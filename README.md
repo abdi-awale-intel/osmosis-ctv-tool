@@ -9,7 +9,7 @@
 
 ## 📥 Quick Download
 
-**[⬇️ Download Latest Release (v2.0)](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases/latest/download/Osmosis_v2.0_Complete.zip)**
+**[⬇️ Download Latest Release (v2.0)](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases/latest)**
 
 > 🔥 **New in v2.0:** Complete PyUber integration with Oracle database connectivity!
 
