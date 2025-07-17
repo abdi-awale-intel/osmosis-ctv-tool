@@ -1,22 +1,15 @@
-# 🚀[![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey.svg)]()
-[![Size](https://img.shields.io/badge/size-54MB-green.svg)]()
-[![Database](https://img.shields.io/badge/database-Oracle%20PyUber-orange.svg)]()
-
-## 📥 Quick Download
-
-**[⬇️ Download Latest Release (v2.0)](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases/latest/download/Osmosis_v2.0_Complete.zip)** v2.0 - CTV Data Processing Tool
+# 🚀 Osmosis v2.0 - CTV Data Processing Tool
 
 **Advanced CTV data processing and analysis tool with complete PyUber database integration**
 
-[![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com/[YOUR-USERNAME]/osmosis-ctv-tool/releases)
+[![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey.svg)]()
 [![Size](https://img.shields.io/badge/size-54MB-green.svg)]()
 [![Database](https://img.shields.io/badge/database-Oracle%20PyUber-orange.svg)]()
 
 ## 📥 Quick Download
 
-**[⬇️ Download Latest Release (v2.0)](https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]/releases/latest/download/Osmosis_v2.0_Complete.zip)**
+**[⬇️ Download Latest Release (v2.0)](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases/latest/download/Osmosis_v2.0_Complete.zip)**
 
 > 🔥 **New in v2.0:** Complete PyUber integration with Oracle database connectivity!
 
