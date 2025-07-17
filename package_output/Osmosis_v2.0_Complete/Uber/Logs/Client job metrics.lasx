@@ -1,0 +1,105 @@
+<QueryConfig AutoExecuteQueryOnLoad="false">
+  <ChangeLog>Changed by AMR\amodi on 9/12/2009 7:04:32 PM from RF3DTS110N1.LTDAUTO.INTEL.COM</ChangeLog>
+  <QueryAttributes />
+  <PostQuerySQL>select * from %{OUTPUT}</PostQuerySQL>
+  <RowHighlightingRules Enable="true" ColumnName="Metrics" FilterRegex="&gt;= 30000" RowColorString="NamedColor:Red" />
+  <RowHighlightingRules Enable="true" ColumnName="Metrics" FilterRegex="&gt;= 10000" RowColorString="NamedColor:Yellow" />
+  <MainPivotConfig Enable="true">
+    <ColumnX FieldName="JobStatus" SortMode="Default" SortOrder="Ascending" SummaryType="Count" SortBySummaryInfo="false" />
+    <ColumnY FieldName="NodeName" SortMode="Default" SortOrder="Ascending" SummaryType="Count" SortBySummaryInfo="false" />
+    <ColumnData FieldName="Metrics, COUNT OF" SortMode="Default" SortOrder="Ascending" SummaryType="Custom" SortBySummaryInfo="false" />
+    <RotateXAxisLabels>false</RotateXAxisLabels>
+    <ShowColumnTotals>false</ShowColumnTotals>
+    <GenerateSeriesFromColumns>false</GenerateSeriesFromColumns>
+  </MainPivotConfig>
+  <AutoPivotConfig TopN="20" OutputDateFormat="yyyy ww.w hh tt" MetricsColumn="Metrics" StatisticalFunctionsForColumn="Avg, 50, 90, Count" StatisticalFunctionsForTable="Count,Avg,IQR,StdDev,0,5,25,50,75,90,95,100" />
+  <MailConfig>
+    <EmailCondition Enable="false" ThresholdRowCount="0">
+      <RunScriptBeforeEmailing>false</RunScriptBeforeEmailing>
+    </EmailCondition>
+    <MailAttachments Excel="false" CSV="false" LAS="false" LAD="false" StatusLogs="false" PivotChart="false" ZipAttachments="false" DoNotSendAttachmentsWithEmail="false" />
+    <IncludeSQLQueryInBody>false</IncludeSQLQueryInBody>
+    <TableInBody Enable="false" />
+    <CopyOutputToDirectory>false</CopyOutputToDirectory>
+    <IncludeAutoPivotSummary>false</IncludeAutoPivotSummary>
+    <IncludeCustomPivotSummary>false</IncludeCustomPivotSummary>
+    <IgnoreExceptions>false</IgnoreExceptions>
+  </MailConfig>
+  <TableSchema>
+    <xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+      <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:MainDataTable="Results" msdata:UseCurrentLocale="true">
+        <xs:complexType>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="Results">
+              <xs:complexType></xs:complexType>
+            </xs:element>
+          </xs:choice>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>
+    <diffgr:diffgram xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:diffgr="urn:schemas-microsoft-com:xml-diffgram-v1" />
+  </TableSchema>
+  <TableData />
+  <QuerySQL><![CDATA[
+--[FileName:"D:\LogAnalyzer2\SampleQueries\UNIQE\ClientLogs\UNIQE client job metrics.lasx"]------
+----------<VARIABLES>------------
+var TIMEFILTER = "Last 2 hours"
+var DOMAIN = "LTDAUTO"
+var NODEFILTER = "localhost"
+var FILEFILTER = "\\%{NODELIST}\C$\logs\Uber*.log*; \\%{NODELIST}\D$\logs\Uber*.log*"
+var FILTER_CONDITION = "Metrics >= 0"
+var SOURCE_FILTER_INTERNAL = "*OnJobCompleteEvent*"
+---[NODELIST]---
+[ThreadQuery(1)]
+BEGIN NODELIST
+	UseMethod GetNodeList with -- **Get the list of nodes matching specified domain and filter**
+		Domain = "${DOMAIN}" -- Domain to search for nodes in (can be comma-separated-list) [String]
+		NodeFilter = "${NODEFILTER}" -- Pattern to look for nodes (comma-separated-list) [String]
+END NODELIST
+---[FILELIST]---
+[NumThreads(5)]
+BEGIN FILELIST
+	UseMethod GetFileList with -- **Get list of files matching specified name and date filter**
+		FileFilter = "${FILEFILTER}" -- Files to check [String]
+		DateFilter = "${TIMEFILTER}" -- Date range to check the files against [String]
+		CheckIfDirectoryExists = true -- Check if the directory being queried exists prior to running the query [Boolean]
+END FILELIST
+---Begin Main Query---
+Using TSV with
+	separator = ";"
+	headerRow = false
+	nFields = 7
+SELECT
+	Filename as SourceFile,
+	RowNumber as SourceLine,
+	DateTime,
+	Extract_Token(filename, 2, '\\') as NodeName,
+	Metrics, Process, JobStatus,
+	TID,
+	JobID, NumOpers, NumRows, NumColumns, NumBytes
+USING
+	field4 as LogType,
+	field5 as SourceTmp,
+	field7 AS Details,
+	extract_token(field6, 1, 'TID:') as TID,
+	case index_of(SourceTmp, '-') when NULL then SourceTmp else extract_prefix(SourceTmp, 2, ':') end as Source,
+	TO_TIMESTAMP(STRCAT(STRCAT(field1, ' '), field2), 'yyyy/MM/dd HH:mm:ss.ll') AS DateTime,
+	ExtractBetween(Details, '[', ']') as Process,
+	ExtractBetween(Details, ' Job ', ' ') as JobID,
+	to_int(ExtractBetween(Details, ' having ', ' operations')) as NumOpers,
+	ExtractBetween(Details, ' with status ', ' and ') as JobStatus,
+	to_int(ExtractBetween(Details, ' took ', ' ms')) as Metrics,
+	to_int(ExtractBetween(Details, ' returned ', ' rows ')) as NumRows,
+	to_int(ExtractBetween(Details, ' rows and ', ' columns ')) as NumColumns,
+	to_int(ExtractBetween(Details, ' columns and ', ' bytes')) as NumBytes
+FROM
+	%{FILELIST}
+WHERE
+	(${FILTER_CONDITION})
+	AND IsInList(Source, '${SOURCE_FILTER_INTERNAL}')
+	AND ApplyTimeRangeFilter(DateTime, '${TIMEFILTER}')
+ORDER BY
+	DateTime DESC
+
+]]></QuerySQL>
+</QueryConfig>

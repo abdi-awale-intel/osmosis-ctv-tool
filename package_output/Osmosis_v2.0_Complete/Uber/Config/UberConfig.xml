@@ -1,0 +1,288 @@
+<UberConfig version="2022/01/26 17:00">
+  <!-- List of adapters that Uber can send the request to.
+    The code uses the Load context, hence the following search algorithm is used to load the assembly
+              1. GAC, 
+              2. Appdomain Application Base
+              3. PrivateBinPath 
+   -->
+  <Adapters>
+    <Adapter>
+      <ApplicationName>UNIQE</ApplicationName>
+      <!-- do not need the adapter file or assembly name in config since
+      we have a direct project reference for Uniqe to optimize performance
+      for NGen-->
+      <AdapterFileOrAssemblyName></AdapterFileOrAssemblyName>
+      <!--TypeName is the type that implements the Initialize. example:Intel.FabAuto.DS.Uniqe.Adapter-->
+      <TypeName>Intel.FabAuto.ESFW.DS.UBER.Uniqe.QEClient.UNIQEAdapter</TypeName>
+      <BaseInterface>IUniqeUBERClient</BaseInterface>
+      <BaseObject>UniqeClient</BaseObject>
+      <ApplicationAttributes>
+        <Attribute name="EnableBest" type="string" value="true" required="true" />
+        <Attribute name="EnableJobSplitting" type="string" value="true" required="true" />
+        <Attribute name="DumpSQL" type="string" value="false" required="true" />
+        <Attribute name="DebugMode" type="string" value="true" required="true" />
+        <!-- Added with v4.0 (works in conjunction with DebugMode) -->
+        <Attribute name="DebugModeNodeFilter" type="string" value="*none" required="true" />
+        <!-- Routing related flags (added v3.5) -->
+        <Attribute name="EnableDynamicRouting" type="string" value="true" required="true" />
+        <Attribute name="UseHealthCheckResultsForRouting" type="string" value="true" required="true" />
+        <Attribute name="HealthCheckTTLInSeconds" type="string" value="86400" required="true" />
+        <Attribute name="HealthCheckFileUpdatePeriodInSeconds" type="string" value="5" required="true" />
+        <Attribute name="DisableHealthCheckResultsForFixedSites" type="string" value="false" required="false" />
+        <!-- Routing related flags (added v4.0) -->
+        <Attribute name="LocalDataSourceSuffix" type="string" value="_LOCAL" required="false" />
+        <Attribute name="LocalDataSourceExclude" type="string" value="*_AUDIT" required="false" />
+        <Attribute name="UserDomainsToCheckForSite" type="string" value="AMR,CCR,GAR,GER" required="false" />
+        <Attribute name="DomainToToDomainMapping" type="string" value="LTDAUTO:RF3PROD,CDCPROD:CDCPROD|F32PROD,RF2PROD:RF3PROD" required="false" />
+        <Attribute name="UserSiteToDomainMapping" type="string" value="OR*:RF3PROD,AZ*:F32PROD|CDCPROD,IR*:F24PROD,IS*:F28PROD,DL*:S46PROD,NM*:F21PROD" required="false" />
+        <Attribute name="MaxEndExecuteRetries" type="string" value="5" required="false" />
+        <Attribute name="StagingDomains" type="string" value="*STG,*INT,LTDAUTO,AMR,GER,GAR" required="false" />
+        <!-- Connection pooling related (added with v4.0) -->
+        <Attribute name="ConnectionPooling" type="string" value="true" required="false" />
+        <!-- Added with v4.3 -->
+        <Attribute name="NetFWVersionFilterToDisableConnectionPooling" type="string" value="4.*" required="false" />
+        <Attribute name="QueueWhenMaxPoolSizeReached" type="string" value="true" required="false" />
+        <Attribute name="MaxWaitQueueTimeInMilliSeconds" type="string" value="10000" required="false" />
+        <Attribute name="MinPoolSize" type="string" value="1" required="false" />
+        <Attribute name="MaxPoolSize" type="string" value="5" required="false" />
+        <Attribute name="MinConnectionLifeTimeInSeconds" type="string" value="180" required="false" />
+        <Attribute name="MaxConnectionLifeTimeInSeconds" type="string" value="600" required="false" />
+        <Attribute name="PoolMonitoringIntervalInSeconds" type="string" value="30" required="false" />
+        <Attribute name="PingServerOnlyOnce" type="string" value="false" required="false" />
+        <Attribute name="UseCommonQueueForEquivalentServers" type="string" value="true" required="false" />
+        <!-- Added with v4.3 -->
+        <Attribute name="EnableReliableSessions" type="string" value="false" required="false" />
+        <Attribute name="DisableReliableSessionsSiteFilter" type="string" value="*" required="false" />
+        <Attribute name="EnableIPCBinding" type="string" value="true" required="false" />
+        <Attribute name="EnableIPCBindingSiteFilter" type="string" value="*" required="false" />
+        <Attribute name="EnableKerberos" type="string" value="true" required="false" />
+        <Attribute name="EnableKerberosSiteFilter" type="string" value="*" required="false" />
+        <!-- Added with v4.5 -->
+        <Attribute name="EnableClientTargetingRules" type="string" value="true" required="false" />
+        <!-- Site contains the default site which is used if Site_DOMAIN is not present -->
+        <Attribute name="Site" type="string" value="RF3PROD" required="true" />
+        <!-- Added with v4.8 -->
+        <Attribute name="IAMWSUrl" type="string" value="https://iamws-i.intel.com/api/v1" required="false" />
+        <Attribute name="UseSecureChannelForOAuth" type="string" value="false" required="false" />
+        <Attribute name="LDAPNode" type="string" value="corpldap.intel.com:3269" required="false" />
+        <Attribute name="ADUser" type="string" value="3F9yc+ep514u4lLXKXH+sGQ+uAShIxfX" required="false" />
+        <Attribute name="ADPassword" type="string" value="==wU17P7e9Fr5tgm77RH/0pi" required="false" />
+        <!--
+        <Attribute name="Site_RF2PROD" type="string" value="RF2PZWAP110-alias.rf2prod.mfg.intel.com" required="false"
+                   preferredDataSources="D1C_PROD_*" isProd="true"/>
+        <Attribute name="Site_RF2PROD1" type="string" value="RF2PZWAP110n1.rf2prod.mfg.intel.com" required="false" isProd="true"/>
+        <Attribute name="Site_RF2PROD2" type="string" value="RF2PZWAP110n2.rf2prod.mfg.intel.com" required="false" isProd="true"/>
+        -->
+        <Attribute name="Site_RF3PROD" type="string" value="RF3PROD1;RF3PROD2;RF3PROD3;RF3PROD4;RF3PROD5;RF3PROD6;RF3PROD7" required="false" preferredDataSources="D1D_PROD_*" isProd="true" />
+        <Attribute name="Site_RF3PROD1" type="string" value="rf3pap420n1.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD2" type="string" value="rf3pap420n2.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD3" type="string" value="rf3pap420n3.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD4" type="string" value="rf3pap420n4.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD5" type="string" value="rf3pap420n5.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD6" type="string" value="rf3pap420n6.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD7" type="string" value="rf3pap420n7.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD8" type="string" value="rf3pvap420n8.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD9" type="string" value="rf3pvap420n9.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD10" type="string" value="rf3pvap420n10.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD11" type="string" value="rf3pvap420n11.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD12" type="string" value="rf3pvap420n12.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD13" type="string" value="rf3pvap420n13.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD14" type="string" value="rf3pvap420n14.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD15" type="string" value="rf3pvap420n15.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD16" type="string" value="rf3pvap420n16.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD17" type="string" value="rf3pvap420n17.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD18" type="string" value="rf3pvap420n18.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_RF3PROD19" type="string" value="rf3pvap420n19.rf3prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_AMR" type="string" value="RF3PROD" required="false" />
+        <Attribute name="Site_AMR1" type="string" value="RF3PROD1" required="false" />
+        <Attribute name="Site_AMR2" type="string" value="RF3PROD2" required="false" />
+        <Attribute name="Site_AMR3" type="string" value="RF3PROD3" required="false" />
+        <Attribute name="Site_AMR4" type="string" value="RF3PROD4" required="false" />
+        <Attribute name="Site_AMR5" type="string" value="RF3PROD5" required="false" />
+        <Attribute name="Site_AMR6" type="string" value="RF3PROD6" required="false" />
+        <Attribute name="Site_AMR7" type="string" value="RF3PROD7" required="false" />
+        <Attribute name="Site_AMR8" type="string" value="RF3PROD8" required="false" />
+        <Attribute name="Site_AMR9" type="string" value="RF3PROD9" required="false" />
+        <Attribute name="Site_AMR10" type="string" value="RF3PROD10" required="false" />
+        <Attribute name="Site_AMR11" type="string" value="RF3PROD11" required="false" />
+        <Attribute name="Site_AFOINT" type="string" value="RF3STG" required="false" isFirewallOpen="false" isProd="false" />
+        <Attribute name="Site_AFOPROD" type="string" value="RF3PROD" required="false" />
+        <Attribute name="Site_AFOPROD1" type="string" value="RF3PROD1" required="false" />
+        <Attribute name="Site_AFOPROD2" type="string" value="RF3PROD2" required="false" />
+        <Attribute name="Site_F21PROD" type="string" value="F21PROD3;F21PROD4;F21PROD5;F21PROD6" required="false" preferredDataSources="F21_PROD_*" isProd="true" />
+        <Attribute name="Site_F21PROD3" type="string" value="F21PAP420n3.f21prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F21PROD4" type="string" value="F21PAP420n4.f21prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F21PROD5" type="string" value="F21PAP420n5.f21prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F21PROD6" type="string" value="F21PAP420n6.f21prod.mfg.intel.com" required="false" isProd="true" />
+        <!-- F21 has no UNIQE Server in Integration environment, hence point traffic to D1D STAG instead -->
+        <Attribute name="Site_F21INT" type="string" value="RF3STG" required="false" isProd="false" />
+        <Attribute name="Site_F24PROD" type="string" value="F24PROD1;F24PROD2;F24PROD3;F24PROD4" required="false" preferredDataSources="F24_PROD_*" isProd="true" />
+        <Attribute name="Site_F24PROD1" type="string" value="f24pap420n1.f24prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F24PROD2" type="string" value="f24pap420n2.f24prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F24PROD3" type="string" value="f24pap420n3.f24prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F24PROD4" type="string" value="f24pap420n4.f24prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F24PRODOLD1" type="string" value="f24pap401n1.f24prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F24PRODOLD2" type="string" value="f24pap401n2.f24prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F28PROD" type="string" value="F28PAP420-alias.f28prod.mfg.intel.com" required="false" preferredDataSources="F28_PROD_*" isProd="true" />
+        <Attribute name="Site_F28PROD1" type="string" value="F28PAP420n1.f28prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F28PROD2" type="string" value="F28PAP420n2.f28prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F28PROD3" type="string" value="F28PAP420n3.f28prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F28PROD4" type="string" value="F28PAP420n4.f28prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F32PROD" type="string" value="F32PROD3;F32PROD4;F32PROD5;F32PROD6" required="false" preferredDataSources="F32_PROD_*,ATM_*" isProd="true" />
+        <Attribute name="Site_F32PROD3" type="string" value="F32PAP420n3.f32prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F32PROD4" type="string" value="F32PAP420n4.f32prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F32PROD5" type="string" value="F32PAP420n5.f32prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F32PROD6" type="string" value="F32PAP420n6.f32prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F32INT" type="string" value="F32INT1;F32INT2;F32INT3;F32INT4" required="false" preferredDataSources="F32_INT*,F32_STAG_*" isProd="false" />
+        <Attribute name="Site_F32INT1" type="string" value="F32IAP420N1.F32INT.MFGINT.INTEL.COM" required="false" isProd="false" />
+        <Attribute name="Site_F32INT2" type="string" value="F32IAP420N2.F32INT.MFGINT.INTEL.COM" required="false" isProd="false" />
+        <Attribute name="Site_F32INT3" type="string" value="F32IAP420N3.F32INT.MFGINT.INTEL.COM" required="false" isProd="false" />
+        <Attribute name="Site_F32INT4" type="string" value="F32IAP420N4.F32INT.MFGINT.INTEL.COM" required="false" isProd="false" />
+        <Attribute name="Site_S46PROD" type="string" value="S46PROD1;S46PROD2" required="false" preferredDataSources="S46_PROD_*" isProd="true" />
+        <Attribute name="Site_S46PROD1" type="string" value="s46pap420n1.s46prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_S46PROD2" type="string" value="s46pap420n2.s46prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_S33PROD" type="string" value="S33PROD1;S33PROD2" required="false" preferredDataSources="S33_PROD_*" isProd="true" />
+        <Attribute name="Site_S33PROD1" type="string" value="s33pap420n1.s33prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_S33PROD2" type="string" value="s33pap420n2.s33prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F68PROD" type="string" value="F68PROD1;F68PROD2;F68PROD3;F68PROD4" required="false" preferredDataSources="F68_PROD_*" isProd="true" />
+        <Attribute name="Site_F68PROD1" type="string" value="f68pap420n1.f68prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F68PROD2" type="string" value="f68pap420n2.f68prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F68PROD3" type="string" value="f68pap420n3.f68prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_F68PROD4" type="string" value="f68pap420n4.f68prod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_CDCPROD" type="string" value="CDCPROD3;CDCPROD4;CDCPROD5;CDCPROD6" required="false" preferredDataSources="CDC_PROD_*" isProd="true" />
+        <Attribute name="Site_CDCPROD3" type="string" value="ccepap420n3.cdcprod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_CDCPROD4" type="string" value="ccepap420n4.cdcprod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_CDCPROD5" type="string" value="ccepap420n5.cdcprod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_CDCPROD6" type="string" value="ccepap420n6.cdcprod.mfg.intel.com" required="false" isProd="true" />
+        <Attribute name="Site_LTDAUTO" type="string" value="RF3STG" required="false" isProd="false" />
+        <Attribute name="Site_RF3STG" type="string" value="RF3STG3" required="false" preferredDataSources="D1D_STAG_*,D1D_DEV_*" isFirewallOpen="true" isProd="false" />
+        <Attribute name="Site_RF3STG1" type="string" value="rf3sap420n1.rf3stg.mfgint.intel.com" required="false" isProd="false" />
+        <Attribute name="Site_RF3STG2" type="string" value="rf3sap420n2.rf3stg.mfgint.intel.com" required="false" isProd="false" />
+        <Attribute name="Site_RF3STG3" type="string" value="rf3sap420n3.rf3stg.mfgint.intel.com" required="false" isProd="false" />
+        <Attribute name="Site_RF3STG4" type="string" value="rf3svap420n4.rf3stg.mfgint.intel.com" required="false" isProd="false" />
+        <Attribute name="Site_CDCINT" type="string" value="CDCINT1;CDCINT2" required="false" isFirewallOpen="false" isProd="false" />
+        <Attribute name="Site_CDCINT1" type="string" value="cceiwsapp124.cdcprod.mfg.intel.com" required="false" isProd="false" />
+        <Attribute name="Site_CDCINT2" type="string" value="cce1iap110n1.cdcprod.mfg.intel.com" required="false" isProd="false" />
+        <Attribute name="Site_DEV" type="string" value="rf3dts110n1.ltdauto.intel.com" required="false" isProd="false" />
+        <Attribute name="Site_DEV2" type="string" value="rf3drd210n1.ltdauto.intel.com" required="false" isProd="false" />
+        <Attribute name="Site_DEV3" type="string" value="amodi-dev3.ltdauto.intel.com" required="false" isProd="false" />
+        <!-- <Attribute name="Site_LTDAUTO" type="string" value="rf3dts110n1.ltdauto.intel.com" required="false" /> -->
+        <!-- Optional meta-data recorded on server side -->
+        <Attribute name="MetaData" type="string" value="" required="false" />
+        <Attribute name="ReadPort" type="string" value="8135" required="true" />
+        <Attribute name="WritePort" type="string" value="8136" required="true" />
+        <Attribute name="Application" type="string" value="" required="false" />
+        <Attribute name="GetSchemaTable" type="string" value="false" required="false" />
+        <Attribute name="UserId" type="string" value="" required="false" />
+        <Attribute name="Password" type="string" value="" required="false" />
+        <Attribute name="AuthenticationMode" type="string" value="IWA" required="true" />
+        <!-- DataAccessor: "default" is whatever the server has configured otherwise specify something such as DataDirect or ODP. But 
+          in the latter case, it will fail if that driver is not available. In the former case, server will retry
+          with a different accessor
+        -->
+        <Attribute name="DataAccessor" type="string" value="default" required="true" />
+        <Attribute name="ChunkSizeInBytes" type="string" value="524288" required="false" />
+        <Attribute name="MaxNumOfChildThreads" type="string" value="5" required="false" />
+        <Attribute name="MinThresholdPeriodInSecondsForQueryBreakUp" type="string" value="-1" required="false" />
+        <Attribute name="MinNumberOfItemsPerThread" type="string" value="20" required="false" />
+        <Attribute name="IgnoreOrderBy" type="string" value="false" required="false" />
+        <Attribute name="EnableCompression" type="string" value="true" required="false" />
+      </ApplicationAttributes>
+    </Adapter>
+  </Adapters>
+  <Converters>
+    <Converter>
+      <ConverterName>IUBERTABLE_TO_RECORDSET</ConverterName>
+      <TypeName>Intel.FabAuto.ESFW.DS.UBER.OutputConverters.RecordsetConverter</TypeName>
+      <ConverterAssemblyName>IUberTableToRecordsetConverter, Version=2.0.0.0, Culture=neutral, PublicKeyToken=0e800f214d5c8a66</ConverterAssemblyName>
+    </Converter>
+    <Converter>
+      <ConverterName>IUBERTABLE_TO_STATISTICA_SPREADSHEET</ConverterName>
+      <TypeName>Intel.FabAuto.ESFW.DS.UBER.OutputConverters.UberTableStatisticaSpreadsheetConverter</TypeName>
+      <ConverterAssemblyName>UberTableStatisticaSpreadsheetConverter, Version=2.0.0.0, Culture=neutral, PublicKeyToken=0e800f214d5c8a66, processorArchitecture=MSIL</ConverterAssemblyName>
+      <ApplicationAttributes>
+        <Attribute name="StatisticaPointer" type="Object" value="" required="true" />
+      </ApplicationAttributes>
+    </Converter>
+  </Converters>
+  <ConfiguredRetryList>
+    <Action name="*">
+      <!-- Could not access the database, reason: Password is invalid. [Comes from DIS nodes] -->
+      <Exception pattern="One or more errors occurred" maxRetries="3" waitBetweenRetriesInMs="100" />
+      <Exception pattern="Could not access the database" maxRetries="3" waitBetweenRetriesInMs="100" />
+      <Exception pattern="Client config updated" maxRetries="3" waitBetweenRetriesInMs="100" />
+      <Exception pattern="Insufficient system resources exist to complete the requested service" maxRetries="3" waitBetweenRetriesInMs="100" />
+      <Exception pattern="No DNS entries exist" maxRetries="5" waitBetweenRetriesInMs="100" />
+      <Exception pattern="There was no endpoint listening" maxRetries="5" waitBetweenRetriesInMs="100" />
+      <Exception pattern="socket transfer timed out|connection attempt lasted for a time span" maxRetries="5" waitBetweenRetriesInMs="2000" />
+      <Exception pattern="CommunicationObjectFaultedException|has stopped accepting wsrm sessions" maxRetries="5" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="Authentication failed on the remote side" maxRetries="2" waitBetweenRetriesInMs="500" />
+      <Exception pattern="DisableAll DIS nodes down" maxRetries="3" waitBetweenRetriesInMs="100" />
+      <Exception pattern="System.TypeInitializationException" maxRetries="3" waitBetweenRetriesInMs="100" />
+      <Exception pattern="Number of waiting threads in the execution threadpool exhausted" maxRetries="5" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="System.NullReferenceException: Object reference not set to an instance of an object" maxRetries="5" waitBetweenRetriesInMs="100" />
+      <!-- can be thrown if UNIQE Server install is messed up and DDDB2 license file is missing -->
+      <Exception pattern="The license file was not found" maxRetries="3" waitBetweenRetriesInMs="100" />
+      <Exception pattern="Thread was interrupted from a waiting state" maxRetries="3" waitBetweenRetriesInMs="100" />
+      <Exception pattern="SQL0440N.*EXEC_QUERY" maxRetries="5" waitBetweenRetriesInMs="100" />
+      <!-- ERROR [08001] [IBM] SQL30082N  Security processing failed with reason "24" ("USERNAME AND/OR PASSWORD INVALID").  SQLSTATE=08001 -->
+      <Exception pattern="SQL30082N.*Security processing failed" maxRetries="3" waitBetweenRetriesInMs="100" />
+      <Exception pattern="Communication link failure" maxRetries="3" waitBetweenRetriesInMs="100" />
+      <!-- System.InvalidOperationException: Could not establish a socket connection to rf3pxap420n2.rf3prod.mfg.intel.com on port 50001.
+   at DDTek.DB2.s.d()
+   at DDTek.DB2.s.au()
+   at DDInt.Common.aj.cm()
+   at DDInt.Common.ak.b(j , z )
+   at DDInt.Common.ak.a(Object , j , Boolean , ai )
+   at DDTek.DB2.DB2Connection.Open() -->
+      <Exception pattern="Could not establish a socket connection" maxRetries="3" waitBetweenRetriesInMs="100" />
+      <Exception pattern="specific name .* could not load Java class" maxRetries="1" waitBetweenRetriesInMs="10" />
+    </Action>
+    <Action name="Connect">
+      <Exception pattern="connection attempt lasted for a time span" maxRetries="5" waitBetweenRetriesInMs="100" />
+      <Exception pattern="socket transfer timed out" maxRetries="5" waitBetweenRetriesInMs="100" />
+      <Exception pattern="cannot access a disposed object" maxRetries="5" waitBetweenRetriesInMs="100" />
+      <Exception pattern="has stopped accepting wsrm sessions" maxRetries="5" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="open operation did not complete within the allotted timeout" maxRetries="5" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="No connection could be made because the target machine actively refused it" maxRetries="5" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="Service is in process of being shutdown|Number of waiting threads in the execution threadpool exhausted" maxRetries="5" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="CommunicationObjectFaultedException" maxRetries="5" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="CommunicationException|has stopped accepting wsrm sessions" maxRetries="5" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="Authentication failed on the remote side" maxRetries="2" waitBetweenRetriesInMs="500" />
+      <!--<Exception pattern="System.ServiceModel.EndpointNotFoundException" maxRetries="5" waitBetweenRetriesInMs="5000"/>-->
+    </Action>
+    <Action name="Execute">
+      <!-- For Elastic SSL issue -->
+      <!--
+      <Exception pattern="Could not establish trust relationship for the SSL.TLS secure channel" maxRetries="3" waitBetweenRetriesInMs="100"/>
+      -->
+      <Exception pattern="socket transfer timed out" maxRetries="5" waitBetweenRetriesInMs="100" />
+      <!-- Happens sometimes when service starts in a bad state -->
+      <Exception pattern="Could not load file or assembly" maxRetries="3" waitBetweenRetriesInMs="10" />
+      <Exception pattern="output session was auto-closed due to a server-initiated shutdown" maxRetries="2" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="CommunicationObjectFaultedException|has stopped accepting wsrm sessions" maxRetries="2" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="Service is in process of being shutdown|Number of waiting threads in the execution threadpool exhausted" maxRetries="5" waitBetweenRetriesInMs="5000" />
+      <!-- ORA-02391: exceeded simultaneous SESSIONS_PER_USER limit -->
+      <Exception pattern="ORA-02391" maxRetries="4" waitBetweenRetriesInMs="10" />
+      <!-- Retry when any exception other than an Oracle exception occurs
+      <Exception pattern="^(?!.*(ORA-[0-9]|OracleException|Failed to obtain new connection|Client config updated))" maxRetries="3" waitBetweenRetriesInMs="500"/>
+      -->
+      <Exception pattern="Hit Firewall Issue with DataSource" maxRetries="2" waitBetweenRetriesInMs="5" />
+    </Action>
+    <Action name="EndExecute">
+      <Exception pattern="socket transfer timed out" maxRetries="5" waitBetweenRetriesInMs="100" />
+      <!-- Happens sometimes when service starts in a bad state -->
+      <Exception pattern="has stopped accepting wsrm sessions" maxRetries="5" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="Could not load file or assembly" maxRetries="3" waitBetweenRetriesInMs="10" />
+      <Exception pattern="output session was auto-closed due to a server-initiated shutdown" maxRetries="2" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="disabledxxxCommunicationException" maxRetries="2" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="CommunicationObjectFaultedException" maxRetries="2" waitBetweenRetriesInMs="5000" />
+      <Exception pattern="Service is in process of being shutdown" maxRetries="3" waitBetweenRetriesInMs="5000" />
+      <!-- ORA-02391: exceeded simultaneous SESSIONS_PER_USER limit -->
+      <Exception pattern="ORA-02391" maxRetries="4" waitBetweenRetriesInMs="10" />
+      <!-- Retry when any exception other than an Oracle exception occurs
+      <Exception pattern="^(?!.*(ORA-[0-9]|OracleException|Failed to obtain new connection|You are using an older version))" maxRetries="3" waitBetweenRetriesInMs="500"/>
+      -->
+    </Action>
+  </ConfiguredRetryList>
+</UberConfig>

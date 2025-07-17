@@ -1,0 +1,42 @@
+{
+    "application": {
+        "name": "CTV List Data Processor",
+        "version": "1.0.0",
+        "description": "GUI application for processing CTV list data"
+    },
+    "default_settings": {
+        "material_data": {
+            "default_lot": "G5088651",
+            "default_wafer": "533",
+            "default_program": "DABHOPCA0H20C022528",
+            "default_prefetch": 3,
+            "default_database": "F24_PROD_XEUS"
+        },
+        "processing": {
+            "delete_intermediary_files": true,
+            "progress_update_interval": 100,
+            "max_parallel_processes": 4
+        },
+        "ui": {
+            "window_size": "1400x800",
+            "min_window_size": "800x600",
+            "theme": "light",
+            "enable_alternating_colors": true
+        }
+    },
+    "paths": {
+        "default_output_folder": "dataOut",
+        "temp_folder": "temp",
+        "log_folder": "logs"
+    },
+    "dependencies": {
+        "required_packages": [
+            "pandas>=1.5.0",
+            "numpy>=1.21.0",
+            "openpyxl>=3.0.0"
+        ],
+        "optional_packages": [
+            "Pillow>=9.0.0"
+        ]
+    }
+}

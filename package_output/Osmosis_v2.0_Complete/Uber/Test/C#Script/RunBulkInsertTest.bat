@@ -1,0 +1,1 @@
+csws.exe BulkInsertTest.cs

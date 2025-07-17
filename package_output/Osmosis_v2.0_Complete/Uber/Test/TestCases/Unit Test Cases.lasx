@@ -1,0 +1,1146 @@
+<QueryConfig AutoExecuteQueryOnLoad="false">
+  <ChangeLog>Changed by AMR\amodi on 5/29/2014 3:34:03 PM from RF3DAP110N1.LTDAUTO.INTEL.COM using LogAnalyzer2 v2.7.40528.2140</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/29/2014 3:29:02 PM from RF3DAP110N1.LTDAUTO.INTEL.COM using LogAnalyzer2 v2.7.40528.2140</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/29/2014 3:26:10 PM from RF3DAP110N1.LTDAUTO.INTEL.COM using LogAnalyzer2 v2.7.40528.2140</ChangeLog>
+  <ChangeLog>Changed by AMR\nupuragr on 5/12/2014 3:47:41 PM from NUPURAGR-MOBL.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40506.1806</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/11/2014 10:10:53 PM from RF3DAP110N1.LTDAUTO.INTEL.COM using LogAnalyzer2 v2.7.40506.1806</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/11/2014 4:15:46 PM from AMODI-MOBL1.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40506.1806</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/11/2014 4:14:34 PM from AMODI-MOBL1.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40506.1806</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/11/2014 4:13:40 PM from AMODI-MOBL1.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40506.1806</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/11/2014 4:12:42 PM from AMODI-MOBL1.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40506.1806</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/11/2014 12:38:25 PM from AMODI-MOBL1.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40506.1806</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/10/2014 10:33:24 PM from AMODI-MOBL1.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40506.1806</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/10/2014 10:30:24 PM from AMODI-MOBL1.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40506.1806</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/10/2014 9:18:45 PM from AMODI-MOBL1.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40506.1806</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/10/2014 5:48:29 PM from AMODI-MOBL1.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40506.1806</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 5/10/2014 12:13:54 AM from AMODI-MOBL1.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40506.1806</ChangeLog>
+  <ChangeLog>Changed by AMR\nupuragr on 5/5/2014 1:28:38 PM from NUPURAGR-MOBL.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40401.1451</ChangeLog>
+  <ChangeLog>Changed by AMR\nupuragr on 4/28/2014 4:53:55 PM from NUPURAGR-MOBL.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40401.1451</ChangeLog>
+  <ChangeLog>Changed by AMR\nupuragr on 4/25/2014 6:21:36 PM from NUPURAGR-MOBL.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40401.1451</ChangeLog>
+  <ChangeLog>Changed by AMR\nupuragr on 4/25/2014 5:44:35 PM from NUPURAGR-MOBL.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40401.1451</ChangeLog>
+  <ChangeLog>Changed by AMR\nupuragr on 4/24/2014 5:12:25 PM from NUPURAGR-MOBL.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40401.1451</ChangeLog>
+  <ChangeLog>Changed by AMR\nupuragr on 4/24/2014 2:31:31 PM from NUPURAGR-MOBL.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40401.1451</ChangeLog>
+  <ChangeLog>Changed by AMR\nupuragr on 4/22/2014 5:25:18 PM from NUPURAGR-MOBL.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40401.1451</ChangeLog>
+  <ChangeLog>Changed by AMR\nupuragr on 4/17/2014 6:01:40 PM from NUPURAGR-MOBL.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40401.1451</ChangeLog>
+  <ChangeLog>Changed by AMR\nupuragr on 4/17/2014 6:00:57 PM from NUPURAGR-MOBL.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40401.1451</ChangeLog>
+  <ChangeLog>Changed by AMR\nupuragr on 4/17/2014 11:36:27 AM from NUPURAGR-MOBL.AMR.CORP.INTEL.COM using LogAnalyzer2 v2.7.40401.1451</ChangeLog>
+  <QueryAttributes>
+    <AlwaysReplaceDomainWithLocal>false</AlwaysReplaceDomainWithLocal>
+  </QueryAttributes>
+  <PostQuerySQL>select * from %{OUTPUT}</PostQuerySQL>
+  <TableLayoutConfig>
+    <BoundColumnList>Name,Result,Description,Message,MethodName,Exception,SourceCode</BoundColumnList>
+  </TableLayoutConfig>
+  <RowHighlightingRules Enable="true" ColumnName="Result" FilterRegex="False" RowColorString="ARGBColor:255:255:128:128" />
+  <TabOrder>C0</TabOrder>
+  <MainPivotConfig Enable="true">
+    <ColumnX FieldName="Category" FieldType="String" SortMode="Default" SortOrder="Ascending" SummaryType="Count" SortBySummaryInfo="false" />
+    <ColumnY FieldName="" FieldType="" SortMode="Default" SortOrder="Ascending" SummaryType="Count" SortBySummaryInfo="false" />
+    <ColumnData FieldName="COUNT OF" FieldType="DateTime" SortMode="Default" SortOrder="Ascending" SummaryType="Count" SortBySummaryInfo="false" />
+    <ShowOthersInTopN>true</ShowOthersInTopN>
+    <ChartTitle>Test Case Summary</ChartTitle>
+    <CustomPalette />
+    <TableData />
+  </MainPivotConfig>
+  <AutoPivotConfig OutputDateFormat="yyyy ww.w hh tt" />
+  <MailConfig>
+    <PostProcessingSQL Enable="false" />
+    <EmailCondition Enable="false">
+      <RunScriptBeforeEmailing>false</RunScriptBeforeEmailing>
+    </EmailCondition>
+    <PostProcessingCondition Enable="false">
+      <RunScriptBeforeEmailing>false</RunScriptBeforeEmailing>
+    </PostProcessingCondition>
+    <CopyCondition Enable="false">
+      <RunScriptBeforeEmailing>false</RunScriptBeforeEmailing>
+    </CopyCondition>
+    <OnlyProcessIfOutputChangedFromPreviousRun>false</OnlyProcessIfOutputChangedFromPreviousRun>
+    <MailAttachments Excel="false" LAS="false" LAD="false" Exceptions="false" StatusLogs="false" PivotChart="true" ZipAttachments="true" DoNotSendAttachmentsWithEmail="false" />
+    <IncludeSQLQueryInBody>false</IncludeSQLQueryInBody>
+    <TableInBody Enable="false" />
+    <CopyOutputToDirectory>false</CopyOutputToDirectory>
+    <IncludeAutoPivotSummary>false</IncludeAutoPivotSummary>
+    <IgnoreExceptions>false</IgnoreExceptions>
+    <OnlyCopyOutputIfEmailConditionIsMet>false</OnlyCopyOutputIfEmailConditionIsMet>
+  </MailConfig>
+  <TableSchema><xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+  <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:MainDataTable="Results" msdata:UseCurrentLocale="true">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="Results">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="DateTime" type="xs:dateTime" minOccurs="0" />
+              <xs:element name="MethodName" type="xs:string" minOccurs="0" />
+              <xs:element name="Name" type="xs:string" minOccurs="0" />
+              <xs:element name="Category" type="xs:string" minOccurs="0" />
+              <xs:element name="Metrics" type="xs:int" minOccurs="0" />
+              <xs:element name="Result" type="xs:string" minOccurs="0" />
+              <xs:element name="Description" type="xs:string" minOccurs="0" />
+              <xs:element name="Message" type="xs:string" minOccurs="0" />
+              <xs:element name="Exception" type="xs:string" minOccurs="0" />
+              <xs:element name="SourceCode" type="xs:string" minOccurs="0" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
+</TableSchema>
+  <TableData />
+  <LastRunAbsoluteDateFilter />
+  <CustomQueryMethodScripts>//css_ref Intel.FabAuto.ESFW.DS.UBER.DataServiceFactory.dll;
+//css_ref Intel.FabAuto.ESFW.DS.UBER.UberCommon.dll;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using Intel.FabAuto.ESFW.DS.UBER;
+using Intel.FabAuto.ESFW.DS.UBER.Interfaces;
+using Intel.FabAuto.ESFW.DS.UBER.Uniqe.Core;
+using Intel.FabAuto.ESFW.DS.UBER.Uniqe.QEClient;
+using Intel.LogAnalyzer;
+using Intel.LogAnalyzer.Common;
+using Intel.LogAnalyzer.Configuration;
+using Intel.LogAnalyzer.Utility;
+
+namespace Intel.LogAnalyzer.BuiltInQueryMethods_Sample
+{
+    public class UniqeTestCases : CustomQueryMethodBase
+    {
+
+        private const string METHOD_INCLUDE_FILTER = "CancelCompletedJobTest";
+        private const string METHOD_EXCLUDE_FILTER = "none";
+        private const string CATEGORY_FILTER = "*";
+        private const int NUM_REPETITIONS = 10;
+        private const int NUM_THREADS = 10;
+
+        public class MyTestCases
+        {
+            public static string Site = null;
+            public static string MethodFilter = "*";
+            public static string MethodExcludeFilter = "none";
+            public static string Category = "*";
+            public static bool TestMode = false;
+            public static int NumRepetitions = 1;
+            public static int NumThreads = 1;
+
+            private UniqeClientHelper GetHelper(string dataSource)
+            {
+                return new UniqeClientHelper { Site = Site, DataSource = dataSource };
+            }
+
+            [LA2TestCase(Name = "Basic Health Check", Category= "Health Check" , Description = "Happy path test case")]
+            public TestCaseOutput BasicHealthCheck()
+            {
+                var ut = GetHelper("D1D_STAG_ARIES").GetUberTable(@"select * from A_LOT where ROWNUM &lt;= 100");
+                var table = ut.ConvertToDataTable();
+                bool success = table.Rows.Count == 100 &amp;&amp; table.Columns.Count == 5;
+                return new TestCaseOutput(success, "Checking A_LOT for D1D_STAG_ARIES [Site = " + ut.ServerFriendlyName + "]");
+            }
+
+            [LA2TestCase(Name = "Staging Oracle Data Source List", Category = "Health Check", Description = "Get data-source list using exposed meta tables")]
+            public TestCaseOutput GetStagingOracleDataSourceListFromServer()
+            {
+                string query = @"select distinct DataSourceName from DataSources where DataSourceName LIKE '%_STAG_%' AND Accessor LIKE '%ODP%'";
+                var table = GetHelper("UNIQE_METADATA_GENERIC").GetUberTable(query);
+                int count = table.ConvertToDataTable().Rows.Count;
+                return new TestCaseOutput(count &gt; 0, "Got " + count + " STAG data-sources from [" + table.ServerFriendlyName + "]");
+            }
+
+            [LA2TestCase(Name = "Staging SQL Data Source List", Category = "Health Check", Description = "Get data-source list using exposed meta tables")]
+            public TestCaseOutput GetStagingSQLDataSourceListFromServer()
+            {
+                string query = @"select distinct DataSourceName from DataSources where DataSourceName LIKE '%_STAG_%' AND Accessor LIKE '%SQL%'";
+                var table = GetHelper("UNIQE_METADATA_GENERIC").GetUberTable(query);
+                int count = table.ConvertToDataTable().Rows.Count;
+                return new TestCaseOutput(count &gt; 0, "Got " + count + " STAG data-sources from [" + table.ServerFriendlyName + "]");
+            }
+
+            [LA2TestCase(Name = "Staging Data Source List", Category = "Health Check", Description = "Get data-source list using exposed meta tables")]
+            public TestCaseOutput GetStagingDataSourceListFromServer()
+            {
+                string query = @"select distinct DataSourceName from DataSources where DataSourceName LIKE '%_STAG_%'";
+                var table = GetHelper("UNIQE_METADATA_GENERIC").GetUberTable(query);
+                int count = table.ConvertToDataTable().Rows.Count;
+                return new TestCaseOutput(count &gt; 0, "Got " + count + " STAG data-sources from [" + table.ServerFriendlyName + "]");
+            }
+
+            [LA2TestCase(Name = "Production Oracle Data Source List", Category = "Health Check", Description = "Get data-source list using exposed meta tables")]
+            public TestCaseOutput GetProductionOracleDataSourceListFromServer()
+            {
+                string query = @"select distinct DataSourceName from DataSources where DataSourceName LIKE '%_PROD_%' AND Accessor LIKE '%ODP%'";
+                var table = GetHelper("UNIQE_METADATA_GENERIC").GetUberTable(query);
+                int count = table.ConvertToDataTable().Rows.Count;
+                return new TestCaseOutput(count &gt; 0, "Got " + count + " STAG data-sources from [" + table.ServerFriendlyName + "]");
+            }
+
+            [LA2TestCase(Name = "Production SQL Data Source List", Category = "Health Check", Description = "Get data-source list using exposed meta tables")]
+            public TestCaseOutput GetProductionSQLDataSourceListFromServer()
+            {
+                string query = @"select distinct DataSourceName from DataSources where DataSourceName LIKE '%_PROD_%' AND Accessor LIKE '%SQL%'";
+                var table = GetHelper("UNIQE_METADATA_GENERIC").GetUberTable(query);
+                int count = table.ConvertToDataTable().Rows.Count;
+                return new TestCaseOutput(count &gt; 0, "Got " + count + " STAG data-sources from [" + table.ServerFriendlyName + "]");
+            }
+
+            [LA2TestCase(Name = "Production Data Source List", Category = "Health Check", Description = "Get data-source list using exposed meta tables")]
+            public TestCaseOutput GetProductionDataSourceListFromServer()
+            {
+                string query = @"select distinct DataSourceName from DataSources where DataSourceName LIKE '%_PROD_%'";
+                var table = GetHelper("UNIQE_METADATA_GENERIC").GetUberTable(query);
+                int count = table.ConvertToDataTable().Rows.Count;
+                return new TestCaseOutput(count &gt; 0, "Got " + count + " STAG data-sources from [" + table.ServerFriendlyName + "]");
+            }
+
+            [LA2TestCase(Name = "Bad Oracle SQL test", Category = "Error Cases", Description = "Incorrect table name specified for Oracle SQL")]
+            public TestCaseOutput OracleBadTableNameTest()
+            {
+                string query = "select * from A_LOTx where ROWNUM &lt;= 100";
+                Exception ex = null;
+                try
+                {
+                    var table = GetHelper("D1D_STAG_ARIES").GetDataTable(query);
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                return new TestCaseOutput(ex != null &amp;&amp; ex.Message.Contains("ORA-00942:"), "Got exception: " + ex.Message);
+            }
+
+            [LA2TestCase(Name = "Empty Datasource test", Category = "Error Cases", Description = "Check if exception is generated in query without datasource")]
+            public TestCaseOutput EmptyDatasourceTest()
+            {
+                string query = "select * from A_LOT where ROWNUM &lt;= 100";
+                Exception ex = null;
+                try
+                {
+                    var table = GetHelper("").GetDataTable(query);
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                return new TestCaseOutput(ex != null &amp;&amp; ex.Message.Contains("No dataSource"), "Got exception: " + ex.Message);
+            }
+
+            [LA2TestCase(Name = "Different dataSource specified on query and operation", Category = "Error Cases", Description = "Checks which dataSource is used when query and operation specifies different dataSources")]
+            public TestCaseOutput DifferentDSNamesOnQueryAndOperationTest()
+            {
+                string sql = "select * from A_LOT where ROWNUM &lt;= 100";
+                string datasource = "D1D_STAG_ARIES";
+                Query query = new Query(sql, datasource);
+                Operation oper = new Operation(query, "F32_STAG_ARIES");
+                UniqeJob job = new UniqeJob();
+                job.AddOperation(oper);
+                Exception ex = null;
+                List&lt;IUberTable&gt; table = null;
+                try
+                {
+                    UniqeClientHelper helper = GetHelper(string.Empty);
+                    table = helper.ExecuteJob(job);
+                    table[0].GoToEndOfData();
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                return new TestCaseOutput(table[0].DataSource.Equals(query.DataSource), "Datasource used is correct");
+            }
+
+
+            [LA2TestCase(Name = "Empty SQL test", Category = "Error Cases", Description = "Empty Oracle SQL is passed to get method")]
+            public TestCaseOutput EmptySQLTest()
+            {
+                string query = "";
+                Exception ex = null;
+                try
+                {
+                    var table = GetHelper("D1D_STAG_ARIES").GetDataTable(query);
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                return new TestCaseOutput(ex != null &amp;&amp; ex.Message.Contains("Empty SQL"), "Got exception: " + ex.Message);
+            }
+
+            [LA2TestCase(Name = "Bad dataSource Name test", Category = "Error Cases", Description = "Wrong datasource name is passed to helper")]
+            public TestCaseOutput BadDatasourceNameTest()
+            {
+                string query = "";
+                Exception ex = null;
+                try
+                {
+                    var table = GetHelper("D1D_STAG_ARIESz").GetDataTable(query);
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                return new TestCaseOutput(ex != null &amp;&amp; ex.Message.Contains("Unrecognized datasource"), "Got exception: " + ex.Message);
+            }
+
+            [LA2TestCase(Name = "Bad table Name test", Category = "Error Cases", Description = "Wrong table name is used in sql")]
+            public TestCaseOutput BadTableNameTest()
+            {
+                string query = "select * from a_lotss";
+                Exception ex = null;
+                try
+                {
+                    var table = GetHelper("D1D_STAG_ARIES").GetDataTable(query);
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                return new TestCaseOutput(ex != null &amp;&amp; ex.Message.Contains("ORA-00942"), "Got exception: " + ex.Message);
+            }
+
+            [LA2TestCase(Name = "Check the equivalence of job and query test", Category = "Functionality", Description = "Test checks if result of executing a job and a query is same")]
+            public TestCaseOutput JobandQueryEquivalenceTest()
+            {
+                Query query = new Query("select * from A_LOT_AT_OPERATION where rownum &lt;=10", "D1D_STAG_ARIES");
+                UniqeJob job = new UniqeJob();
+                job.AddOperation(new Operation(query, null));
+
+                var helper = GetHelper("D1D_STAG_ARIES");              
+                var jobOutput = helper.ExecuteJob(job);
+                jobOutput[0].GoToEndOfData();
+
+                var queryOutput = helper.GetDataTable(query);
+
+                return new TestCaseOutput(jobOutput[0].RowCount == queryOutput.Rows.Count &amp;&amp; jobOutput[0].ColumnCount == queryOutput.Columns.Count, "Executing job or query is equivalent");
+            }
+
+            [LA2TestCase(Name = "Check job status test", Category = "Functionality", Description = "Test checks all possible status for a job")]
+            public TestCaseOutput JobStatusTest()
+            {
+                var table = GetHelper("D1D_STAG_ARIES").GetUberTable("select * from A_LOT_AT_OPERATION where rownum&lt;=2000");
+                var status_exe = table.GetJobStatus();
+                bool exe = (status_exe.State == JobStatus.Status.Executing || status_exe.State == JobStatus.Status.CompletedSuccessfully);
+                table.GoToEndOfData();
+                var status_complete = table.GetJobStatus();
+                bool complete = status_complete.State == JobStatus.Status.CompletedSuccessfully;
+                return new TestCaseOutput(exe == true &amp;&amp; complete == true, "Job status retrieved successfully [First status=" + status_exe
+                    + "][Second status=" + status_complete + "]");
+            }
+
+            [LA2TestCase(Name = "Cancel a long running job test", Category = "Functionality", Description = "Test checks if a job is cancelled successfully")]
+            public TestCaseOutput CancelJobTest()
+            {
+                var table = GetHelper("D1D_STAG_ARIES").GetUberTable("select * from A_LOT_AT_OPERATION");
+                Thread.Sleep(1000);
+                var status1 = table.GetJobStatus();
+                Debug.Assert(status1.State == JobStatus.Status.Executing);
+                table.CancelJob();
+                Thread.Sleep(2000);
+                JobStatus status = table.GetJobStatus();
+                return new TestCaseOutput(status.State == JobStatus.Status.Canceled || status.State == JobStatus.Status.Canceling, "Job with ID : " + table.JobID + " has status : " + status);
+            }
+
+            [LA2TestCase(Name = "Cancel one operation from a multi operation job", Category = "Functionality", Description = "Test check if only particular operation is cancelled from a job")]
+            public TestCaseOutput CancelMultiOperationJobTest()
+            {
+                UniqeJob job = new UniqeJob();
+                Query query = new Query("select * from A_LOT_AT_OPERATION");
+                job.AddOperation(new Operation(query, "D1D_STAG_ARIES"));
+                job.AddOperation(new Operation(query, "D1D_STAG_ARIES"));
+
+                var tables = GetHelper("D1D_STAG_ARIES").ExecuteJob(job);
+
+                Thread.Sleep(2000);
+                Debug.Assert(tables[0].GetJobStatus().State == JobStatus.Status.Executing);
+                
+                tables[0].CancelJob();
+                
+                Thread.Sleep(2000);
+                JobStatus status1 = tables[0].GetJobStatus();
+                JobStatus status2 = tables[1].GetJobStatus();
+                
+                return new TestCaseOutput(status1.State.ToString().StartsWith("Cancel") &amp;&amp; status2.State.ToString().StartsWith("Cancel"), "Job with ID : " 
+                    + job.JobId + " containing two operations have following status; Oper1 status : " + status1 + " Oper2 status : " + status2);
+            }
+
+            [LA2TestCase(Name = "Cancel a completed job test", Category = "Functionality", Description = "Test checks the behaviour if a job already completed is cancelled")]
+            public TestCaseOutput CancelCompletedJobTest()
+            {
+                var table = GetHelper("D1D_STAG_ARIES").GetUberTable("select * from A_LOT_AT_OPERATION where rownum &lt;=10");
+                table.GoToEndOfData();
+
+                Debug.Assert(table.GetJobStatus().State == JobStatus.Status.CompletedSuccessfully);
+
+                bool canceled = table.CancelJob();
+                JobStatus status = table.GetJobStatus();
+                return new TestCaseOutput(status.State == JobStatus.Status.CompletedSuccessfully, "Job with ID : " + table.JobID + " has status : " + status + " as job already completed execution");
+            }
+
+            [LA2TestCase(Name = "Parametrised SQL Test", Category = "Functionality", Description = "SQL containing parameters is passed")]
+            public TestCaseOutput ParametrisedSQLTest()
+            {
+                int count = 10;
+                string sql = "select facility from A_LOT where facility = :facility and rownum&lt;= :rowcount";
+                Query query = new Query(sql);
+                query.AddParameter("rowcount", count);
+                query.AddParameter("facility", "RA3");
+
+                DataTable table = GetHelper("D1D_STAG_ARIES").GetDataTable(query);
+                return new TestCaseOutput(table.Rows.Count == count, "Got successful result with number of rows equal to parameter passed");
+            }
+
+            [LA2TestCase(Name = "Job with multiple Operations Test", Category = "Functionality", Description = "Execute job with multiple Operations")]
+            public TestCaseOutput JobWithMultipleOperation()
+            {
+                UniqeJob job = new UniqeJob();
+                string sql = "select * from A_LOT_AT_OPERATION where rownum &lt;=10";
+                Query query = new Query(sql, "D1D_STAG_ARIES");
+                job.AddOperation(new Operation(query, null));
+                job.AddOperation(new Operation(query, null));
+
+                var table = GetHelper("D1D_STAG_ARIES").ExecuteJob(job);
+                return new TestCaseOutput(table.Count == 2, "Number of tables obtained is equal to operations in the job");
+            }
+
+            [LA2TestCase(Name = "Job with large number of Operations Test", Category = "Functionality", Description = "Execute job with large number of Operations")]
+            public TestCaseOutput JobWithLargeNumberOfOperation()
+            {
+                UniqeJob job = new UniqeJob();
+                string sql = "select * from A_LOT_AT_OPERATION where rownum &lt;=10";
+                Query query = new Query(sql, "D1D_STAG_ARIES");
+
+                for (int i = 0; i &lt; 200; i++)
+                {
+                    job.AddOperation(new Operation(query, null));
+                }
+
+                var table = GetHelper("D1D_STAG_ARIES").ExecuteJob(job);
+                return new TestCaseOutput(table.Count == 200, "Number of tables obtained is equal to operations in the job");
+            }
+
+            [LA2TestCase(Name = "Job with multiple queries Test", Category = "Functionality", Description = "Execute job with multiple queries")]
+            public TestCaseOutput JobWithMultipleQueriesInAnOperation()
+            {
+                UniqeJob job = new UniqeJob();
+                string sql = "select * from A_LOT_AT_OPERATION where rownum &lt;=10";
+                Query query1 = new Query(sql, "D1D_STAG_ARIES");
+                Query query2 = new Query(sql, "D1D_STAG_ARIES");
+                Operation oper = new Operation();
+                oper.AddQuery(query1);
+                oper.AddQuery(query2);
+                job.AddOperation(oper);
+
+                var uberTables = GetHelper("D1D_STAG_ARIES").ExecuteJob(job);
+                DataTable table = uberTables[0].ConvertToDataTable();
+                return new TestCaseOutput(table.Rows.Count == 20, "Result obtained successfully for both the queries");
+            }
+
+            [LA2TestCase(Name = "Write the result to CSV Test", Category = "Functionality", Description = "Test checks if dataTable is written and read successfully from CSV file.")]
+            public TestCaseOutput WriteToCSVTest()
+            {
+                string filelocation = UtilityMethods.CreateTempFile("csv", null);
+                string sql = "select * from A_LOT_AT_OPERATION where rownum &lt;=10";
+                 var uberTable = GetHelper("D1D_STAG_ARIES").GetUberTable(sql);
+                uberTable.SaveToCsvFile(filelocation, null);
+
+                var table = UtilityMethods.ConvertCSVFileToDataTable(filelocation, true);
+                return new TestCaseOutput(table.Rows.Count == 10, "Result written and read successfully from CSV file");
+            }
+
+            [LA2TestCase(Name = "Call timeout test", Category = "Functionality", Description = "Test checks if calltimeout parameter is not ignored")]
+            public TestCaseOutput CallTimeOutTest()
+            {
+                string query = "select * from A_LOT_AT_OPERATION ";
+                Exception ex = null;
+                try
+                {
+                    var helper = GetHelper("D1D_STAG_ARIES");
+                    helper.TimeOutInSeconds = 1;
+                    var table = helper.GetDataTable(query);
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                return new TestCaseOutput(ex != null &amp;&amp; ex.Message.Contains("time-out"), "Got exception: " + ex.Message);
+            }
+
+            [LA2TestCase(Name = "Check Compression Ratio Test", Category = "Functionality", Description = "Test checks if enable compression parameter is not ignored ")]
+            public TestCaseOutput CheckCompressionRatioTest()
+            {
+                string sql = "select * from A_LOT_AT_OPERATION where rownum&lt;=5000";
+                var helper = GetHelper("D1D_STAG_ARIES");
+                helper.EnableCompression = false;
+                var uberTable = helper.GetUberTable(sql);
+                uberTable.ConvertToDataTable();
+                return new TestCaseOutput(uberTable.TableSizeInBytes == uberTable.BytesReceived &amp;&amp; uberTable.CompressionRatio == 1, 
+                    "Query returns with compression ratio " + uberTable.CompressionRatio + " as EnableCompression was false");
+            }
+
+            [LA2TestCase(Name = "Query Breakup with Max Allowed Threads Test", Category = "Functionality", Description = "Test checks if query uses less than max allowed threads")]
+            public TestCaseOutput QueryBreakUpWithMaxAllowedThreadsTest()
+            {
+                string query = @"select S.* from FDC.P_FDC_RUN_ENTITY E, FDC.P_FDC_summary_value S
+                        where E.start_time between to_date('20130601 08:00:00', 'YYYYMMDD HH24:MI:SS') and to_date('20130601 10:15:00', 'YYYYMMDD HH24:MI:SS')
+                        and E.tool_run_id = S.tool_run_id";
+
+                UniqeClientHelper helper = GetHelper("D1D_PROD_MARS");
+                helper.MinThresholdPeriodInSecondsForQueryBreakUp = 1;
+                helper.MaxNumOfChildThreads = 200;
+                helper.IgnoreOrderBy = true;
+
+                var table = helper.GetUberTable(query);
+                table.NextRow();
+                return new TestCaseOutput(10 == table.NumThreads, "Query was executed with 10 threads");
+            }
+
+
+            //[LA2TestCase(Name = "Query with LOB type of data test", Description = "Test shows that query containing LOB data fails ")]
+            //public TestCaseOutput GetDataWithLOBTest()
+            //{
+            //    string query = "select * from dba_views";
+            //    Exception ex = null;
+            //    try
+            //    {
+            //        var helper = GetHelper("D1D_PROD_E3_AUDIT");
+            //        var table = helper.GetDataTable(query);
+            //    }
+            //    catch (Exception e)
+            //    {
+            //        ex = e;
+            //    }
+            //    return new TestCaseOutput(ex != null, "Got exception: " + ex.Message);
+            //}
+
+            [LA2TestCase(Name = "FTP Image Download Test", Category = "FTP", Description = "Check if image is downloaded successfully using FTP API")]
+            public TestCaseOutput FTPImageDownloadTest()
+            {
+                DataTable table = GetHelper("D1D_DEV_TEST_FTP").DownloadFilesUsingFTP("/yas/data/images/rf3pxap400n2/20130818/13/D081813@135216W0000366609F00075373I02.jpg", @"c:\temp\ftp");
+                return new TestCaseOutput(table.Rows.Count == 1, @"Image successfully downloaded to c:\temp\ftp");
+            }
+
+
+            [LA2TestCase(Name = "FTP Image Download With Wildcard Test", Category = "FTP", Description = "Check if image specified using wildcard is downloaded successfully using FTP API")]
+            public TestCaseOutput FTPDownloadImageWithWildcardTest()
+            {
+
+                var table = GetHelper("D1D_DEV_TEST_FTP").DownloadFilesUsingFTP("/yas/data/images/rf3pxap400n2/20130818/13/*.jpg", @"c:\temp\ftp");
+                return new TestCaseOutput(table.Rows.Count &gt; 0, @"Image successfully downloaded to c:\temp\ftp");
+
+            }
+
+
+            [LA2TestCase(Name = "FTP Download With Wildcard for files in sub directory Test", Category = "FTP", Description = "Check if files specified using wildcard is downloaded successfully using FTP API")]
+            public TestCaseOutput FTPDownloadWithWildcardForSubDirTest()
+            {
+
+                var table = GetHelper("D1D_DEV_TEST_FTP").DownloadFilesUsingFTP("./Testing/*.cs", @"c:\temp\ftp");
+                return new TestCaseOutput(table.Rows.Count == 5, @"Files successfully downloaded to c:\temp\ftp");
+
+            }
+
+            [LA2TestCase(Name = "FTP Download With Comma seprated list of files Test", Category = "FTP", Description = "Check if comma seprated files are downloaded successfully using FTP API")]
+            public TestCaseOutput FTPDownloadWithCommaSepratedListOfFilesTest()
+            {
+
+                var table = GetHelper("D1D_DEV_TEST_FTP").DownloadFilesUsingFTP("./Testing/Hello.vb,./Testing/importData.cs,./Testing/test", @"c:\temp\ftp");
+                return new TestCaseOutput(table.Rows.Count == 3, @"Files successfully downloaded to c:\temp\ftp\Testing");
+
+            }
+
+            [LA2TestCase(Name = "FTP Download With Invalid filename Test", Category = "FTP", Description = "Check if proper error is generated for invalid filename with FTP API")]
+            public TestCaseOutput FTPDownloadWithInvalidFilenameTest()
+            {
+                Exception ex = null;
+                try
+                {
+                    var table = GetHelper("D1D_DEV_TEST_FTP").DownloadFilesUsingFTP("asc.out", @"c:\temp\ftp");
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                return new TestCaseOutput(ex.Message != null &amp;&amp; ex.Message.Contains("File unavailable"), "Got exception: " + ex.Message);
+
+            }
+
+
+            [LA2TestCase(Name = "FTP Download With Wrong case filename Test", Category = "FTP", Description = "Check if proper error is generated for wrong case filename with FTP API")]
+            public TestCaseOutput FTPDownloadWithWrongCaseFilenameTest()
+            {
+                Exception ex = null;
+                try
+                {
+                    var table = GetHelper("D1D_DEV_TEST_FTP").DownloadFilesUsingFTP("./Testing/Msxml.cs", @"c:\temp\ftp");
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                return new TestCaseOutput(ex.Message != null &amp;&amp; ex.Message.Contains("File unavailable"), "Got exception: " + ex.Message);
+
+            }
+
+            [LA2TestCase(Name = "FTP Download With empty file list Test", Category = "FTP", Description = "Check if proper error is generated for empty file list with FTP API")]
+            public TestCaseOutput FTPDownloadWitEmptyFilenameTest()
+            {
+                Exception ex = null;
+                try
+                {
+                    var table = GetHelper("D1D_DEV_TEST_FTP").DownloadFilesUsingFTP("", @"c:\temp\ftp");
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                return new TestCaseOutput(ex.Message != null &amp;&amp; ex.Message.Contains("FTP_Accessor: Incorrect command text supplied"), "Got exception: " + ex.Message);
+
+            }
+
+            [LA2TestCase(Name = "FTP Download With Special character in filename Test", Category = "FTP", Description = "Check if files with special character is downloaded successfully using FTP API")]
+            public TestCaseOutput FTPDownloadWithSpecialCharacterinFilenameTest()
+            {
+
+                var table = GetHelper("D1D_DEV_TEST_FTP").DownloadFilesUsingFTP(@"./Testing/SpecialCharacters/lin$q.cs", @"c:\temp\ftp");
+                return new TestCaseOutput(table.Rows.Count &gt; 0, @"File successfully downloaded to C:\Temp\ftp\lin$q.cs");
+
+            }
+
+            [LA2TestCase(Name = "FTP Download With Time filter Test", Category = "FTP", Description = "Check if files with time filter is downloaded successfully using FTP API")]
+            public TestCaseOutput FTPDownloadWithTimeFilterTest()
+            {
+
+                var table = GetHelper("D1D_DEV_TEST_FTP").DownloadFilesUsingFTP("./Testing/*", "Last 200 day", @"c:\temp\ftp");
+                return new TestCaseOutput(table.Rows.Count &gt; 0, @"Image successfully downloaded to C:\Temp\ftp\home\ftptest\Testing\");
+
+            }
+
+            [LA2TestCase(Name = "FTP File Info with Time Filter Test", Category = "FTP", Description = "Check if time filter works with FTP File Info API")]
+            public TestCaseOutput FTPFileInfoWithTimeFilterTest()
+            {
+
+                var table = GetHelper("D1D_DEV_TEST_FTP").GetFileInfoUsingFTP("/home/ftptest/Testing/*", "Last 200 day");
+
+                return new TestCaseOutput(table.Rows.Count &gt; 0 &amp;&amp; table.Columns.Count &gt; 0, @"File Info obtained for all files for past 4 days");
+            }
+
+            [LA2TestCase(Name = "FTP File List with Time Filter Test", Category = "FTP", Description = "Check if time filter works with FTP  File list API")]
+            public TestCaseOutput FTPFileListWithTimeFilterTest()
+            {
+
+                var list = GetHelper("D1D_DEV_TEST_FTP").GetFileListUsingFTP("/home/ftptest/Testing/*", "Last 200 day");
+
+                return new TestCaseOutput(list.Count &gt; 0, @"File list obtained for past 4 days");
+            }
+
+            [LA2TestCase(Name = "Generic Oracle SP Invocation Test", Category = "Stored Procedure", Description = "Testing the invocation for a generic Oracle SP")]
+            public TestCaseOutput GenericSPInvocationTest()
+            {
+                var inputArray = new int[12] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+                var param1 = new QueryParam
+                {
+                    Name = "InputParam",
+                    CollectionType = UniqeParamCollectionType.AssociativeArray,
+                    Value = inputArray
+                };
+                var param2 = new QueryParam
+                {
+                    Name = "OutputParam",
+                    Type = UniqeParamType.Int32,
+                    CollectionType = UniqeParamCollectionType.AssociativeArray,
+                    Direction = ParameterDirection.Output
+                };
+
+                var helper = GetHelper("D1D_STAG_ARIES");
+                helper.Authentication = AuthMode.UPWD;
+                helper.UserId = "hr";
+                helper.Password = "hr";
+
+                helper.ExecuteStoredProcedure("UBER.RUN_SP_N", param1, param2);
+                var outputArray = (int[])param2.Value;
+                return new TestCaseOutput(outputArray.Length == inputArray.Length, @"SP Invoked successfully with input and output array params");
+            }
+
+            [LA2TestCase(Name = "Mutiple output parameter SP Invocation Test", Category = "Stored Procedure", Description = "Testing the invocation of Oracle SP with multiple output params")]
+            public TestCaseOutput MultipleOutputParameterSPTest()
+            {
+                var inputArray = new int[12] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+                var param1 = new QueryParam
+                {
+                    Name = "InputParam",
+                    CollectionType = UniqeParamCollectionType.AssociativeArray,
+                    Value = inputArray
+                };
+                var param2 = new QueryParam
+                {
+                    Name = "OutputParam",
+                    Type = UniqeParamType.Int32,
+                    CollectionType = UniqeParamCollectionType.AssociativeArray,
+                    Direction = ParameterDirection.Output
+                };
+
+                var param3 = new QueryParam
+                {
+                    Name = "OutputParam2",
+                    Type = UniqeParamType.Int32,
+                    CollectionType = UniqeParamCollectionType.AssociativeArray,
+                    Direction = ParameterDirection.Output
+                };
+
+                var helper = GetHelper("D1D_STAG_ARIES");
+                helper.Authentication = AuthMode.UPWD;
+                helper.UserId = "hr";
+                helper.Password = "hr";
+
+                helper.ExecuteStoredProcedure("UBER.RUN_SP_NUP", param1, param2, param3);
+                var outputArray1 = (int[])param2.Value;
+                var outputArray2 = (int[])param3.Value;
+                return new TestCaseOutput(outputArray1.Length == inputArray.Length &amp;&amp; outputArray1.Length == outputArray2.Length, @"SP Invoked successfully with multiple output array params");
+            }
+
+            [LA2TestCase(Name = "DB2 SP Invocation Test", Category = "Stored Procedure", Description = "Testing the invocation of DB2 SP ")]
+            public TestCaseOutput DB2SPInvocationTest()
+            {
+                int[] input = { 1, 2, 3, 4, 5 };
+
+                var param1 = new QueryParam
+                {
+                    Name = "InputParam",
+                    CollectionType = UniqeParamCollectionType.AssociativeArray,
+                    Type = UniqeParamType.Int32,
+                    Value = input
+                };
+                var param2 = new QueryParam
+                {
+                    Name = "OutputParam",
+                    Type = UniqeParamType.Int32,
+                    Direction = ParameterDirection.Output
+                };
+
+                new UniqeClientHelper
+                {
+                    //Using dev box as code change is not yet checked in 
+                    Site = "nupuragr-dev2",
+                    DataSource = "F28_PROD_MAO_FS",
+                    Authentication = AuthMode.UPWD,
+                    UserId = "db2inst1",
+                    Password = "db2inst1"
+                }.ExecuteStoredProcedure("D1D.SUM_ARRAY_PROC", param1, param2);
+
+                int output = (int)param2.Value;
+                int sum = 0;
+                for (int i = 0; i &lt; input.Length; i++)
+                {
+                    sum += input[i];
+                }
+                return new TestCaseOutput(output == sum, @"SP Invoked successfully with input involving array type");
+            }
+        }
+
+        /// &lt;summary&gt;
+        /// Test harness
+        /// &lt;/summary&gt;
+        [STAThread]
+        private static void Main()
+        {
+            new UniqeTestCases
+            {
+                Site = null,
+                MethodFilter = METHOD_INCLUDE_FILTER,
+                MethodExcludeFilter = METHOD_EXCLUDE_FILTER,
+                Category = CATEGORY_FILTER,
+                NumRepetitions = NUM_REPETITIONS,
+                NumThreads = NUM_THREADS,
+                TestMode = false
+            }.Test();
+        }
+
+        // Output type is QueryResult
+        public override CustomQueryOutputType OutputType { get { return CustomQueryOutputType.QueryResult; } }
+
+        public override string Description
+        {
+            get { return "Run UNIQE Test cases"; }
+        }
+
+        [Description("UNIQE Site")]
+        [DefaultValue("")]
+        public string Site { get; set; }
+
+        [Description("Filter on Test Method Name")]
+        [DefaultValue("")]
+        public string MethodFilter { get; set; }
+
+        [Description("Exclude Filter on Test Method Name")]
+        [DefaultValue("none")]
+        public string MethodExcludeFilter { get; set; }
+
+        [Description("Filter on Test Method Category")]
+        [DefaultValue("")]
+        public string Category { get; set; }
+
+        [Description("Test Mode")]
+        [DefaultValue(false)]
+        public bool TestMode { get; set; }
+
+        [Description("Number of threads to use while running the test-cases")]
+        [DefaultValue(1)]
+        public int NumThreads { get; set; }
+
+        [Description("Number of times to repeat the test-cases")]
+        [DefaultValue(1)]
+        public int NumRepetitions { get; set; }
+
+        public override QueryResult GetQueryResult()
+        {
+            if (string.IsNullOrEmpty(MethodFilter)) MethodFilter = "*";
+            if (string.IsNullOrEmpty(Category)) Category = "*";
+            MyTestCases.Site = Site;
+            MyTestCases.MethodFilter = MethodFilter;
+            MyTestCases.MethodExcludeFilter = MethodExcludeFilter;
+            MyTestCases.Category = Category;
+            MyTestCases.TestMode = TestMode;
+            MyTestCases.NumRepetitions = NumRepetitions;
+            MyTestCases.NumThreads = NumThreads;
+
+            if (!string.IsNullOrEmpty(SettingsXml))
+            {
+                try
+                {
+                    var config = QueryConfig.LoadConfig(SettingsXml);
+                    if (config.CustomQueryMethodScripts != null)
+                    {
+                        LA2TestCase.SourceCode = config.CustomQueryMethodScripts.PrintList(Environment.NewLine);
+                    }
+                }
+                catch { }
+            }
+            DataTable table = LA2TestCase.RunTestCases(typeof(MyTestCases));
+            return new QueryResult(table);
+        }
+
+    }
+
+    public class TestCaseOutput
+    {
+        public TestCaseOutput(bool success)
+        {
+            Success = success;
+        }
+
+        public TestCaseOutput(bool success, string message)
+        {
+            Success = success;
+            Message = message;
+        }
+
+        public bool Success { get; set; }
+        public string Message { get; set; }
+    }
+
+    public class LA2TestCase : Attribute
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public string Category { get; set; }
+        public static string SourceCode = null;
+
+        public static DataTable RunTestCases(Type classType)
+        {
+            DataTable table = new DataTable();
+
+            table.Columns.Add("DateTime", typeof(DateTime));
+            table.Columns.Add("Name");
+            table.Columns.Add("Category");
+            table.Columns.Add("Result");
+            table.Columns.Add("Metrics", typeof(long));
+            table.Columns.Add("Description");
+            table.Columns.Add("Message");
+            table.Columns.Add("MethodName");
+            table.Columns.Add("Exception");
+            table.Columns.Add("SourceCode");
+
+            List&lt;MethodInfo&gt; methodsToRun = new List&lt;MethodInfo&gt;();
+            var methods = classType.GetMethods();
+            for (int i = 0; i &lt; UniqeTestCases.MyTestCases.NumRepetitions; i++)
+            {
+                foreach (var method in methods)
+                {
+                    methodsToRun.Add(method);
+                  
+                }
+            }
+
+            if (UniqeTestCases.MyTestCases.NumThreads &gt; 1)
+            {
+                ConcurrentBag&lt;DataRow&gt; rows = new ConcurrentBag&lt;DataRow&gt;();
+                Parallel.ForEach(methodsToRun, new ParallelOptions { MaxDegreeOfParallelism = UniqeTestCases.MyTestCases.NumThreads },
+                    (method) =&gt;
+                    {
+                        var row = RunTestCase(classType, method, table);
+                        if (row != null)
+                        {
+                            rows.Add(row);
+                        }
+                    });
+                foreach (var row in rows)
+                {
+                    table.Rows.Add(row);
+                }
+            }
+            else
+            {
+                foreach (var method in methodsToRun)
+                {
+                    var row = RunTestCase(classType, method, table);
+                    if (row != null)
+                    {
+                        table.Rows.Add(row);
+                    }
+                }
+            }
+
+            return table;
+        }
+
+        private static DataRow RunTestCase(Type classType, MethodInfo method, DataTable table)
+        {
+            DataRow row = null;
+            object[] classAttrs = method.GetCustomAttributes(typeof(LA2TestCase), true);
+            if (classAttrs != null &amp;&amp; classAttrs.Length &gt; 0)
+            {
+                LA2TestCase attr = (LA2TestCase)classAttrs[0];
+                if (method.IsPublic &amp;&amp; method.ReturnType == typeof(TestCaseOutput) &amp;&amp; method.GetParameters().Length == 0
+                    &amp;&amp; !method.Name.IsWildCardMatch(UniqeTestCases.MyTestCases.MethodExcludeFilter, ",")
+                    &amp;&amp; method.Name.IsWildCardMatch(UniqeTestCases.MyTestCases.MethodFilter, ",")
+                    &amp;&amp; attr.Category.IsWildCardMatch(UniqeTestCases.MyTestCases.Category, ","))
+                {
+                    Stopwatch sw = Stopwatch.StartNew();
+                    string exception = null;
+                    string message = null;
+                    bool result = false;
+                    string sourceCode = ExtractMethodBody(SourceCode, method.Name);
+                    try
+                    {
+                        if (UniqeTestCases.MyTestCases.TestMode)
+                        {
+                            result = true;
+                            message = "Test mode...no code executed.";
+                        }
+                        else
+                        {
+                            object classInstance = Activator.CreateInstance(classType, null);
+                            var output = (TestCaseOutput)method.Invoke(classInstance, null);
+                            result = output.Success;
+                            message = output.Message;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        exception = ex.ToString();
+                        result = false;
+                    }
+
+                    row = table.NewRow();
+                    row.ItemArray = new object[] { DateTime.Now,  attr.Name, attr.Category, result, sw.ElapsedMilliseconds, attr.Description, message, method.Name, exception, sourceCode };
+                }
+            }
+            return row;
+        }
+
+        private static string ExtractMethodBody(string code, string method)
+        {
+            string source = null;
+            if (!string.IsNullOrEmpty(code))
+            {
+                var match = Regex.Match(code, @"(public\s+static|public)\s+TestCaseOutput\s+" + method + @"\s*\(\s*\)\s*{", RegexOptions.Singleline);
+                if (match.Success)
+                {
+                    string text = code.Substring(match.Index);
+
+                    int endIndex = -1;
+                    var stack = new Stack&lt;int&gt;();
+                    for (int i = 0; i &lt; text.Length; i++)
+                    {
+                        switch (text[i])
+                        {
+                            case '{':
+                                stack.Push(i);
+                                break;
+                            case '}':
+                                if (stack.Count == 1)
+                                {
+                                    endIndex = i;
+                                    i = text.Length;
+                                }
+                                else
+                                {
+                                    stack.Pop();
+                                }
+                                break;
+                        }
+                    }
+                    if (endIndex &gt; 0)
+                    {
+                        source = text.Substring(0, endIndex + 1).Trim();
+                    }
+                }
+            }
+
+            return source;
+        }
+
+    }
+
+}
+
+
+
+
+
+
+
+</CustomQueryMethodScripts>
+  <CustomUIActionScripts>using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Diagnostics;
+using System.Drawing;
+using System.Text;
+using Intel.LogAnalyzer;
+using Intel.LogAnalyzer.BuiltInCustomUIActions;
+using Intel.LogAnalyzer.Common;
+using Intel.LogAnalyzer.Configuration;
+using Intel.LogAnalyzer.UIControls;
+using Intel.LogAnalyzer.Utility;
+
+namespace Intel.LogAnalyzer.BuiltInCustomUIActions_Temp
+{
+    public class DisplaySourceCode : ICustomUIAction
+    {
+        /// &lt;summary&gt;
+        /// Test harness
+        /// &lt;/summary&gt;
+        [STAThread]
+        private static void Main()
+        {
+            DataTable table = new DataTable();
+            table.Columns.Add("Details", typeof(string));
+            table.Rows.Add(@"blah blah: &lt;Test&gt;This is a test Xml&lt;/Test&gt;");
+
+            new DisplaySourceCode().Test(null, table.ConvertDataRowToDictionary(0), "Details", table, 0);
+        }
+
+        public List&lt;CustomUIActionData&gt; GetRightClickMenuData(string queryXml, Dictionary&lt;string, object&gt; rowData, string columnName, DataTable sourceTable, int rowIndex)
+        {
+            string methodName = null;
+            Dictionary&lt;string, string&gt; xmls = new Dictionary&lt;string, string&gt;();
+
+            foreach (KeyValuePair&lt;string, object&gt; item in rowData)
+            {
+                string colName = item.Key;
+                string colValue = item.Value.ToStringEx().Trim();
+
+                if (colName.EqualsEx("MethodName") &amp;&amp; colValue.Length &gt; 0)
+                {
+                    methodName = colValue;
+                }
+
+                if (colName.EqualsEx("SourceCode") &amp;&amp; colValue.Length &gt; 0)
+                {
+                    xmls.Add(colName, colValue);
+                }
+            }
+
+            if (xmls.Count == 0 || methodName == null)
+            {
+                return null;
+            }
+
+            List&lt;CustomUIActionData&gt; customUIActions = new List&lt;CustomUIActionData&gt;();
+
+            foreach (var item in xmls)
+            {
+                CustomUIActionData uiActionData = new CustomUIActionData
+                {
+                    MenuCaption = "Display C# source code for method [" + methodName + "]",
+                    MenuIcon = global::Intel.LogAnalyzer.BuiltInCustomUIActions.Properties.Resources.Details,
+                    Context = item
+                };
+
+                uiActionData.UIAction = (sender, e) =&gt;
+                {
+                    KeyValuePair&lt;string,string&gt; queryItem = UtilityMethods.GetMenuContextData&lt;KeyValuePair&lt;string,string&gt;&gt;(sender);
+                    using (XmlDisplay xmlDisplay = new XmlDisplay())
+                    {
+                        xmlDisplay.DisplayQuery(queryItem.Value, "C# Source Code");
+                    }
+                };
+                customUIActions.Add(uiActionData);
+            }
+
+            return customUIActions;
+        }
+
+    }
+}
+
+
+
+</CustomUIActionScripts>
+  <PivotGroupingSettings Enable="true" PivotColumn="Category">
+    <SortyByColumn>Count</SortyByColumn>
+  </PivotGroupingSettings>
+  <QuerySQL><![CDATA[
+--[FileName:"\\10.8.96.80\Home\amodi\Temp\Unit Test Cases.lasx"]------
+----------<VARIABLES>------------
+var SITE = "DEV2"
+var TEST_MODE = "false"
+var METHOD_FILTER = "*"
+var METHOD_EXCLUDE_FILTER = "none"
+var CATEGORY = "Health* ,*error*,functionality"
+var NUM_REPETITIONS = "1"
+var NUM_THREADS = "5"
+var FILTER_CONDITION = "1 = 1"
+---[RAW_CSV]---
+BEGIN RAW_CSV
+	UseMethod UNIQETESTCASES with -- Unidentified method
+		SITE = "${SITE}"
+		METHODFILTER = "${METHOD_FILTER}"
+		METHODEXCLUDEFILTER = "${METHOD_EXCLUDE_FILTER}"
+		CATEGORY = "${CATEGORY}"
+		NUMTHREADS = "${NUM_THREADS}"
+		NUMREPETITIONS = "${NUM_REPETITIONS}"
+		TESTMODE = "${test_mode}"
+END RAW_CSV
+---Begin Main Query---
+Using CSV with
+SELECT
+	DateTime,
+	MethodName,
+	Name,
+	Category,
+	Metrics,
+	Result,
+	Description,
+	Message,
+	Exception,
+	SourceCode
+FROM
+	%{RAW_CSV}
+WHERE
+	(${FILTER_CONDITION})
+ORDER BY
+	DateTime
+
+]]></QuerySQL>
+</QueryConfig>

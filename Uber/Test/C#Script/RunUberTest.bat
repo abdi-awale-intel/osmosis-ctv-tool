@@ -1,0 +1,1 @@
+@"%UBER_INSTALL_DIR%\Test\C#Script\csws.exe" "%UBER_INSTALL_DIR%\Test\C#Script\UberTest.cs"

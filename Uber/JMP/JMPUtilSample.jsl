@@ -1,0 +1,17 @@
+// Include JMP header for Uber
+include(Get Environment Variable("UBER_JMP_DIR") || "\Include\JMPUtil.jsl");
+
+emailAddresses = GetEmailAddresses("amodi,AMR\sshellma");
+Throw(emailAddresses);
+
+//exitCode = SendEmail("amodi", "Just a test", "Coming from JMP.", "C:\Temp\out.csv|C:\Temp\PSPSelectedInstall.log");
+
+//exitCode = RunCommand("la2.bat", 1);
+
+//clipboardText = GetClipboardText();
+
+//files = GetMembersInCompressedFile("C:\Temp\Daisy.zip");
+//exitCode = DecompressMembers("C:\Temp\Daisy.zip", "*.cache*", "C:\Temp\DaisyOutput");
+
+// Runs any C# script that implements IRunScript interface
+//result = RunScript(Load Text File("Script.cs"), "");

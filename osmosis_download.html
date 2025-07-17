@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Osmosis - Download & Deploy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 90%;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .logo {
+            font-size: 48px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        
+        .version-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-block;
+        }
+        
+        .download-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .download-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .download-info {
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature-card {
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+        }
+        
+        .feature-icon {
+            font-size: 36px;
+            margin-bottom: 15px;
+        }
+        
+        .feature-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .requirements {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .requirements h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+        
+        .req-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .req-list li {
+            padding: 5px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .req-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .install-steps {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .install-steps h3 {
+            color: #155724;
+            margin-bottom: 15px;
+        }
+        
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .step-number {
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">OSMOSIS</div>
+            <div class="subtitle">Advanced CTV Data Processing & Analysis Tool</div>
+            <span class="version-badge">v2.0 - Full Database Support</span>
+        </div>
+        
+        <div class="download-section">
+            <h2>Download & Deploy</h2>
+            <p style="margin: 15px 0;">Get the complete Osmosis application with PyUber database integration</p>
+            
+            <a href="#" class="download-btn" onclick="downloadApp()">
+                📥 Download Osmosis v2.0
+            </a>
+            
+            <div class="download-info">
+                Size: ~60MB | Windows 10/11 | Includes PyUber & Uber
+            </div>
+        </div>
+        
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🗄️</div>
+                <div class="feature-title">Database Integration</div>
+                <div>Full PyUber support for Oracle database connectivity</div>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-title">Smart Processing</div>
+                <div>Automated CTV decoding and data analysis</div>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">Data Export</div>
+                <div>CSV, Excel output with advanced formatting</div>
+            </div>
+        </div>
+        
+        <div class="requirements">
+            <h3>🔧 System Requirements</h3>
+            <ul class="req-list">
+                <li>Windows 10 or Windows 11 (64-bit)</li>
+                <li>4 GB RAM (8 GB recommended)</li>
+                <li>1 GB free disk space</li>
+                <li>Network access to Oracle databases</li>
+                <li>Administrator privileges (for installation)</li>
+            </ul>
+        </div>
+        
+        <div class="install-steps">
+            <h3>🚀 Quick Installation</h3>
+            
+            <div class="step">
+                <span class="step-number">1.</span>
+                <strong>Download:</strong> Click the download button above to get Osmosis_v2.0.zip
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2.</span>
+                <strong>Extract:</strong> Unzip to any folder (e.g., C:\Osmosis\)
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3.</span>
+                <strong>Install:</strong> Right-click "Install_Osmosis.bat" → Run as Administrator
+            </div>
+            
+            <div class="step">
+                <span class="step-number">4.</span>
+                <strong>Launch:</strong> Use desktop shortcut or run Osmosis.exe
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Osmosis v2.0</strong> - Advanced CTV Data Processing Tool</p>
+            <p>Built with PyUber Integration | Last Updated: July 17, 2025</p>
+        </div>
+    </div>
+    
+    <script>
+        function downloadApp() {
+            // Create download for the Osmosis package
+            const link = document.createElement('a');
+            link.href = 'osmosis_v2.0_complete.zip';
+            link.download = 'Osmosis_v2.0_Complete.zip';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Show download instructions
+            alert('📥 Download started!\n\nAfter download:\n1. Extract the ZIP file\n2. Run "Install_Osmosis.bat" as Administrator\n3. Launch from desktop shortcut');
+        }
+        
+        // Add smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+# Python bytecode 
+__pycache__/ 
+*.py[cod] 
+*$py.class 
+ 
+# Distribution / packaging 
+build/ 
+dist/ 
+*.egg-info/ 
+ 
+# IDE 
+.vscode/ 
+.idea/ 
+*.swp 
+*.swo 
+ 
+# OS 
+.DS_Store 
+Thumbs.db 
+desktop.ini 
+ 
+# Logs 
+*.log 
+ 
+# Large files (use Git LFS instead) 
+*.zip 
+*.exe 

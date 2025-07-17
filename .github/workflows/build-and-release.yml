@@ -1,0 +1,177 @@
+name: Build and Release Osmosis
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v2.0.0
+  release:
+    types: [created]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+        
+    - name: Verify PyUber integration
+      run: |
+        python -c "import PyUber; print('PyUber imported successfully')"
+        
+    - name: Build Osmosis executable
+      run: |
+        python build_app.py
+        
+    - name: Verify build output
+      run: |
+        dir dist
+        if (Test-Path "dist\Osmosis.exe") { 
+          echo "✅ Osmosis.exe built successfully"
+          $size = (Get-Item "dist\Osmosis.exe").Length / 1MB
+          echo "📦 Executable size: $([math]::Round($size, 2)) MB"
+        } else { 
+          echo "❌ Build failed - Osmosis.exe not found"
+          exit 1
+        }
+        
+    - name: Create installation package
+      run: |
+        # Create package directory
+        mkdir release_package
+        
+        # Copy all distribution files
+        xcopy /E /I /Y dist release_package
+        
+        # Copy additional files
+        copy README.md release_package\
+        copy config.json release_package\ -ErrorAction SilentlyContinue
+        
+        # Create installer script
+        echo '@echo off' > release_package\Install_Osmosis.bat
+        echo 'echo Installing Osmosis v2.0...' >> release_package\Install_Osmosis.bat
+        echo 'echo Installation complete!' >> release_package\Install_Osmosis.bat
+        echo 'echo Launch Osmosis.exe to start the application.' >> release_package\Install_Osmosis.bat
+        echo 'pause' >> release_package\Install_Osmosis.bat
+        
+        # Create launcher script
+        echo '@echo off' > release_package\Launch_Osmosis.bat
+        echo 'cd /d "%~dp0"' >> release_package\Launch_Osmosis.bat
+        echo 'start "" "Osmosis.exe"' >> release_package\Launch_Osmosis.bat
+        
+    - name: Create ZIP package
+      run: |
+        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+        $version = if ($env:GITHUB_REF -match 'refs/tags/(.*)') { $matches[1] } else { "dev" }
+        $zipName = "Osmosis_${version}_Complete.zip"
+        
+        powershell -command "Compress-Archive -Path 'release_package\*' -DestinationPath '$zipName' -CompressionLevel Optimal"
+        
+        $zipSize = (Get-Item $zipName).Length / 1MB
+        echo "📦 Package created: $zipName"
+        echo "📊 Package size: $([math]::Round($zipSize, 2)) MB"
+        echo "PACKAGE_NAME=$zipName" >> $env:GITHUB_ENV
+        
+    - name: Generate build info
+      run: |
+        $buildInfo = @"
+# Osmosis v2.0 - Build Information
+
+**Build Date:** $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')
+**Build Trigger:** ${{ github.event_name }}
+**Commit:** ${{ github.sha }}
+**Branch/Tag:** ${{ github.ref }}
+
+## Package Contents
+- Osmosis.exe (Main application with PyUber integration)
+- PyUber/ (Database connectivity library)
+- Uber/ (Oracle configuration files)
+- Install_Osmosis.bat (Installation script)
+- Launch_Osmosis.bat (Quick launcher)
+- README.md (Documentation)
+
+## System Requirements
+- Windows 10/11 (64-bit)
+- 4 GB RAM minimum (8 GB recommended)
+- Oracle database access
+- Administrator privileges for installation
+
+## Installation
+1. Download and extract the ZIP package
+2. Run Install_Osmosis.bat as Administrator
+3. Launch using Osmosis.exe or Launch_Osmosis.bat
+
+Built automatically by GitHub Actions 🚀
+"@
+        $buildInfo | Out-File -FilePath "BUILD_INFO.md" -Encoding UTF8
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: osmosis-build-artifacts
+        path: |
+          ${{ env.PACKAGE_NAME }}
+          BUILD_INFO.md
+        retention-days: 30
+        
+    - name: Upload release asset (on release)
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./${{ env.PACKAGE_NAME }}
+        asset_name: ${{ env.PACKAGE_NAME }}
+        asset_content_type: application/zip
+        
+    - name: Upload to release (on tag push)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ${{ env.PACKAGE_NAME }}
+          BUILD_INFO.md
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Build Success Notification
+      if: needs.build.result == 'success'
+      run: |
+        echo "✅ Osmosis build completed successfully!"
+        echo "📦 Package is ready for download"
+        
+    - name: Build Failure Notification
+      if: needs.build.result == 'failure'
+      run: |
+        echo "❌ Osmosis build failed"
+        echo "🔍 Check the build logs for details"

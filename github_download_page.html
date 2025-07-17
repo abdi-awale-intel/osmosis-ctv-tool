@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Osmosis v2.0 - GitHub Download</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #0d1117;
+            color: #f0f6fc;
+            line-height: 1.5;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #238636 0%, #196127 100%);
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 30px;
+            border: 1px solid #30363d;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 42px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .header p {
+            margin: 15px 0 0 0;
+            font-size: 18px;
+            opacity: 0.9;
+            color: white;
+        }
+        
+        .download-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .download-btn {
+            background: #238636;
+            color: white;
+            padding: 16px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            margin: 10px;
+        }
+        
+        .download-btn:hover {
+            background: #2ea043;
+            transform: translateY(-1px);
+        }
+        
+        .github-btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+        }
+        
+        .github-btn:hover {
+            background: #30363d;
+            border-color: #8b949e;
+        }
+        
+        .content-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .content-card h2 {
+            color: #58a6ff;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 10px;
+        }
+        
+        .content-card h3 {
+            color: #7d8590;
+            font-size: 18px;
+            font-weight: 600;
+            margin: 25px 0 15px 0;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .feature-item {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .feature-icon {
+            font-size: 28px;
+            margin-bottom: 12px;
+            display: block;
+        }
+        
+        .requirements-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .requirements-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .requirements-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #238636;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .steps {
+            counter-reset: step;
+        }
+        
+        .step {
+            counter-increment: step;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #238636;
+        }
+        
+        .step:before {
+            content: "Step " counter(step) ": ";
+            font-weight: 600;
+            color: #238636;
+        }
+        
+        .github-footer {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 25px;
+            text-align: center;
+            border-radius: 12px;
+            margin-top: 30px;
+        }
+        
+        .badge {
+            background: #238636;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-block;
+            margin: 5px;
+        }
+        
+        .code-block {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'SFMono-Regular', 'Consolas', monospace;
+            font-size: 14px;
+            color: #e6edf3;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        .warning {
+            background: #1c2128;
+            border: 1px solid #f85149;
+            border-left: 4px solid #f85149;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .info {
+            background: #1c2128;
+            border: 1px solid #58a6ff;
+            border-left: 4px solid #58a6ff;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        a {
+            color: #58a6ff;
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 OSMOSIS v2.0</h1>
+        <p>Advanced CTV Data Processing & Analysis Tool</p>
+        <p>Complete PyUber Database Integration</p>
+        <div style="margin-top: 20px;">
+            <span class="badge">v2.0</span>
+            <span class="badge">PyUber Integrated</span>
+            <span class="badge">54MB Complete</span>
+        </div>
+    </div>
+    
+    <div class="download-section">
+        <h2 style="color: #f0f6fc; margin-bottom: 20px;">📥 Download Options</h2>
+        
+        <!-- UPDATE THESE LINKS WITH YOUR ACTUAL GITHUB INFO -->
+        <a href="https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]/releases/download/v2.0.0/Osmosis_v2.0_Complete.zip" 
+           class="download-btn">
+            ⬇️ Download Release (Recommended)
+        </a>
+        
+        <a href="https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]" 
+           class="download-btn github-btn">
+            🔗 View on GitHub
+        </a>
+        
+        <a href="https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]/archive/refs/heads/main.zip" 
+           class="download-btn github-btn">
+            📦 Download Source Code
+        </a>
+        
+        <div style="margin-top: 20px; color: #7d8590; font-size: 14px;">
+            Package Size: ~54MB | Windows 10/11 | All Dependencies Included
+        </div>
+    </div>
+    
+    <div class="info">
+        <strong>📌 Quick GitHub Setup:</strong> Replace <code>[YOUR-USERNAME]</code> and <code>[REPOSITORY-NAME]</code> in the links above with your actual GitHub repository details.
+    </div>
+    
+    <div class="content-card">
+        <h2>🔧 System Requirements</h2>
+        <ul class="requirements-list">
+            <li><strong>Operating System:</strong> Windows 10 or Windows 11 (64-bit)</li>
+            <li><strong>Memory:</strong> 4 GB RAM minimum (8 GB recommended)</li>
+            <li><strong>Storage:</strong> 1 GB free disk space</li>
+            <li><strong>Network:</strong> Oracle database access (D1D_PROD_XEUS, F24_PROD_XEUS)</li>
+            <li><strong>Permissions:</strong> Administrator privileges for installation</li>
+        </ul>
+    </div>
+    
+    <div class="content-card">
+        <h2>🚀 Installation Steps</h2>
+        <div class="steps">
+            <div class="step">
+                <strong>Download</strong> the ZIP package using the button above
+            </div>
+            <div class="step">
+                <strong>Extract</strong> all files to a folder (e.g., <code>C:\Osmosis\</code>)
+            </div>
+            <div class="step">
+                <strong>Install</strong> by right-clicking <code>Install_Osmosis.bat</code> and selecting "Run as Administrator"
+            </div>
+            <div class="step">
+                <strong>Launch</strong> using the desktop shortcut or run <code>Osmosis.exe</code> directly
+            </div>
+        </div>
+    </div>
+    
+    <div class="content-card">
+        <h2>⭐ Key Features</h2>
+        <div class="feature-grid">
+            <div class="feature-item">
+                <span class="feature-icon">🗄️</span>
+                <h3>Database Integration</h3>
+                <p>Full PyUber support for Oracle database connectivity and real-time data retrieval from production systems.</p>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">⚡</span>
+                <h3>Smart Processing</h3>
+                <p>Automated CTV decoding, SmartCTV configuration parsing, and advanced data analysis pipelines.</p>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">📊</span>
+                <h3>Data Export</h3>
+                <p>Professional CSV and Excel output with advanced formatting, pivoting, and comprehensive reporting.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="content-card">
+        <h2>🆕 What's New in v2.0</h2>
+        <h3>✅ Major Fixes</h3>
+        <ul>
+            <li><strong>PyUber Integration:</strong> Complete Oracle database connectivity restored</li>
+            <li><strong>Error Resolution:</strong> Fixed 'NoneType' object has no attribute 'uber_request'</li>
+            <li><strong>Performance:</strong> Enhanced data processing with chunked queries</li>
+            <li><strong>Reliability:</strong> Robust error handling and recovery mechanisms</li>
+        </ul>
+        
+        <h3>🎯 Performance Metrics</h3>
+        <ul>
+            <li><strong>Package Size:</strong> ~54MB (includes all database libraries)</li>
+            <li><strong>Startup Time:</strong> 5-10 seconds (cold start with PyUber initialization)</li>
+            <li><strong>Query Speed:</strong> 2-60 seconds (depends on data volume and network)</li>
+            <li><strong>Memory Usage:</strong> 200-500MB during active processing</li>
+        </ul>
+    </div>
+    
+    <div class="content-card">
+        <h2>📦 Package Contents</h2>
+        <div class="code-block">
+Osmosis_v2.0_Complete.zip (54MB)
+├── Osmosis.exe              # Main application with GUI
+├── Install_Osmosis.bat      # Automated installer script
+├── Launch_Osmosis.bat       # Quick launch script
+├── config.json              # Application configuration
+├── README.md                # Complete documentation
+├── PyUber/                  # Database connection library
+│   ├── core.py
+│   ├── client.py
+│   └── ... (all modules)
+└── Uber/                    # Oracle configuration
+    ├── Config/
+    ├── bin/
+    └── JMP/
+        </div>
+    </div>
+    
+    <div class="content-card">
+        <h2>🛠️ Troubleshooting</h2>
+        
+        <h3>Installation Issues</h3>
+        <ul>
+            <li><strong>Permission denied:</strong> Run installer as Administrator</li>
+            <li><strong>Antivirus blocking:</strong> Add Osmosis folder to antivirus exceptions</li>
+            <li><strong>Installation fails:</strong> Verify Windows 10/11 64-bit system</li>
+        </ul>
+        
+        <h3>Database Connection</h3>
+        <ul>
+            <li><strong>Connection failed:</strong> Verify network access to Oracle databases</li>
+            <li><strong>Authentication error:</strong> Check database credentials and permissions</li>
+            <li><strong>Firewall blocking:</strong> Allow Oracle client connections through firewall</li>
+        </ul>
+        
+        <div class="warning">
+            <strong>⚠️ Important:</strong> This tool requires access to Intel internal Oracle databases. Ensure you have proper network connectivity and database permissions before installation.
+        </div>
+    </div>
+    
+    <div class="github-footer">
+        <h3>🔗 GitHub Repository</h3>
+        <p><strong>Osmosis v2.0</strong> | Complete CTV Data Processing Tool</p>
+        <p>Built with PyUber Integration | Last Updated: July 17, 2025</p>
+        <p>
+            <a href="https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]/issues">Report Issues</a> | 
+            <a href="https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]/releases">All Releases</a> | 
+            <a href="https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]">Source Code</a>
+        </p>
+    </div>
+</body>
+</html>

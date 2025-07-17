@@ -1,0 +1,1 @@
+@"%WINDIR%\SysWow64\wscript.exe" "%UBER_INSTALL_DIR%\Test\UberSample.vbs"
