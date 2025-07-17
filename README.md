@@ -1,4 +1,11 @@
-# 🚀 Osmosis v2.0 - CTV Data Processing Tool
+# 🚀[![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey.svg)]()
+[![Size](https://img.shields.io/badge/size-54MB-green.svg)]()
+[![Database](https://img.shields.io/badge/database-Oracle%20PyUber-orange.svg)]()
+
+## 📥 Quick Download
+
+**[⬇️ Download Latest Release (v2.0)](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases/latest/download/Osmosis_v2.0_Complete.zip)** v2.0 - CTV Data Processing Tool
 
 **Advanced CTV data processing and analysis tool with complete PyUber database integration**
 
@@ -27,7 +34,7 @@ Osmosis is a professional CTV (Clock Tree Verification) data processing applicat
 
 ## 🚀 Quick Start
 
-1. **Download** the [latest release](https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]/releases/latest)
+1. **Download** the [latest release](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases/latest)
 2. **Extract** `Osmosis_v2.0_Complete.zip` to any folder
 3. **Install** by running `Install_Osmosis.bat` as Administrator
 4. **Launch** using the desktop shortcut
@@ -108,7 +115,7 @@ Osmosis connects to Intel's production Oracle databases:
 ### Building from Source
 ```bash
 # Clone repository
-git clone https://github.com/[YOUR-USERNAME]/osmosis-ctv-tool.git
+git clone https://github.com/abdi-awale-intel/osmosis-ctv-tool.git
 cd osmosis-ctv-tool
 
 # Install dependencies
@@ -135,8 +142,8 @@ Internal Intel tool - for Intel employees and authorized contractors only.
 
 ## 🤝 Support
 
-- 🐛 **Bug Reports:** [Create an issue](https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]/issues)
-- 💡 **Feature Requests:** [Submit enhancement](https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]/issues)
+- 🐛 **Bug Reports:** [Create an issue](https://github.com/abdi-awale-intel/osmosis-ctv-tool/issues)
+- 💡 **Feature Requests:** [Submit enhancement](https://github.com/abdi-awale-intel/osmosis-ctv-tool/issues)
 - 📧 **Direct Support:** Contact development team
 
 ---
@@ -145,6 +152,6 @@ Internal Intel tool - for Intel employees and authorized contractors only.
 
 **🏆 Osmosis v2.0** | Built with ❤️ for Intel | Last Updated: July 17, 2025
 
-[📥 Download](https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]/releases/latest) | [📖 Documentation](https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]/wiki) | [🐛 Issues](https://github.com/[YOUR-USERNAME]/[REPOSITORY-NAME]/issues)
+[📥 Download](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases/latest) | [📖 Documentation](https://github.com/abdi-awale-intel/osmosis-ctv-tool/wiki) | [🐛 Issues](https://github.com/abdi-awale-intel/osmosis-ctv-tool/issues)
 
 </div>
