@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Osmosis Application Builder
 Creates a standalone executable from the deployment package
@@ -11,6 +12,15 @@ import shutil
 from pathlib import Path
 import tempfile
 
+# Fix encoding issues for GitHub Actions Windows runner
+if sys.platform == "win32":
+    try:
+        # Try to set UTF-8 encoding for stdout
+        sys.stdout.reconfigure(encoding='utf-8')
+    except (AttributeError, OSError):
+        # Fallback for older Python versions or restricted environments
+        pass
+
 class OsmosisAppBuilder:
     def __init__(self):
         self.deployment_dir = Path(__file__).parent.absolute()
@@ -19,9 +29,19 @@ class OsmosisAppBuilder:
         self.app_name = "Osmosis"
         
     def print_status(self, message, status="INFO"):
-        """Print formatted status messages"""
-        icons = {"INFO": "ℹ️", "SUCCESS": "✅", "ERROR": "❌", "WARNING": "⚠️"}
-        print(f"{icons.get(status, '📋')} [{status}] {message}")
+        """Print formatted status messages with ASCII fallback for GitHub Actions"""
+        # Use ASCII characters for better compatibility with Windows cp1252 encoding
+        icons = {
+            "INFO": "[i]", 
+            "SUCCESS": "[+]", 
+            "ERROR": "[!]", 
+            "WARNING": "[?]"
+        }
+        try:
+            print(f"{icons.get(status, '[*]')} [{status}] {message}")
+        except UnicodeEncodeError:
+            # Fallback to ASCII-only output
+            print(f"[{status}] {message}")
         
     def check_requirements(self):
         """Check if PyInstaller is available"""
