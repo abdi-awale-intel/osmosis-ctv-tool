@@ -475,8 +475,146 @@ class CTVListGUI:
         log_scrollbar.pack(side='right', fill='y')
         self.log_text.configure(yscrollcommand=log_scrollbar.set)
         
+    def load_csv_filtered(self, file_path):
+        """Load CSV file with column filtering to remove unnamed and empty columns"""
+        try:
+            # Read the CSV first
+            df = pd.read_csv(file_path)
+            
+            # Define required columns
+            required_columns = ['Database', 'Program', 'Test', 'Lot', 'Wafer', 'Prefetch']
+            
+            # Filter out unnamed columns and empty columns
+            valid_columns = []
+            for col in df.columns:
+                # Skip unnamed columns and completely empty columns
+                if (not str(col).startswith('Unnamed:') and 
+                    not df[col].isna().all() and 
+                    str(col).strip() != ''):
+                    valid_columns.append(col)
+            
+            self.log_message(f"Original columns: {list(df.columns)}")
+            self.log_message(f"Valid columns found: {valid_columns}")
+            
+            # Keep only valid columns that exist in the dataframe
+            columns_to_keep = []
+            for col in required_columns:
+                if col in valid_columns:
+                    columns_to_keep.append(col)
+                else:
+                    # Try case-insensitive matching
+                    for valid_col in valid_columns:
+                        if col.lower() == valid_col.lower():
+                            columns_to_keep.append(valid_col)
+                            break
+            
+            if not columns_to_keep:
+                # If no required columns found, keep all valid columns
+                columns_to_keep = valid_columns[:6]  # Limit to first 6 valid columns
+                self.log_message("No required columns found, using first valid columns", "warning")
+            
+            self.log_message(f"Columns to keep: {columns_to_keep}")
+            
+            # Return filtered dataframe
+            filtered_df = df[columns_to_keep].copy()
+            
+            # Rename columns to match expected names if needed
+            column_mapping = {}
+            for i, col in enumerate(filtered_df.columns):
+                if i < len(required_columns):
+                    expected_col = required_columns[i]
+                    if col.lower() != expected_col.lower():
+                        column_mapping[col] = expected_col
+                        
+            if column_mapping:
+                filtered_df = filtered_df.rename(columns=column_mapping)
+                self.log_message(f"Renamed columns: {column_mapping}")
+            
+            return filtered_df
+            
+        except Exception as e:
+            self.log_message(f"Error filtering CSV: {str(e)}", "error")
+            raise e
+    
+    def load_excel_filtered(self, file_path):
+        """Load Excel file with column filtering to remove unnamed and empty columns"""
+        try:
+            # Read Excel file
+            df = pd.read_excel(file_path)
+            
+            # Define required columns
+            required_columns = ['Database', 'Program', 'Test', 'Lot', 'Wafer', 'Prefetch']
+            
+            # Remove unnamed and empty columns
+            valid_columns = []
+            for col in df.columns:
+                # Skip unnamed columns and completely empty columns
+                if (not str(col).startswith('Unnamed:') and 
+                    not df[col].isna().all() and 
+                    str(col).strip() != ''):
+                    valid_columns.append(col)
+            
+            self.log_message(f"Original columns: {list(df.columns)}")
+            self.log_message(f"Valid columns found: {valid_columns}")
+            
+            # Keep intersection of required and valid columns
+            columns_to_keep = []
+            for col in required_columns:
+                if col in valid_columns:
+                    columns_to_keep.append(col)
+                else:
+                    # Try case-insensitive matching
+                    for valid_col in valid_columns:
+                        if col.lower() == valid_col.lower():
+                            columns_to_keep.append(valid_col)
+                            break
+            
+            if not columns_to_keep:
+                # If no required columns found, keep all valid columns
+                columns_to_keep = valid_columns[:6]  # Limit to first 6 valid columns
+                self.log_message("No required columns found, using first valid columns", "warning")
+            
+            self.log_message(f"Columns to keep: {columns_to_keep}")
+            
+            # Return filtered dataframe
+            filtered_df = df[columns_to_keep].copy()
+            
+            # Rename columns to match expected names if needed
+            column_mapping = {}
+            for i, col in enumerate(filtered_df.columns):
+                if i < len(required_columns):
+                    expected_col = required_columns[i]
+                    if col.lower() != expected_col.lower():
+                        column_mapping[col] = expected_col
+                        
+            if column_mapping:
+                filtered_df = filtered_df.rename(columns=column_mapping)
+                self.log_message(f"Renamed columns: {column_mapping}")
+            
+            return filtered_df
+            
+        except Exception as e:
+            self.log_message(f"Error filtering Excel: {str(e)}", "error")
+            raise e
+    
+    def validate_material_columns(self, df):
+        """Validate that the material data contains expected columns"""
+        required_columns = ['Database', 'Program', 'Test', 'Lot', 'Wafer', 'Prefetch']
+        missing_columns = []
+        
+        for col in required_columns:
+            if col not in df.columns:
+                missing_columns.append(col)
+        
+        if missing_columns:
+            self.log_message(f"Warning: Missing columns: {missing_columns}", "warning")
+            return False, missing_columns
+        else:
+            self.log_message("All required columns found", "success")
+            return True, []
+
     def load_material_file(self):
-        """Load material data from CSV or Excel file"""
+        """Load material data from CSV or Excel file with enhanced column filtering"""
         file_path = filedialog.askopenfilename(
             title="Select Material Data File",
             filetypes=[("CSV files", "*.csv"), ("Excel files", "*.xlsx *.xls"), ("All files", "*.*")]
@@ -484,10 +622,31 @@ class CTVListGUI:
         
         if file_path:
             try:
+                self.log_message(f"Loading material data from: {file_path}")
+                
+                # Load and filter the file based on type
                 if file_path.endswith('.csv'):
-                    self.material_df = pd.read_csv(file_path)
+                    self.material_df = self.load_csv_filtered(file_path)
                 elif file_path.endswith(('.xlsx', '.xls')):
-                    self.material_df = pd.read_excel(file_path)
+                    self.material_df = self.load_excel_filtered(file_path)
+                else:
+                    # Try CSV as fallback
+                    self.material_df = self.load_csv_filtered(file_path)
+                
+                # Validate columns
+                is_valid, missing_cols = self.validate_material_columns(self.material_df)
+                
+                if not is_valid:
+                    self.log_message(f"File loaded but missing required columns: {missing_cols}", "warning")
+                    # Show user a message about missing columns
+                    missing_str = ", ".join(missing_cols)
+                    response = messagebox.askyesno(
+                        "Missing Columns", 
+                        f"The file is missing these required columns: {missing_str}\n\n"
+                        "Would you like to continue with the available columns?"
+                    )
+                    if not response:
+                        return
                 
                 # Extract data into raw format for processing
                 if not self.material_df.empty:
@@ -500,32 +659,86 @@ class CTVListGUI:
                     # Extract first row data and parse into lists
                     first_row = self.material_df.iloc[0]
                     
-                    self.material_data = {
-                        'Lot': parse_loaded_value(first_row.get('Lot', '')) or ['Not Null'],
-                        'Wafer': parse_loaded_value(first_row.get('Wafer', '')) or ['Not Null'],
-                        'Program': parse_loaded_value(first_row.get('Program', '')) or ['DAB%', 'DAC%'],
-                        'Prefetch': int(first_row.get('Prefetch', 3)) if str(first_row.get('Prefetch', '')).strip().isdigit() else 3,
-                        'Database': parse_loaded_value(first_row.get('Database', '')) or ['D1D_PROD_XEUS', 'F24_PROD_XEUS']
+                    # Use default values for missing columns
+                    default_values = {
+                        'Lot': ['Not Null'],
+                        'Wafer': ['Not Null'], 
+                        'Program': ['DAB%', 'DAC%'],
+                        'Prefetch': 3,
+                        'Database': ['D1D_PROD_XEUS', 'F24_PROD_XEUS']
                     }
+                    
+                    self.material_data = {}
+                    for col, default in default_values.items():
+                        if col in first_row:
+                            if col == 'Prefetch':
+                                # Handle Prefetch as integer
+                                value = first_row.get(col, default)
+                                if str(value).strip().isdigit():
+                                    self.material_data[col] = int(value)
+                                else:
+                                    self.material_data[col] = default
+                            else:
+                                # Handle other columns as lists
+                                parsed_value = parse_loaded_value(first_row.get(col, ''))
+                                self.material_data[col] = parsed_value if parsed_value else default
+                        else:
+                            # Use default if column not found
+                            self.material_data[col] = default
+                    
+                    self.log_message(f"Parsed material data: {self.material_data}")
                 
                 self.update_material_display()
-                self.log_message(f"Material data loaded from: {file_path}", "success")
+                self.log_message(f"Material data loaded successfully from: {os.path.basename(file_path)}", "success")
+                
+                # Show column preview to user
+                self.show_column_preview()
                 
                 # Update entry fields with first row data if available
                 if not self.material_df.empty:
-                    if 'Lot' in self.material_df.columns:
-                        self.lot_var.set(str(self.material_df.iloc[0]['Lot']))
-                    if 'Wafer' in self.material_df.columns:
-                        self.wafer_var.set(str(self.material_df.iloc[0]['Wafer']))
-                    if 'Program' in self.material_df.columns:
-                        self.program_var.set(str(self.material_df.iloc[0]['Program']))
-                    if 'Prefetch' in self.material_df.columns:
-                        self.prefetch_var.set(str(self.material_df.iloc[0]['Prefetch']))
-                    if 'Database' in self.material_df.columns:
-                        self.database_var.set(str(self.material_df.iloc[0]['Database']))
+                    self.update_entry_fields_from_dataframe()
                         
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to load file: {str(e)}")
+                error_msg = f"Failed to load file: {str(e)}"
+                self.log_message(error_msg, "error")
+                messagebox.showerror("Error", error_msg)
+    
+    def show_column_preview(self):
+        """Show user a preview of the columns that were imported"""
+        if hasattr(self, 'material_df') and self.material_df is not None:
+            columns = list(self.material_df.columns)
+            rows = len(self.material_df)
+            
+            preview_msg = f"Successfully imported {rows} rows with columns:\n\n"
+            for i, col in enumerate(columns, 1):
+                preview_msg += f"{i}. {col}\n"
+            
+            # Show sample data if available
+            if not self.material_df.empty:
+                preview_msg += f"\nSample data (first row):\n"
+                first_row = self.material_df.iloc[0]
+                for col in columns:
+                    value = str(first_row[col])[:50] + "..." if len(str(first_row[col])) > 50 else str(first_row[col])
+                    preview_msg += f"• {col}: {value}\n"
+            
+            messagebox.showinfo("Import Preview", preview_msg)
+    
+    def update_entry_fields_from_dataframe(self):
+        """Update the entry fields with data from the loaded dataframe"""
+        if self.material_df is not None and not self.material_df.empty:
+            first_row = self.material_df.iloc[0]
+            
+            # Update entry fields only if the column exists
+            if 'Lot' in self.material_df.columns:
+                self.lot_var.set(str(first_row['Lot']))
+            if 'Wafer' in self.material_df.columns:
+                self.wafer_var.set(str(first_row['Wafer']))
+            if 'Program' in self.material_df.columns:
+                self.program_var.set(str(first_row['Program']))
+            if 'Prefetch' in self.material_df.columns:
+                self.prefetch_var.set(str(first_row['Prefetch']))
+            if 'Database' in self.material_df.columns:
+                self.database_var.set(str(first_row['Database']))
                 
     def create_material_dataframe(self):
         """Create material data from manual input"""
