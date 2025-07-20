@@ -43,6 +43,11 @@ for module in python_modules:
     if module_path.exists():
         datas.append((str(module_path), '.'))
 
+# Add images directory
+images_dir = deployment_dir / 'images'
+if images_dir.exists():
+    datas.append((str(images_dir), 'images'))
+
 # Hidden imports (modules that PyInstaller might miss)
 hiddenimports = [
     'tkinter',

@@ -54,7 +54,9 @@ class CTVListGUI:
         # Set application icon
         if PIL_AVAILABLE:
             try:
-                icon_image = Image.open(r"C:\Users\abdiawal\Downloads\logo.jpeg")
+                # Use relative path from the script directory
+                icon_path = os.path.join(os.path.dirname(__file__), "images", "logo.jpeg")
+                icon_image = Image.open(icon_path)
                 icon_photo = ImageTk.PhotoImage(icon_image)
                 self.root.iconphoto(False, icon_photo)
             except Exception as e:
@@ -212,9 +214,9 @@ class CTVListGUI:
         # Add theme toggle logos at the top center
         if PIL_AVAILABLE:
             try:
-                # Load light mode and dark mode logos
-                lightmode_logo_path = r"C:\Users\abdiawal\Downloads\lightmode-logo.jpg"
-                darkmode_logo_path = r"C:\Users\abdiawal\Downloads\darkmode-logo.png"
+                # Load light mode and dark mode logos using relative paths
+                lightmode_logo_path = os.path.join(os.path.dirname(__file__), "images", "lightmode-logo.jpg")
+                darkmode_logo_path = os.path.join(os.path.dirname(__file__), "images", "darkmode-logo.png")
                 
                 # Load and resize logos
                 light_image = Image.open(lightmode_logo_path)
