@@ -28,23 +28,64 @@ import pyuber_query as py
 PYUBER_AVAILABLE = True
 
 # Import smart_json_parser if available
+SMART_CTV_AVAILABLE = False
+sm = None
+
 try:
     # Try relative import first (for packaged executable)
     from . import smart_json_parser as sm
-    SMART_CTV_AVAILABLE = True
-except ImportError:
+    # Test that the module actually has the required function
+    if hasattr(sm, 'process_SmartCTV'):
+        SMART_CTV_AVAILABLE = True
+        print("✅ SmartCTV module loaded successfully (relative import)")
+    else:
+        sm = None
+        print("⚠️ SmartCTV module found but missing required functions (relative import)")
+except ImportError as e:
+    print(f"❌ Relative import failed: {e}")
     try:
         # Try direct import (for development environment)
         import smart_json_parser as sm
-        SMART_CTV_AVAILABLE = True
-    except ImportError:
+        if hasattr(sm, 'process_SmartCTV'):
+            SMART_CTV_AVAILABLE = True
+            print("✅ SmartCTV module loaded successfully (direct import)")
+        else:
+            sm = None
+            print("⚠️ SmartCTV module found but missing required functions (direct import)")
+    except ImportError as e:
+        print(f"❌ Direct import failed: {e}")
         try:
             # Try importing from src directory
             import src.smart_json_parser as sm
-            SMART_CTV_AVAILABLE = True
-        except ImportError:
+            if hasattr(sm, 'process_SmartCTV'):
+                SMART_CTV_AVAILABLE = True
+                print("✅ SmartCTV module loaded successfully (src import)")
+            else:
+                sm = None
+                print("⚠️ SmartCTV module found but missing required functions (src import)")
+        except ImportError as e:
+            print(f"❌ Src import failed: {e}")
+            sm = None
             SMART_CTV_AVAILABLE = False
-            print("smart_json_parser not available - SmartCTV processing will be disabled")
+            print("❌ SmartCTV functionality not available - all import methods failed")
+
+# Final validation
+if SMART_CTV_AVAILABLE and sm is not None:
+    try:
+        # Test that we can actually access the function
+        func = getattr(sm, 'process_SmartCTV', None)
+        if func is None:
+            SMART_CTV_AVAILABLE = False
+            sm = None
+            print("❌ SmartCTV process_SmartCTV function not found, disabling SmartCTV")
+        else:
+            print(f"✅ SmartCTV fully validated and ready")
+    except Exception as e:
+        print(f"❌ SmartCTV validation failed: {e}")
+        SMART_CTV_AVAILABLE = False
+        sm = None
+        
+print(f"🔧 Final SmartCTV status: Available={SMART_CTV_AVAILABLE}, Module={sm is not None}")
 class CTVListGUI:
     def __init__(self, root):
         self.root = root
@@ -1504,31 +1545,43 @@ class CTVListGUI:
                             intermediary_file_list.append(datainput_file)
 
                         elif  "smartctv" in test_type.lower(): # SMART CTV loop/check logic and indexing
-                            if SMART_CTV_AVAILABLE and "CtvTag" in mode:
+                            if SMART_CTV_AVAILABLE and sm is not None and "CtvTag" in mode:
                                 mode = mode.strip('\"\'')  # Assuming mode is in column 4
                                 config_number = ''
                                 self.log_message(f"Processing CTV Tag SmartCtvDc for test: {test}")
                                 self.log_message(f"Config number: {config_number}")
                                 self.update_progress(current_iteration + 0.3, total_iterations, f"Processing SmartCTV for: {test}")
-                                ctv_files,ITUFF_suffixes = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
-                                for ctv_file,ITUFF_suffix in zip(ctv_files,ITUFF_suffixes):
+                                try:
+                                    ctv_files,ITUFF_suffixes = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
+                                    for ctv_file,ITUFF_suffix in zip(ctv_files,ITUFF_suffixes):
+                                        intermediary_file_list.append(ctv_file)
+                                        test = test + ITUFF_suffix
+                                        self.update_progress(current_iteration + 0.6, total_iterations, f"Indexing SmartCTV for: {test}")
+                                        indexed_file, csv_identifier,need_suffix  = ind.index_CTV(ctv_file, test, module_name, place_in,mode)
+                                        intermediary_file_list.append(indexed_file)
+                                        self.log_message(f"Performing data request for test: {test}")
+                                        datainput_file,datacombine_file = py.uber_request(indexed_file,test,test_type,need_suffix,place_in,program, csv_identifier,lot_list,wafer_list,prefetch,databases)
+                                        intermediary_file_list.append(datainput_file)
+                                        test = test.replace(ITUFF_suffix,'')
+                                except Exception as e:
+                                    self.log_message(f"❌ Error in SmartCTV processing for test {test}: {str(e)}")
+                                    current_iteration += 1
+                                    self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (SmartCTV error)")
+                                    continue
+                            elif SMART_CTV_AVAILABLE and sm is not None:
+                                try:
+                                    config_number = str(int(row[3]))                    
+                                    ctv_file = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
                                     intermediary_file_list.append(ctv_file)
-                                    test = test + ITUFF_suffix
-                                    self.update_progress(current_iteration + 0.6, total_iterations, f"Indexing SmartCTV for: {test}")
-                                    indexed_file, csv_identifier,need_suffix  = ind.index_CTV(ctv_file, test, module_name, place_in,mode)
+                                    indexed_file,csv_identifier,need_suffix = ind.index_CTV(ctv_file, test,module_name,place_in)
+                                    self.log_message(f"Processing SmartCtvDc for test: {test}")
+                                    current_iteration += 1
                                     intermediary_file_list.append(indexed_file)
-                                    self.log_message(f"Performing data request for test: {test}")
-                                    datainput_file,datacombine_file = py.uber_request(indexed_file,test,test_type,need_suffix,place_in,program, csv_identifier,lot_list,wafer_list,prefetch,databases)
-                                    intermediary_file_list.append(datainput_file)
-                                    test = test.replace(ITUFF_suffix,'')
-                            elif SMART_CTV_AVAILABLE:
-                                config_number = str(int(row[3]))                    
-                                ctv_file = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
-                                intermediary_file_list.append(ctv_file)
-                                indexed_file,csv_identifier,need_suffix = ind.index_CTV(ctv_file, test,module_name,place_in)
-                                self.log_message(f"Processing SmartCtvDc for test: {test}")
-                                current_iteration += 1
-                                intermediary_file_list.append(indexed_file)
+                                except Exception as e:
+                                    self.log_message(f"❌ Error in SmartCTV processing for test {test}: {str(e)}")
+                                    current_iteration += 1
+                                    self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (SmartCTV error)")
+                                    continue
                             else:
                                 self.log_message(f"❌ Error processing test {test}: SmartCTV functionality not available (smart_json_parser module not found)")
                                 self.log_message("ℹ️ Skipping SmartCTV processing for this test")
