@@ -35,13 +35,34 @@ try:
     
     import pyuber_query as py
     print("PyUber module loaded successfully")
+    
+    # Test PyUber status
+    pyuber_status = py.get_pyuber_status()
+    if not pyuber_status['available']:
+        PYUBER_AVAILABLE = False
+        print(f"PyUber backend not available: {pyuber_status['error']}")
+    else:
+        print(f"PyUber backend ready - Path: {pyuber_status['module_path']}")
+        
 except ImportError as e:
     PYUBER_AVAILABLE = False
     print(f"PyUber not available - some features will be disabled: {e}")
     # Create a dummy module for fallback
     class DummyPyUber:
         def uber_request(self, *args, **kwargs):
-            raise ImportError("PyUber module not available")
+            raise ImportError(
+                "❌ PyUber Backend Not Available\n\n"
+                "The PyUber database module is required for data processing but could not be imported.\n\n"
+                "Possible solutions:\n"
+                "1. Install PyUber module\n"
+                "2. Contact your system administrator for PyUber setup\n"
+                "3. Ensure database drivers are properly installed\n\n"
+                "This application requires PyUber for database connectivity to retrieve test data."
+            )
+        
+        def get_pyuber_status(self):
+            return {'available': False, 'error': 'PyUber module not available'}
+    
     py = DummyPyUber()
 
 class CTVListGUI:
@@ -54,8 +75,13 @@ class CTVListGUI:
         # Set application icon
         if PIL_AVAILABLE:
             try:
-                # Use relative path from the script directory
-                icon_path = os.path.join(os.path.dirname(__file__), "images", "logo.jpeg")
+                # Get the correct path for bundled application
+                if hasattr(sys, '_MEIPASS'):
+                    # Running as PyInstaller bundle
+                    icon_path = os.path.join(sys._MEIPASS, "images", "logo.jpeg")
+                else:
+                    # Running as script
+                    icon_path = os.path.join(os.path.dirname(__file__), "images", "logo.jpeg")
                 icon_image = Image.open(icon_path)
                 icon_photo = ImageTk.PhotoImage(icon_image)
                 self.root.iconphoto(False, icon_photo)
@@ -214,9 +240,15 @@ class CTVListGUI:
         # Add theme toggle logos at the top center
         if PIL_AVAILABLE:
             try:
-                # Load light mode and dark mode logos using relative paths
-                lightmode_logo_path = os.path.join(os.path.dirname(__file__), "images", "lightmode-logo.jpg")
-                darkmode_logo_path = os.path.join(os.path.dirname(__file__), "images", "darkmode-logo.png")
+                # Get the correct paths for bundled application
+                if hasattr(sys, '_MEIPASS'):
+                    # Running as PyInstaller bundle
+                    lightmode_logo_path = os.path.join(sys._MEIPASS, "images", "lightmode-logo.jpg")
+                    darkmode_logo_path = os.path.join(sys._MEIPASS, "images", "darkmode-logo.png")
+                else:
+                    # Running as script
+                    lightmode_logo_path = os.path.join(os.path.dirname(__file__), "images", "lightmode-logo.jpg")
+                    darkmode_logo_path = os.path.join(os.path.dirname(__file__), "images", "darkmode-logo.png")
                 
                 # Load and resize logos
                 light_image = Image.open(lightmode_logo_path)
