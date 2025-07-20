@@ -29,11 +29,22 @@ PYUBER_AVAILABLE = True
 
 # Import smart_json_parser if available
 try:
-    import smart_json_parser as sm
+    # Try relative import first (for packaged executable)
+    from . import smart_json_parser as sm
     SMART_CTV_AVAILABLE = True
 except ImportError:
-    SMART_CTV_AVAILABLE = False
-    print("smart_json_parser not available - SmartCTV processing will be disabled")
+    try:
+        # Try direct import (for development environment)
+        import smart_json_parser as sm
+        SMART_CTV_AVAILABLE = True
+    except ImportError:
+        try:
+            # Try importing from src directory
+            import src.smart_json_parser as sm
+            SMART_CTV_AVAILABLE = True
+        except ImportError:
+            SMART_CTV_AVAILABLE = False
+            print("smart_json_parser not available - SmartCTV processing will be disabled")
 class CTVListGUI:
     def __init__(self, root):
         self.root = root
@@ -1521,9 +1532,9 @@ class CTVListGUI:
                             else:
                                 self.log_message(f"❌ Error processing test {test}: SmartCTV functionality not available (smart_json_parser module not found)")
                                 self.log_message("ℹ️ Skipping SmartCTV processing for this test")
-                                self.log_message(f"Performing data request for test: {test}")
-                                datainput_file,datacombine_file = py.uber_request(indexed_file,test,test_type,need_suffix,place_in,program, csv_identifier,lot_list,wafer_list,prefetch,databases)
-                                intermediary_file_list.append(datainput_file)
+                                current_iteration += 1
+                                self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (SmartCTV unavailable)")
+                                continue
                         else:
                             self.log_message(f"Unknown test type: {test_type}")
                             current_iteration += 1
