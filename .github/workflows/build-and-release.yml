@@ -43,14 +43,14 @@ jobs:
         
     - name: Build Osmosis executable
       run: |
-        python build_app.py
+        python src/build_app.py full
         
     - name: Verify build output
       run: |
-        dir dist
-        if (Test-Path "dist\Osmosis.exe") { 
+        dir src\dist
+        if (Test-Path "src\dist\Osmosis.exe") { 
           echo "✅ Osmosis.exe built successfully"
-          $size = (Get-Item "dist\Osmosis.exe").Length / 1MB
+          $size = (Get-Item "src\dist\Osmosis.exe").Length / 1MB
           echo "📦 Executable size: $([math]::Round($size, 2)) MB"
         } else { 
           echo "❌ Build failed - Osmosis.exe not found"
@@ -60,14 +60,10 @@ jobs:
     - name: Create installation package
       run: |
         mkdir release_package
-        xcopy /E /I /Y dist release_package
+        xcopy /E /I /Y src\dist release_package
         copy README.md release_package\ -ErrorAction SilentlyContinue
         copy config.json release_package\ -ErrorAction SilentlyContinue
-        
-        echo '@echo off' > release_package\Install_Osmosis.bat
-        echo 'echo Installing Osmosis v2.0...' >> release_package\Install_Osmosis.bat
-        echo 'echo Installation complete!' >> release_package\Install_Osmosis.bat
-        echo 'pause' >> release_package\Install_Osmosis.bat
+        copy core_package\Install_Osmosis.bat release_package\ -ErrorAction SilentlyContinue
         
         echo '@echo off' > release_package\Launch_Osmosis.bat
         echo 'cd /d "%~dp0"' >> release_package\Launch_Osmosis.bat
