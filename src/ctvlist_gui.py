@@ -1510,7 +1510,7 @@ class CTVListGUI:
                                     datainput_file,datacombine_file = py.uber_request(indexed_file,test,test_type,need_suffix,place_in,program, csv_identifier,lot_list,wafer_list,prefetch,databases)
                                     intermediary_file_list.append(datainput_file)
                                     test = test.replace(ITUFF_suffix,'')
-                            else:
+                            elif SMART_CTV_AVAILABLE:
                                 config_number = str(int(row[3]))                    
                                 ctv_file = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
                                 intermediary_file_list.append(ctv_file)
@@ -1518,6 +1518,9 @@ class CTVListGUI:
                                 self.log_message(f"Processing SmartCtvDc for test: {test}")
                                 current_iteration += 1
                                 intermediary_file_list.append(indexed_file)
+                            else:
+                                self.log_message(f"❌ Error processing test {test}: SmartCTV functionality not available (smart_json_parser module not found)")
+                                self.log_message("ℹ️ Skipping SmartCTV processing for this test")
                                 self.log_message(f"Performing data request for test: {test}")
                                 datainput_file,datacombine_file = py.uber_request(indexed_file,test,test_type,need_suffix,place_in,program, csv_identifier,lot_list,wafer_list,prefetch,databases)
                                 intermediary_file_list.append(datainput_file)
