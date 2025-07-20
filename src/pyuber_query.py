@@ -1,4 +1,11 @@
 import pandas as pd
+import sys
+import os
+# Add the parent directory to Python path to find PyUber module
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 import PyUber
 import csv
 import pandas
@@ -6,8 +13,6 @@ import datetime
 from datetime import date
 from dateutil.relativedelta import relativedelta
 import time
-import sys
-import os
 import file_functions as fi
 #def uber_request(indexed_input, test_name_file,test_type, output_folder,extra_identifier=''):
 def uber_request(indexed_input, test_name_file, test_type='',needed_suffix=False, output_folder='', program='DAC%', extra_identifier='', lot = ['Not Null'], wafer_id = ['Not Null'], prefetch = '1', databases = ['D1D_PROD_XEUS','F24_PROD_XEUS']):

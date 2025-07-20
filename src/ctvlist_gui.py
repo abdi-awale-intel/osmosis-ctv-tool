@@ -10,6 +10,7 @@ import time
 import datetime
 import threading
 
+
 # Import PIL for images (with fallback)
 try:
     from PIL import Image, ImageTk
@@ -22,70 +23,27 @@ except ImportError:
 import file_functions as fi
 import mtpl_parser as mt
 import index_ctv as ind
+import smart_json_parser as sm
 
 # Import pyuber_query with fallback handling
-import pyuber_query as py
 PYUBER_AVAILABLE = True
-
-# Import smart_json_parser if available
-SMART_CTV_AVAILABLE = False
-sm = None
-
 try:
-    # Try relative import first (for packaged executable)
-    from . import smart_json_parser as sm
-    # Test that the module actually has the required function
-    if hasattr(sm, 'process_SmartCTV'):
-        SMART_CTV_AVAILABLE = True
-        print("✅ SmartCTV module loaded successfully (relative import)")
-    else:
-        sm = None
-        print("⚠️ SmartCTV module found but missing required functions (relative import)")
+    # Add the parent directory to Python path to find PyUber module
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+    
+    import pyuber_query as py
+    print("PyUber module loaded successfully")
 except ImportError as e:
-    print(f"❌ Relative import failed: {e}")
-    try:
-        # Try direct import (for development environment)
-        import smart_json_parser as sm
-        if hasattr(sm, 'process_SmartCTV'):
-            SMART_CTV_AVAILABLE = True
-            print("✅ SmartCTV module loaded successfully (direct import)")
-        else:
-            sm = None
-            print("⚠️ SmartCTV module found but missing required functions (direct import)")
-    except ImportError as e:
-        print(f"❌ Direct import failed: {e}")
-        try:
-            # Try importing from src directory
-            import src.smart_json_parser as sm
-            if hasattr(sm, 'process_SmartCTV'):
-                SMART_CTV_AVAILABLE = True
-                print("✅ SmartCTV module loaded successfully (src import)")
-            else:
-                sm = None
-                print("⚠️ SmartCTV module found but missing required functions (src import)")
-        except ImportError as e:
-            print(f"❌ Src import failed: {e}")
-            sm = None
-            SMART_CTV_AVAILABLE = False
-            print("❌ SmartCTV functionality not available - all import methods failed")
+    PYUBER_AVAILABLE = False
+    print(f"PyUber not available - some features will be disabled: {e}")
+    # Create a dummy module for fallback
+    class DummyPyUber:
+        def uber_request(self, *args, **kwargs):
+            raise ImportError("PyUber module not available")
+    py = DummyPyUber()
 
-# Final validation
-if SMART_CTV_AVAILABLE and sm is not None:
-    try:
-        # Test that we can actually access the function
-        func = getattr(sm, 'process_SmartCTV', None)
-        if func is None:
-            SMART_CTV_AVAILABLE = False
-            sm = None
-            print("❌ SmartCTV process_SmartCTV function not found, disabling SmartCTV")
-        else:
-            print(f"✅ SmartCTV fully validated and ready")
-    except Exception as e:
-        print(f"❌ SmartCTV validation failed: {e}")
-        SMART_CTV_AVAILABLE = False
-        sm = None
-        
-print(f"🔧 Final SmartCTV status: Available={SMART_CTV_AVAILABLE}, Module={sm is not None}")
 class CTVListGUI:
     def __init__(self, root):
         self.root = root
@@ -1545,7 +1503,7 @@ class CTVListGUI:
                             intermediary_file_list.append(datainput_file)
 
                         elif  "smartctv" in test_type.lower(): # SMART CTV loop/check logic and indexing
-                            if SMART_CTV_AVAILABLE and sm is not None and "CtvTag" in mode:
+                            if "CtvTag" in mode:
                                 mode = mode.strip('\"\'')  # Assuming mode is in column 4
                                 config_number = ''
                                 self.log_message(f"Processing CTV Tag SmartCtvDc for test: {test}")
@@ -1566,9 +1524,9 @@ class CTVListGUI:
                                 except Exception as e:
                                     self.log_message(f"❌ Error in SmartCTV processing for test {test}: {str(e)}")
                                     current_iteration += 1
-                                    self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (SmartCTV error)")
+                                    self.update_progress(current_iteration, total_iterations, f"Failed test: {test} (SmartCTV error)")
                                     continue
-                            elif SMART_CTV_AVAILABLE and sm is not None:
+                            else:
                                 try:
                                     config_number = str(int(row[3]))                    
                                     ctv_file = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
@@ -1580,14 +1538,8 @@ class CTVListGUI:
                                 except Exception as e:
                                     self.log_message(f"❌ Error in SmartCTV processing for test {test}: {str(e)}")
                                     current_iteration += 1
-                                    self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (SmartCTV error)")
+                                    self.update_progress(current_iteration, total_iterations, f"Failed test: {test} (SmartCTV error)")
                                     continue
-                            else:
-                                self.log_message(f"❌ Error processing test {test}: SmartCTV functionality not available (smart_json_parser module not found)")
-                                self.log_message("ℹ️ Skipping SmartCTV processing for this test")
-                                current_iteration += 1
-                                self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (SmartCTV unavailable)")
-                                continue
                         else:
                             self.log_message(f"Unknown test type: {test_type}")
                             current_iteration += 1
