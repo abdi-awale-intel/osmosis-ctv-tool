@@ -1,0 +1,24 @@
+// Include JMP header for Uber
+include(Get Environment Variable("UBER_JMP_DIR") || "\Include\UberJMP.jsl");
+
+try(
+
+    // Run query with 600 seconds time-out
+    table = GetTableUsingUber("D1D_PROD_ARIES", "select * from A_LOT_AT_OPERATION where rownum <= 20", 600);
+    
+	//table = GetTableUsingUberUNP("D1D_PROD_ARIES", "select * from A_LOT_AT_OPERATION where OPERATION = '6072' AND rownum <= 20", "AMR\amodi");
+	
+  /*
+  // Query multiple sites with 1 SQL using IWA
+  table = GetTableUsingUberMultiple({ "D1D_PROD_ARIES" , "F32_PROD_ARIES" }, 
+	"select '?*SITE' \!"SITE\!", LOT, FACILITY from A_LOT_AT_OPERATION where rownum <= 20 ORDER BY LOT", 
+	0, "?*SITE");
+
+  // Query multiple sites with 1 SQL using UNP
+  table = GetTableUsingUberUNPMultiple({ "D1D_PROD_ARIES" , "F32_PROD_ARIES" }, 
+	"select '?*SITE' \!"SITE\!", LOT, FACILITY from A_LOT_AT_OPERATION where rownum <= 20 ORDER BY LOT", 
+	"AMR\amodi", 0, "?*SITE");
+  */
+  
+  , Dialog(exception_msg); // Display exception if any
+);

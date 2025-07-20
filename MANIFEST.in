@@ -1,0 +1,33 @@
+# Include configuration and documentation files
+include *.txt
+include *.md
+include *.json
+include *.spec
+include *.bat
+include *.ps1
+
+# Include all files in important directories
+recursive-include resources *
+recursive-include PyUber *.py
+recursive-include PyUber *.dll
+recursive-include PyUber *.pyd
+recursive-include Uber *
+
+# Include source files
+recursive-include src *.py
+
+# Exclude build artifacts and cache
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude build *
+recursive-exclude dist *
+recursive-exclude *.egg-info *
+
+# Exclude version control
+recursive-exclude * .git*
+recursive-exclude * .svn*
+
+# Include batch files but exclude temporary ones
+include *.bat
+exclude temp_*.bat
+exclude *_temp.bat

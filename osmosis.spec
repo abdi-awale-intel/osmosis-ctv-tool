@@ -5,41 +5,46 @@ from pathlib import Path
 
 # Application details
 app_name = 'Osmosis'
-main_script = r'C:\Users\abdiawal\Downloads\Scripts\_Current\deployment_package\osmosis_main.py'
-deployment_dir = Path(r'C:\Users\abdiawal\Downloads\Scripts\_Current\deployment_package')
+main_script = 'src/osmosis_main.py'
+deployment_dir = Path('.')
 
 # Data files to include
 datas = []
 
 # Add resource files if they exist
-config_file = deployment_dir / 'config.json'
+config_file = Path('config.json')
 if config_file.exists():
     datas.append((str(config_file), '.'))
 
-resources_dir = deployment_dir / 'resources'
+resources_dir = Path('resources')
 if resources_dir.exists():
     datas.append((str(resources_dir), 'resources'))
 
 # Add PyUber and Uber directories
-pyuber_dir = deployment_dir / 'PyUber'
+pyuber_dir = Path('PyUber')
 if pyuber_dir.exists():
     datas.append((str(pyuber_dir), 'PyUber'))
 
-uber_dir = deployment_dir / 'Uber'
+uber_dir = Path('Uber')
 if uber_dir.exists():
     datas.append((str(uber_dir), 'Uber'))
 
-# Add all Python modules in deployment directory
+# Add all Python modules in src directory
+src_dir = Path('src')
 python_modules = [
     'file_functions.py',
     'mtpl_parser.py',
     'index_ctv.py',
     'pyuber_query.py',
-    'smart_json_parser.py'
+    'smart_json_parser.py',
+    'deploy_ctvlist.py',
+    'ctvlist_gui.py',
+    'download_server.py',
+    'build_app.py'
 ]
 
 for module in python_modules:
-    module_path = deployment_dir / module
+    module_path = src_dir / module
     if module_path.exists():
         datas.append((str(module_path), '.'))
 
@@ -89,7 +94,7 @@ hiddenimports = [
 # Analysis
 a = Analysis(
     [main_script],
-    pathex=[str(deployment_dir)],
+    pathex=['src', '.'],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,

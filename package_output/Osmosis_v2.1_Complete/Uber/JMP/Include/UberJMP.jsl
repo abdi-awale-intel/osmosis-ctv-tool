@@ -1,0 +1,372 @@
+// Define JMP function to get data from Uber //
+GetEnvVariablePrivate = Function(
+	{varName},
+	{varValue},
+	
+	kernel32 = Load Dll( "kernel32" ); 
+    MAX_PATH = 255; 
+    lpBuffer = Repeat( " ", MAX_PATH );
+    nBufferLength = Length( lpBuffer );
+	kernel32 << DeclareFunction( "GetEnvironmentVariableA", 
+		Convention( STDCALL), 
+		Alias( "GetEnvironmentVariable" ),
+		   Arg( AnsiString( MAX_PATH ), "varName" ), 
+		   Arg( AnsiString( MAX_PATH ), update, "lpBuffer" ), 
+		   Arg( Int32, "nBufferLength" ), 
+		Returns( Int32 )
+		);
+	kernel32 << GetEnvironmentVariable(varName, lpBuffer, nBufferLength);
+	varValue = lpBuffer;
+	kernel32 << UnloadDLL();
+	
+	varValue;
+);
+
+GetUberDLL = Function(
+	{},
+	{dllObject},
+	dllObject = LoadDll(Get Env Variable Private("UBER_JMP_DIR") || "\UberWinLib.dll");
+	dllObject;
+);
+
+GetTableUsingUberGeneric = Function(
+	{dataSource, sql, uniqeServer, authMode, userId, password},
+	{dllObject, outCsvFile, table},
+	
+	//Load the DLL supplied by Uber
+	dllObject = GetUberDLL();
+	
+	//Call SaveQueryResultsToCsvFileWithAuth funtion
+	dllObject << DeclareFunction(
+		"SaveQueryResultsToCsvFileWithAuth",
+		Convention( CDECL ),
+		Alias( "SaveQueryResultsToCsvFileWithAuth" ),
+		Arg(AnsiString, "dataSource"),
+		Arg(AnsiString, "sql"),
+		Arg(AnsiString, "csvFile"),
+		Arg(AnsiString, "outputDateFormat"),
+		Arg(AnsiString, "site"),
+		Arg(AnsiString, "authMode"), // Can be IWA, UNP or UPWD
+		Arg(AnsiString, "userId"),
+		Arg(AnsiString, "password"),
+		Returns( AnsiString )
+	);
+	
+	If (Length(dataSource) == 0, dataSource = "<empty>");
+	If (Length(sql) == 0, sql = " ");
+	If (Length(uniqeServer) == 0, uniqeServer = " ");
+	outCsvFile = dllObject << SaveQueryResultsToCsvFileWithAuth(dataSource, sql, " ",
+		"yyyy/MM/dd HH:mm:ss", uniqeServer, authMode, userId, password);
+		
+	if (Contains(outCsvFile, "UberException:"), 
+	   /* then */ Throw(outCsvFile));
+	   
+	table = Open(outCsvFile);
+	table << SetName(dataSource);
+	table << Delete Rows(1); // Delete first row as it is a dummy one to get the type right
+	
+	//Call DeleteTempFile funtion
+	dllObject << DeclareFunction(
+		"DeleteTempFile",
+		Convention( CDECL ),
+		Alias( "DeleteTempFile" ),
+		Arg(AnsiString, "fileName"),
+		Returns( Int32 )
+		);
+	dllObject << DeleteTempFile(outCsvFile);
+	
+	// Unload DLL
+	dllObject << UnloadDLL;
+	
+	table; // Return table
+);
+
+GetTableWithTransformUsingUberGenericWithJsl = Function(
+	{dataSource, sql, transformScript, uniqeServer, authMode, userId, password, timeOutInSeconds=7200},
+	{table},
+	
+	//Load the DLL supplied by Uber
+	dllObject = GetUberDLL();
+	
+	//Call SaveQueryResultsToJslFileWithTransformAndAuth funtion
+	dllObject << DeclareFunction(
+		"SaveQueryResultsToJslFileWithTransformAndAuth",
+		Convention( CDECL ),
+		Alias( "SaveQueryResultsToJslFileWithAuth" ),
+		Arg(AnsiString, "dataSource"),
+		Arg(AnsiString, "sql"),
+		Arg(AnsiString, "transformScript"),
+		Arg(AnsiString, "outputDateFormat"),
+		Arg(AnsiString, "site"),
+		Arg(AnsiString, "authMode"), // Can be IWA, UNP or UPWD
+		Arg(AnsiString, "userId"),
+		Arg(AnsiString, "password"),
+		Arg(Int32, "timeOutInSeconds"),
+		Returns( AnsiString )
+	);
+	
+    If (Length(dataSource) == 0, dataSource = "<empty>");
+	If (Length(sql) == 0, sql = " ");
+	If (Length(uniqeServer) == 0, uniqeServer = " ");
+	outJslFile = dllObject << SaveQueryResultsToJslFileWithTransformAndAuth(dataSource, sql, transformScript,
+		"yyyy/MM/dd HH:mm:ss", uniqeServer, authMode, userId, password, timeOutInSeconds);
+	if (Contains(outJslFile, "UberException:"), 
+	   /* then */ Throw(outJslFile));
+	   
+	table = Include(outJslFile); // this implements Open() function
+	table << SetName(dataSource);
+	
+	//Call DeleteTempFile funtion
+	dllObject << DeclareFunction(
+		"DeleteTempFile",
+		Convention( CDECL ),
+		Alias( "DeleteTempFile" ),
+		Arg(AnsiString, "fileName"),
+		Returns( Int32 )
+		);
+	dllObject << DeleteTempFile(outJslFile);
+	
+	// Unload DLL
+	dllObject << UnloadDLL;
+	
+	table; // Return table
+);
+
+GetTableUsingUberGenericWithJsl = Function(
+	{dataSource, sql, uniqeServer, authMode, userId, password, timeOutInSeconds=7200},
+	{table},
+	
+	//Load the DLL supplied by Uber
+	dllObject = GetUberDLL();
+	
+	//Call SaveQueryResultsToJslFileWithAuth funtion
+	dllObject << DeclareFunction(
+		"SaveQueryResultsToJslFileWithAuth",
+		Convention( CDECL ),
+		Alias( "SaveQueryResultsToJslFileWithAuth" ),
+		Arg(AnsiString, "dataSource"),
+		Arg(AnsiString, "sql"),
+		Arg(AnsiString, "outputDateFormat"),
+		Arg(AnsiString, "site"),
+		Arg(AnsiString, "authMode"), // Can be IWA, UNP or UPWD
+		Arg(AnsiString, "userId"),
+		Arg(AnsiString, "password"),
+		Arg(Int32, "timeOutInSeconds"),
+		Returns( AnsiString )
+	);
+	
+    If (Length(dataSource) == 0, dataSource = "<empty>");
+	If (Length(sql) == 0, sql = " ");
+	If (Length(uniqeServer) == 0, uniqeServer = " ");
+	outJslFile = dllObject << SaveQueryResultsToJslFileWithAuth(dataSource, sql,
+		"yyyy/MM/dd HH:mm:ss", uniqeServer, authMode, userId, password, timeOutInSeconds);
+	if (Contains(outJslFile, "UberException:"), 
+	   /* then */ Throw(outJslFile));
+	   
+	table = Include(outJslFile); // this implements Open() function
+	table << SetName(dataSource);
+	
+	//Call DeleteTempFile funtion
+	dllObject << DeclareFunction(
+		"DeleteTempFile",
+		Convention( CDECL ),
+		Alias( "DeleteTempFile" ),
+		Arg(AnsiString, "fileName"),
+		Returns( Int32 )
+		);
+	dllObject << DeleteTempFile(outJslFile);
+	
+	// Unload DLL
+	dllObject << UnloadDLL;
+	
+	table; // Return table
+);
+
+GetTableUsingUberGenericMultipleWithJsl = Function(
+	{dataSource, sql, uniqeServer, authMode, userId, password, sqlSeparator, 
+	    separateCsvFilesFlag, siteIdentifierStringInSQL, timeOutInSeconds=7200},
+	{table},
+	
+	//Load the DLL supplied by Uber
+	dllObject = GetUberDLL();
+	
+	//Call SaveQueryResultsMultipleToJslFileWithAuth funtion
+	dllObject << DeclareFunction(
+		"SaveQueryResultsMultipleToJslFileWithAuth",
+		Convention( CDECL ),
+		Alias( "SaveQueryResultsMultipleToJslFileWithAuth" ),
+		Arg(AnsiString, "dataSource"),
+		Arg(AnsiString, "sql"),
+		Arg(AnsiString, "outputDateFormat"),
+		Arg(AnsiString, "site"),
+		Arg(AnsiString, "authMode"), // Can be IWA, UNP or UPWD
+		Arg(AnsiString, "userId"),
+		Arg(AnsiString, "password"),
+		Arg(AnsiString, "sqlSeparator"), // string used to separate multiple SQLs and DataSources
+		Arg(Int32, "separateCsvFilesFlag"), // 0 if output is expected in a single table, 1 otherwise
+		Arg(AnsiString, "siteIdentifierStringInSQL"), // String in SQL to replace with site name (which is extracted from DataSource)
+		Arg(Int32, "timeOutInSeconds"),
+		Returns( AnsiString )
+	);
+	
+	If (Length(dataSource) == 0, dataSource = "<empty>");
+	If (Length(sql) == 0, sql = " ");
+	If (Length(uniqeServer) == 0, uniqeServer = " ");
+	outJslFile = dllObject << SaveQueryResultsMultipleToJslFileWithAuth(dataSource, sql,
+		"yyyy/MM/dd HH:mm:ss", uniqeServer, authMode, userId, password, 
+		sqlSeparator, separateCsvFilesFlag, siteIdentifierStringInSQL, timeOutInSeconds);
+	if (Contains(outJslFile, "UberException:"), 
+	   /* then */ Throw(outJslFile));
+	   
+	table = Include(outJslFile); // this implements Open() function
+	table << SetName(dataSource);
+	
+	//Call DeleteTempFile funtion
+	dllObject << DeclareFunction(
+		"DeleteTempFile",
+		Convention( CDECL ),
+		Alias( "DeleteTempFile" ),
+		Arg(AnsiString, "fileName"),
+		Returns( Int32 )
+		);
+	dllObject << DeleteTempFile(outJslFile);
+	
+	// Unload DLL
+	dllObject << UnloadDLL;
+	
+	table; // Return table
+);
+
+GetTableUsingUberGenericMultipleWithTransformJsl = Function(
+	{dataSource, sql, transformScript, uniqeServer, authMode, userId, password, sqlSeparator, 
+	    separateCsvFilesFlag, siteIdentifierStringInSQL, timeOutInSeconds=7200},
+	{table},
+	
+	//Load the DLL supplied by Uber
+	dllObject = GetUberDLL();
+	
+	//Call SaveQueryResultsMultipleToJslFileWithTransformAndAuth funtion
+	dllObject << DeclareFunction(
+		"SaveQueryResultsMultipleToJslFileWithTransformAndAuth",
+		Convention( CDECL ),
+		Alias( "SaveQueryResultsMultipleToJslFileWithTransformAndAuth" ),
+		Arg(AnsiString, "dataSource"),
+		Arg(AnsiString, "sql"),
+		Arg(AnsiString, "transformScript"),
+		Arg(AnsiString, "outputDateFormat"),
+		Arg(AnsiString, "site"),
+		Arg(AnsiString, "authMode"), // Can be IWA, UNP or UPWD
+		Arg(AnsiString, "userId"),
+		Arg(AnsiString, "password"),
+		Arg(AnsiString, "sqlSeparator"), // string used to separate multiple SQLs and DataSources
+		Arg(Int32, "separateCsvFilesFlag"), // 0 if output is expected in a single table, 1 otherwise
+		Arg(AnsiString, "siteIdentifierStringInSQL"), // String in SQL to replace with site name (which is extracted from DataSource)
+		Arg(Int32, "timeOutInSeconds"),
+		Returns( AnsiString )
+	);
+	
+	If (Length(dataSource) == 0, dataSource = "<empty>");
+	If (Length(sql) == 0, sql = " ");
+	If (Length(uniqeServer) == 0, uniqeServer = " ");
+	outJslFile = dllObject << SaveQueryResultsMultipleToJslFileWithTransformAndAuth(dataSource, sql, transformScript,
+		"yyyy/MM/dd HH:mm:ss", uniqeServer, authMode, userId, password, 
+		sqlSeparator, separateCsvFilesFlag, siteIdentifierStringInSQL, timeOutInSeconds);
+	if (Contains(outJslFile, "UberException:"), 
+	   /* then */ Throw(outJslFile));
+	   
+	table = Include(outJslFile); // this implements Open() function
+	table << SetName(dataSource);
+	
+	//Call DeleteTempFile funtion
+	dllObject << DeclareFunction(
+		"DeleteTempFile",
+		Convention( CDECL ),
+		Alias( "DeleteTempFile" ),
+		Arg(AnsiString, "fileName"),
+		Returns( Int32 )
+		);
+	dllObject << DeleteTempFile(outJslFile);
+	
+	// Unload DLL
+	dllObject << UnloadDLL;
+	
+	table; // Return table
+);
+
+GetStringFromArray = Function(
+ {sql, delimiter},
+ If (!IsList(sql), sql=EvalList({sql}));
+ ConcatItems(sql, delimiter);
+);
+
+GetTableUsingUberGenericMultipleWithJsl2 = Function(
+	{dataSources, sqls, uniqeServer, authMode, userId, password, separateCsvFilesFlag, siteIdentifierStringInSQL, timeOutInSeconds},
+	{table},
+	
+	separator = "::x4214;;";	
+	dataSource = GetStringFromArray(dataSources, separator);
+	sql = GetStringFromArray(sqls, separator);	
+	
+    table = GetTableUsingUberGenericMultipleWithJsl(dataSource, sql, uniqeServer, authMode, userId, password, 
+		separator, separateCsvFilesFlag, siteIdentifierStringInSQL, timeOutInSeconds);
+	table << SetName(GetStringFromArray(dataSources, ","));
+	table; // Return table
+);
+
+GetTableUsingUberMultiple = Function(
+	{dataSources, sqls, separateCsvFilesFlag, siteIdentifierStringInSQL,timeOutInSeconds=7200},
+	{table},
+	table = GetTableUsingUberGenericMultipleWithJsl2(dataSources, sqls, " ", "IWA", " ", " ",
+		separateCsvFilesFlag, siteIdentifierStringInSQL, timeOutInSeconds);
+    table;
+);
+	
+GetTableUsingUberUNPMultiple = Function(
+	{dataSources, sqls, userId, separateCsvFilesFlag, siteIdentifierStringInSQL, timeOutInSeconds=7200},
+	{table},
+	table = GetTableUsingUberGenericMultipleWithJsl2(dataSources, sqls, " ", "UNP", userId, " ",
+		separateCsvFilesFlag, siteIdentifierStringInSQL, timeOutInSeconds);
+    table;
+);
+	
+GetTableUsingUberSlow = Function(
+	{dataSource, sql},
+	{table},
+	
+	table = GetTableUsingUberGeneric(dataSource, sql, " ", "IWA", " ", " ");
+	
+	table;
+);
+
+GetTableUsingUber = Function(
+	{dataSource, sql, timeOutInSeconds=7200},
+	{table},
+	
+	table = GetTableUsingUberGenericWithJsl(dataSource, sql, " ", "IWA", " ", " ", timeOutInSeconds);
+	
+	table;
+);
+
+GetTableUsingUberUNPSlow = Function(
+	{dataSource, sql, userId},
+	{table},
+	
+	table = GetTableUsingUberGeneric(dataSource, sql, " ", "UNP", userId, " ");
+	
+	table;
+);
+
+GetTableUsingUberUNP = Function(
+	{dataSource, sql, userId, timeOutInSeconds=7200},
+	{table},
+	
+	table = GetTableUsingUberGenericWithJsl(dataSource, sql, " ", "UNP", userId, " ", timeOutInSeconds);
+	
+	table;
+);
+
+//table = GetTableUsingUberUNP("D1D_PROD_ARIES", "select * from A_LOT_AT_OPERATION where rownum <= 20", "AMR\amodi");
+//table = GetTableUsingUber("D1D_STAG_ARIES", "select * from A_LOT_AT_OPERATION where rownum <= 10");
+
+//table = GetTableUsingUberUNPMultiple({ "D1D_PROD_ARIES", "F32_PROD_ARIES" }, "select * from A_LOT_AT_OPERATION where rownum <= 20", "AMR\amodi", 0, " ");
+//table = GetTableUsingUberMultiple({ "D1D_PROD_ARIES", "F32_PROD_ARIES" }, "select * from A_LOT_AT_OPERATION where rownum <= 20", 0, " ");

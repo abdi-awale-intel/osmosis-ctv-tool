@@ -1,0 +1,107 @@
+<QueryConfig AutoExecuteQueryOnLoad="false">
+  <ChangeLog>Changed by AMR\amodi on 9/12/2009 7:04:43 PM from RF3DTS110N1.LTDAUTO.INTEL.COM</ChangeLog>
+  <ChangeLog>Changed by AMR\amodi on 9/12/2009 7:02:42 PM from RF3DTS110N1.LTDAUTO.INTEL.COM</ChangeLog>
+  <QueryAttributes />
+  <PostQuerySQL>select * from %{OUTPUT}</PostQuerySQL>
+  <MainPivotConfig>
+    <ColumnX FieldName="" SortMode="Default" SortOrder="Ascending" SummaryType="Count" SortBySummaryInfo="false" />
+    <ColumnY FieldName="" SortMode="Default" SortOrder="Ascending" SummaryType="Count" SortBySummaryInfo="false" />
+    <ColumnData FieldName="" SortMode="Default" SortOrder="Ascending" SummaryType="Count" SortBySummaryInfo="false" />
+    <ShowOthersInTopN>true</ShowOthersInTopN>
+    <RotateXAxisLabels>false</RotateXAxisLabels>
+    <ShowXAxisGridLines>false</ShowXAxisGridLines>
+    <PointLabelOverlapMode>None</PointLabelOverlapMode>
+  </MainPivotConfig>
+  <AutoPivotConfig TopN="20" OutputDateFormat="yyyy ww.w hh tt" MetricsColumn="Metrics" StatisticalFunctionsForColumn="Avg, 50, 90, Count" StatisticalFunctionsForTable="Count,Avg,IQR,StdDev,0,5,25,50,75,90,95,100" />
+  <MailConfig>
+    <EmailCondition Enable="false" ThresholdRowCount="0">
+      <RunScriptBeforeEmailing>false</RunScriptBeforeEmailing>
+    </EmailCondition>
+    <MailAttachments Excel="false" CSV="false" LAS="false" LAD="false" StatusLogs="false" PivotChart="false" ZipAttachments="false" DoNotSendAttachmentsWithEmail="false" />
+    <IncludeSQLQueryInBody>false</IncludeSQLQueryInBody>
+    <TableInBody Enable="false" />
+    <CopyOutputToDirectory>false</CopyOutputToDirectory>
+    <IncludeAutoPivotSummary>false</IncludeAutoPivotSummary>
+    <IncludeCustomPivotSummary>false</IncludeCustomPivotSummary>
+    <IgnoreExceptions>false</IgnoreExceptions>
+  </MailConfig>
+  <TableSchema>
+    <xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+      <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:MainDataTable="Results" msdata:Locale="en-US">
+        <xs:complexType>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="Results" msdata:CaseSensitive="False" msdata:Locale="en-US">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="SourceFile" type="xs:string" minOccurs="0" />
+                  <xs:element name="SourceLine" type="xs:int" minOccurs="0" />
+                  <xs:element name="DateTime" type="xs:dateTime" minOccurs="0" />
+                  <xs:element name="NodeName" type="xs:string" minOccurs="0" />
+                  <xs:element name="Source" type="xs:string" minOccurs="0" />
+                  <xs:element name="TID" type="xs:int" minOccurs="0" />
+                  <xs:element name="Details" type="xs:string" minOccurs="0" />
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:choice>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>
+    <diffgr:diffgram xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:diffgr="urn:schemas-microsoft-com:xml-diffgram-v1" />
+  </TableSchema>
+  <TableData />
+  <QuerySQL><![CDATA[
+--[FileName:"D:\Documents and Settings\amodi\Desktop\EADSS\DEV\UNIQE\Code\TestClient\UNIQE client logs.lasx"]------
+----------<VARIABLES>------------
+var TIMEFILTER = "Last 1 hours"
+var DOMAIN = "LTDAUTO"
+var NODEFILTER = "localhost"
+var FILEFILTER = "\\%{NODELIST}\C$\logs\Uber*.log*; \\%{NODELIST}\D$\logs\Uber*.log*"
+var SOURCE_FILTER = "*"
+var DETAILS_FILTER = "*"
+---[NODELIST]---
+[ThreadQuery(1)]
+BEGIN NODELIST
+	UseMethod GetNodeList with -- **Get the list of nodes matching specified domain and filter**
+		Domain = "${DOMAIN}" -- Domain to search for nodes in (can be comma-separated-list) [String]
+		NodeFilter = "${NODEFILTER}" -- Pattern to look for nodes (comma-separated-list) [String]
+END NODELIST
+---[FILELIST]---
+[NumThreads(5)]
+BEGIN FILELIST
+	UseMethod GetFileList with -- **Get list of files matching specified name and date filter**
+		FileFilter = "${FILEFILTER}" -- Files to check [String]
+		DateFilter = "${TIMEFILTER}" -- Date range to check the files against [String]
+		CheckIfDirectoryExists = true -- Check if the directory being queried exists prior to running the query [Boolean]
+END FILELIST
+---Begin Main Query---
+Using TSV with
+	separator = ";"
+	headerRow = false
+	nFields = 7
+SELECT
+	Filename as SourceFile,
+	RowNumber as SourceLine,
+	DateTime,
+	Extract_Token(filename, 2, '\\') as NodeName,
+	Source,
+	TID,
+	Details
+USING
+	field4 as LogType,
+	field5 as SourceTmp,
+	field7 AS Details,
+	extract_token(field6, 1, 'TID:') as TID,
+	case index_of(SourceTmp, '-') when NULL then SourceTmp else extract_prefix(SourceTmp, 2, ':') end as Source,
+	TO_TIMESTAMP(STRCAT(STRCAT(field1, ' '), field2), 'yyyy/MM/dd HH:mm:ss.ll') AS DateTime
+FROM
+	%{FILELIST}
+WHERE
+	IsInList(Details, '${DETAILS_FILTER}')
+	AND IsInList(Source, '${SOURCE_FILTER}')
+	AND ApplyTimeRangeFilter(DateTime, '${TIMEFILTER}')
+ORDER BY
+	DateTime DESC
+
+]]></QuerySQL>
+</QueryConfig>

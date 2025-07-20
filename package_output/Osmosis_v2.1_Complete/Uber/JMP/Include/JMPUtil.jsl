@@ -1,0 +1,221 @@
+// Define JMP function to get data from Uber //
+GetEnvVariablePrivate = Function(
+	{varName},
+	{varValue},
+	
+	kernel32 = Load Dll( "kernel32" ); 
+    MAX_PATH = 255; 
+    lpBuffer = Repeat( " ", MAX_PATH );
+    nBufferLength = Length( lpBuffer );
+	kernel32 << DeclareFunction( "GetEnvironmentVariableA", 
+		Convention( STDCALL), 
+		Alias( "GetEnvironmenVariable" ),
+		   Arg( AnsiString( MAX_PATH ), "varName" ), 
+		   Arg( AnsiString( MAX_PATH ), update, "lpBuffer" ), 
+		   Arg( Int32, "nBufferLength" ), 
+		Returns( Int32 )
+		);
+	kernel32 << GetEnvironmenVariable(varName, lpBuffer, nBufferLength);
+	varValue = lpBuffer;
+	kernel32 << UnloadDLL();
+	
+	varValue;
+);
+
+GetUberDLL = Function(
+	{},
+	{dllObject},
+	//Load the DLL supplied by Uber
+	dllObject = LoadDll(Get Env Variable Private("UBER_JMP_DIR") || "\UberWinLib.dll");
+	
+	dllObject
+);
+
+GetEmailAddresses = Function(
+	{userIdsCommaSeparated},
+	{emailAddresses},
+	
+	//Load the DLL supplied by Uber
+	dllObject = GetUberDLL();
+	
+	//Call GetEmailAddresses funtion
+	dllObject << DeclareFunction(
+		"GetEmailAddresses",
+		Convention( CDECL ),
+		Alias( "GetEmailAddresses" ),
+		Arg(AnsiString, "userIdsCommaSeparated"),
+		Returns( AnsiString ) // comma-separated email addresses
+	);
+	
+	emailAddresses = dllObject << GetEmailAddresses(userIdsCommaSeparated);
+	
+	// Unload DLL
+	dllObject << UnloadDLL;
+	
+	emailAddresses;
+);
+
+SendEmail = Function(
+	{toListCommaSeparated, subject, body, listOfFilesPipeSeparated},
+	{exitCode},
+	
+	//Load the DLL supplied by Uber
+	dllObject = GetUberDLL();
+	
+	//Call SendEmail funtion
+	dllObject << DeclareFunction(
+		"SendEmail",
+		Convention( CDECL ),
+		Alias( "SendEmail" ),
+		Arg(AnsiString, "toListCommaSeparated"),
+		Arg(AnsiString, "subject"),
+		Arg(AnsiString, "body"),
+		Arg(AnsiString, "listOfFilesPipeSeparated"),
+		Returns( Int32 )
+	);
+	
+	exitCode = dllObject << SendEmail(toListCommaSeparated, subject, body, listOfFilesPipeSeparated);
+	
+	// Unload DLL
+	dllObject << UnloadDLL;
+	
+	exitCode;
+);
+
+RunCommand = Function(
+	{cmdLines, waitUntilCompletion},
+	{exitCode},
+	
+	//Load the DLL supplied by Uber
+	dllObject = GetUberDLL();
+	
+	//Call RunCommand funtion
+	dllObject << DeclareFunction(
+		"RunCommand",
+		Convention( CDECL ),
+		Alias( "RunCommand" ),
+		Arg(AnsiString, "cmdLines"),
+		Arg(Int32, "waitUntilCompletion"),
+		Returns( Int32 )
+	);
+	
+	exitCode = dllObject << RunCommand(cmdLines, waitUntilCompletion);
+	
+	// Unload DLL
+	dllObject << UnloadDLL;
+	
+	exitCode;
+);
+
+RunScript = Function(
+	{scriptCode, argument},
+	{result},
+	
+	//Load the DLL supplied by Uber
+	dllObject = GetUberDLL();
+	
+	//Call RunScript funtion
+	dllObject << DeclareFunction(
+		"RunScript",
+		Convention( CDECL ),
+		Alias( "RunScript" ),
+		Arg(AnsiString, "scriptCode"),
+		Arg(AnsiString, "argument"),
+		Returns( AnsiString )
+	);
+	
+	result = dllObject << RunScript(scriptCode, argument);
+	
+	// Unload DLL
+	dllObject << UnloadDLL;
+	
+	result;
+);
+
+GetMembersInCompressedFile = Function(
+	{zipFile},
+	{pipeSeparatedFileList},
+	
+	//Load the DLL supplied by Uber
+	dllObject = GetUberDLL();
+	
+	//Call GetMembersInCompressedFile funtion
+	dllObject << DeclareFunction(
+		"GetMembersInCompressedFile",
+		Convention( CDECL ),
+		Alias( "GetMembersInCompressedFile" ),
+		Arg(AnsiString, "zipFile"),
+		Returns( AnsiString )
+	);
+	
+	pipeSeparatedFileList = dllObject << GetMembersInCompressedFile(zipFile);
+	
+	// Unload DLL
+	dllObject << UnloadDLL;
+	
+	pipeSeparatedFileList;
+);
+
+DecompressMembers = Function(
+	{zipFile, memberFilesToDecompressPipeSeparated, outputFolder},
+	{exitCode},
+	
+	//Load the DLL supplied by Uber
+	dllObject = GetUberDLL();
+	
+	//Call DecompressMembers funtion
+	dllObject << DeclareFunction(
+		"DecompressMembers",
+		Convention( CDECL ),
+		Alias( "DecompressMembers" ),
+		Arg(AnsiString, "zipFile"),
+		Arg(AnsiString, "memberFilesToDecompressPipeSeparated"),
+		Arg(AnsiString, "outputFolder"),
+		Returns( Int32 )
+	);
+	
+	exitCode = dllObject << DecompressMembers(zipFile, memberFilesToDecompressPipeSeparated, outputFolder);
+	
+	// Unload DLL
+	dllObject << UnloadDLL;
+	
+	exitCode;
+);
+
+GetClipboardText = Function(
+	{},
+	{clipboardText},
+	
+	//Load the DLL supplied by Uber
+	dllObject = GetUberDLL();
+	
+	//Call GetClipboardText funtion
+	dllObject << DeclareFunction(
+		"GetClipboardText",
+		Convention( CDECL ),
+		Alias( "GetClipboardText" ),
+		Returns( AnsiString )
+	);
+	
+	clipboardText = dllObject << GetClipboardText();
+	
+	// Unload DLL
+	dllObject << UnloadDLL;
+	
+	clipboardText; // Return table
+);
+
+
+// Sample usage:
+//==============
+
+//emailAddresses = GetEmailAddresses("amodi,sshellma");
+
+//exitCode = SendEmail("amodi", "Just a test", "Coming from JMP.", "C:\Temp\out.csv|C:\Temp\PSPSelectedInstall.log");
+
+//exitCode = RunCommand("la2.bat", 1);
+
+//clipboardText = GetClipboardText();
+
+//files = GetMembersInCompressedFile("C:\Temp\Daisy.zip");
+//exitCode = DecompressMembers("C:\Temp\Daisy.zip", "*.cache*", "C:\Temp\DaisyOutput");

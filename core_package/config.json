@@ -1,8 +1,9 @@
 {
     "application": {
         "name": "CTV List Data Processor",
-        "version": "1.0.0",
-        "description": "GUI application for processing CTV list data"
+        "version": "2.1",
+        "description": "GUI application for processing CTV list data",
+        "build_date": "2025-07-20T09:40:16.513375"
     },
     "default_settings": {
         "material_data": {

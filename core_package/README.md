@@ -1,169 +1,187 @@
-# CTV List GUI Application - Deployment Package
+# 🚀 Osmosis v2.0 - CTV Data Processing Tool
 
-## 📋 Overview
+**Advanced CTV data processing and analysis tool with complete PyUber database integration**
 
-This deployment package automatically installs the CTV List Data Processor GUI application with all required dependencies, including a portable Python environment.
+[![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey.svg)]()
+[![Size](https://img.shields.io/badge/size-54MB-green.svg)]()
+[![Database](https://img.shields.io/badge/database-Oracle%20PyUber-orange.svg)]()
 
-## 🚀 Quick Installation
+## 📥 Quick Download
 
-1. **Download** this deployment package
-2. **Extract** all files to a folder
-3. **Right-click** `install.bat` and select **"Run as Administrator"**
-4. **Follow** the on-screen instructions
-5. **Launch** the application from the desktop shortcut
+**[⬇️ Download Latest Release (v2.0)](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases/latest)**
+
+> 🔥 **New in v2.0:** Complete PyUber integration with Oracle database connectivity!
+
+## 🎯 What's This Tool?
+
+Osmosis is a professional CTV (Clock Tree Verification) data processing application that connects to Intel's production Oracle databases to retrieve, process, and analyze semiconductor test data. Perfect for test engineers, data analysts, and validation teams.
+
+### ✨ Key Features
+
+- 🗄️ **Database Integration** - Direct Oracle connectivity via PyUber library
+- ⚡ **Smart Processing** - Automated CTV decoding and SmartCTV configuration
+- 📊 **Data Export** - Professional CSV/Excel output with advanced formatting
+- 🖥️ **User-Friendly GUI** - Modern interface for easy operation
+- 🔧 **Enterprise Ready** - Built for Intel internal production use
+
+## 🚀 Quick Start
+
+1. **Download** the [latest release](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases/latest)
+2. **Extract** `Osmosis_v2.0_Complete.zip` to any folder
+3. **Install** by running `Install_Osmosis.bat` as Administrator
+4. **Launch** using the desktop shortcut
 
 ## 💻 System Requirements
 
-- **Operating System**: Windows 10 or later (64-bit)
-- **Memory**: 4 GB RAM minimum, 8 GB recommended
-- **Storage**: 500 MB free disk space
-- **Network**: Internet connection required for initial setup
-- **Permissions**: Administrator rights for installation
+| Requirement | Specification |
+|-------------|---------------|
+| **OS** | Windows 10/11 (64-bit) |
+| **RAM** | 4 GB minimum (8 GB recommended) |
+| **Storage** | 1 GB free space |
+| **Network** | Oracle database access required |
+| **Permissions** | Administrator rights for installation |
 
-## 📦 What Gets Installed
+## 🔧 What's Included
 
-### SQLPathFinder3 Environment
-- **Location**: `C:\Users\[Username]\My Programs\SQLPathFinder3\`
-- **Python**: Portable Python 3.11 with pip
-- **Packages**: pandas, numpy, openpyxl, Pillow
+```
+📦 Osmosis v2.0 Complete Package (54MB)
+├── 🎯 Osmosis.exe                 # Main application with GUI
+├── 🔧 Install_Osmosis.bat         # Automated installer
+├── ⚡ Launch_Osmosis.bat          # Quick launch script
+├── ⚙️ config.json                # Configuration file
+├── 📚 README.md                  # Documentation
+├── 🗄️ PyUber/                    # Database library
+└── 🏗️ Uber/                      # Oracle configuration
+```
 
-### Application Files
-- **Location**: Same directory as deployment package
-- **Main App**: `ctvlist_gui.py`
-- **Launcher**: `Launch_CTV_List_GUI.bat`
-- **Config**: Application configuration files
+## 🆕 What's New in v2.0
 
-### Desktop Integration
-- **Shortcut**: "CTV List Data Processor" on desktop
-- **Context**: Properly configured working directory
-- **Icon**: Python executable icon
+### ✅ Major Improvements
+- **Complete PyUber Integration** - Full Oracle database connectivity restored
+- **Error Resolution** - Fixed `'NoneType' object has no attribute 'uber_request'`
+- **Enhanced Performance** - Optimized data processing with chunked queries
+- **Better Reliability** - Robust error handling and recovery mechanisms
 
-## 🖥️ Usage Instructions
+### 📈 Performance Metrics
+- **Startup Time:** 5-10 seconds (with PyUber initialization)
+- **Query Speed:** 2-60 seconds (depends on data volume)
+- **Memory Usage:** 200-500MB during processing
+- **Package Size:** ~54MB (includes all database libraries)
 
-### Starting the Application
+## 🛠️ Troubleshooting
 
-**Option 1: Desktop Shortcut**
-- Double-click "CTV List Data Processor" on your desktop
+<details>
+<summary><strong>🔴 Installation Issues</strong></summary>
 
-**Option 2: Manual Launch**
-- Navigate to the deployment package folder
-- Double-click `Launch_CTV_List_GUI.bat`
+- **Permission denied:** Run installer as Administrator
+- **Antivirus blocking:** Add Osmosis folder to AV exceptions  
+- **Installation fails:** Verify Windows 10/11 64-bit system
+</details>
 
-### Application Workflow
+<details>
+<summary><strong>🔶 Database Connection</strong></summary>
 
-1. **Material Data Tab**
-   - Enter material parameters (Lot, Wafer, Program, etc.)
-   - Or load from CSV/Excel file
-   - Click "Create DataFrame" to proceed
+- **Connection failed:** Verify network access to Oracle databases
+- **Authentication error:** Check database credentials and permissions
+- **Firewall blocking:** Allow Oracle client through firewall
+</details>
 
-2. **MTPL & Test Selection Tab**
-   - Browse and load your MTPL file
-   - Search and filter available tests
-   - Select tests for processing
+<details>
+<summary><strong>⚡ Performance Issues</strong></summary>
 
-3. **Output & Processing Tab**
-   - Choose output folder (default: dataOut)
-   - Configure processing options
-   - Start processing and monitor progress
+- **Slow queries:** Check network connectivity to database servers
+- **High memory usage:** Normal for large datasets (200-500MB expected)
+- **Startup delay:** PyUber initialization takes 5-10 seconds (normal)
+</details>
 
-## 🔧 Troubleshooting
+## 📊 Database Support
 
-### Common Issues
+Osmosis connects to Intel's production Oracle databases:
+- **D1D_PROD_XEUS** - Primary production database
+- **F24_PROD_XEUS** - Secondary production database
 
-**❌ "Python not found" Error**
-- **Solution**: Reinstall using `install.bat` as Administrator
-- **Cause**: Incomplete installation or corrupted Python environment
+> ⚠️ **Note:** Requires Intel network access and proper database permissions
 
-**❌ Package Import Errors**
-- **Solution**: Check internet connection and reinstall
-- **Details**: Required packages: pandas, numpy, openpyxl, Pillow
+## 🏗️ For Developers
 
-**❌ Permission Denied**
-- **Solution**: Run installer as Administrator
-- **Cause**: Insufficient permissions to create directories
+### Modern Build System
+Osmosis now uses a modern build system similar to Git repositories:
 
-**❌ Application Won't Start**
-- **Solution**: Check if all files are in the correct locations
-- **Debug**: Look at the console output in the launcher window
-
-### Advanced Troubleshooting
-
-**Verify Installation**
 ```bash
-# Navigate to: C:\Users\[Username]\My Programs\SQLPathFinder3\python3\
-# Run: python.exe --version
-# Should show: Python 3.11.0
+# Full build process
+.\build.ps1 full
+
+# Individual commands
+.\build.ps1 clean        # Clean artifacts
+.\build.ps1 deps         # Install dependencies  
+.\build.ps1 exe          # Build executable
+.\build.ps1 package      # Create distribution
+.\build.ps1 test         # Run tests
+.\build.ps1 version 2.1  # Update version
 ```
 
-**Test Package Installation**
+**Alternative methods:**
 ```bash
-# In the same directory, run:
-# python.exe -c "import pandas, numpy, tkinter; print('All packages OK')"
+# Python build script
+python build.py full
+
+# Legacy batch file
+build.bat full
 ```
 
-**Reset Installation**
-1. Delete `C:\Users\[Username]\My Programs\SQLPathFinder3\`
-2. Delete `C:\Users\[Username]\Downloads\Scripts\_Current\`
-3. Run `install.bat` again as Administrator
+### Building from Source
+```bash
+# Clone repository
+git clone https://github.com/abdi-awale-intel/osmosis-ctv-tool.git
+cd osmosis-ctv-tool
 
-## 📞 Support
-
-### Self-Help Resources
-- Check error messages in the launcher console
-- Verify internet connection for package downloads
-- Ensure Windows is up to date
-
-### Contact Information
-- **System Administrator**: Contact your IT department
-- **Application Issues**: Refer to the application documentation
-- **Installation Problems**: Check Windows Event Viewer for detailed errors
-
-## ⚙️ Technical Details
-
-### Architecture
-- **Python**: 3.11 Embedded Distribution (Portable)
-- **GUI Framework**: tkinter (built-in)
-- **Data Processing**: pandas, numpy
-- **File Formats**: CSV, Excel (.xlsx, .xls)
-
-### File Locations
-```
-C:\Users\[Username]\
-├── My Programs\
-│   └── SQLPathFinder3\
-│       └── python3\           # Portable Python environment
-├── [Deployment Folder]\       # Wherever you extracted the package
-│   ├── ctvlist_gui.py        # Main application
-│   ├── Launch_CTV_List_GUI.bat # Launcher script
-│   └── config files...
-└── Desktop\
-    └── CTV List Data Processor.lnk # Desktop shortcut
+# Quick start
+.\build.ps1 full
 ```
 
-### Network Requirements
-- **Initial Setup**: ~50 MB download (Python + packages)
-- **Runtime**: No network connection required
-- **Updates**: Manual reinstallation required
+### Modern Project Structure
+```
+📁 osmosis-ctv-tool/
+├── 📁 src/                     # 🔥 NEW: Source code directory
+│   ├── 🐍 osmosis_main.py      # Main application entry
+│   ├── 🖥️ ctvlist_gui.py       # GUI interface  
+│   ├── 🗄️ pyuber_query.py      # Database operations
+│   ├── 📊 smart_json_parser.py # Configuration parser
+│   ├── 🚀 deploy_ctvlist.py    # Deployment utilities
+│   └── 🔧 build_app.py         # Build helpers
+├── 🏗️ build.py                 # Modern Python build system
+├── 🔨 build.ps1                # PowerShell build system  
+├── 📦 build.bat                # Legacy batch wrapper
+├── ⚙️ setup.py                 # Python packaging
+├── 📋 requirements.txt         # Dependencies
+├── 🎯 osmosis.spec             # PyInstaller configuration
+└── 📁 package_output/          # Distribution packages
+```
 
-## 📝 Version Information
+### Development Features
+- **🔄 Git-like workflow** - Modern source organization
+- **🏗️ Multi-platform builds** - Python, PowerShell, Batch
+- **📦 Wheel packaging** - Standard Python distribution
+- **🔧 Automated testing** - Built-in test execution  
+- **📊 Version management** - Automated version updates
 
-- **Application**: CTV List Data Processor v1.0
-- **Python Version**: 3.11.0
-- **Deployment Package**: v1.0
-- **Last Updated**: January 2025
+## 📄 License
 
-## 🔄 Updates and Maintenance
+Internal Intel tool - for Intel employees and authorized contractors only.
 
-### Updating the Application
-1. Download new deployment package
-2. Run `install.bat` (will update application files only)
-3. Existing Python environment will be preserved
+## 🤝 Support
 
-### Uninstalling
-1. Delete desktop shortcut
-2. Remove `C:\Users\[Username]\My Programs\SQLPathFinder3\`
-3. Remove the deployment package folder
+- 🐛 **Bug Reports:** [Create an issue](https://github.com/abdi-awale-intel/osmosis-ctv-tool/issues)
+- 💡 **Feature Requests:** [Submit enhancement](https://github.com/abdi-awale-intel/osmosis-ctv-tool/issues)
+- 📧 **Direct Support:** Contact development team
 
 ---
 
-*For additional technical support, please contact your system administrator.*
+<div align="center">
+
+**🏆 Osmosis v2.0** | Built with ❤️ for Intel | Last Updated: July 17, 2025
+
+[📥 Download](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases/latest) | [📖 Documentation](https://github.com/abdi-awale-intel/osmosis-ctv-tool/wiki) | [🐛 Issues](https://github.com/abdi-awale-intel/osmosis-ctv-tool/issues)
+
+</div>

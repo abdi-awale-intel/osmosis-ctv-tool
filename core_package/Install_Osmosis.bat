@@ -3,15 +3,19 @@ title Osmosis Installer
 color 0B
 
 echo.
-echo   ██████╗ ███████╗███╗   ███╗ ██████╗ ███████╗██╗███████╗
-echo  ██╔═══██╗██╔════╝████╗ ████║██╔═══██╗██╔════╝██║██╔════╝
-echo  ██║   ██║███████╗██╔████╔██║██║   ██║███████╗██║███████╗
-echo  ██║   ██║╚════██║██║╚██╔╝██║██║   ██║╚════██║██║╚════██║
-echo  ╚██████╔╝███████║██║ ╚═╝ ██║╚██████╔╝███████║██║███████║
-echo   ╚═════╝ ╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚══════╝╚═╝╚══════╝
+echo ================================================
 echo.
-echo  Osmosis Installer
-echo  ========================
+echo   ####   ####  #   #  ####   ####  ####  ####
+echo  #    # #      ## ##  #    # #      #    #
+echo  #    #  ###   # # #  #    #  ###   ###   ###
+echo  #    #     #  #   #  #    #     #     #     #
+echo   ####  ####   #   #   ####  ####  ####  ####
+echo.
+echo          OSMOSIS v2.0 INSTALLER
+echo        Advanced CTV Tool Suite
+echo      Intel Database Analysis Tool
+echo.
+echo ================================================
 echo.
 
 set "INSTALL_DIR=%USERPROFILE%\Desktop\Osmosis"
@@ -27,27 +31,97 @@ if /i not "%confirm%"=="Y" (
 
 echo.
 echo Creating installation directory...
-if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
-
-echo Copying application files...
-copy "Osmosis.exe" "%INSTALL_DIR%\" >nul
-if exist "config.json" copy "config.json" "%INSTALL_DIR%\" >nul
-if exist "resources" xcopy "resources" "%INSTALL_DIR%\resources\" /E /I /Q >nul
-
-echo Creating desktop shortcut...
-powershell -command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%USERPROFILE%\Desktop\Osmosis.lnk'); $Shortcut.TargetPath = '%INSTALL_DIR%\Osmosis.exe'; $Shortcut.WorkingDirectory = '%INSTALL_DIR%'; $Shortcut.Description = 'Osmosis Data Processor'; $Shortcut.Save()"
+if not exist "%INSTALL_DIR%" (
+    mkdir "%INSTALL_DIR%"
+    echo [OK] Directory created: %INSTALL_DIR%
+) else (
+    echo [INFO] Directory already exists: %INSTALL_DIR%
+)
 
 echo.
-echo ================================
-echo Installation completed successfully!
-echo ================================
-echo.
-echo Osmosis has been installed to: %INSTALL_DIR%
-echo Desktop shortcut created: Osmosis.lnk
-echo.
-echo You can now launch Osmosis from:
-echo 1. Desktop shortcut
-echo 2. Installation folder: %INSTALL_DIR%\Osmosis.exe
-echo.
+echo [1/4] Copying main executable...
+if exist "Osmosis.exe" (
+    copy "Osmosis.exe" "%INSTALL_DIR%\" >nul 2>&1
+    if %errorlevel% equ 0 (
+        echo [OK] Osmosis.exe copied successfully
+    ) else (
+        echo [ERROR] Failed to copy Osmosis.exe
+        goto error
+    )
+) else (
+    echo [ERROR] Osmosis.exe not found in current directory
+    goto error
+)
 
-pause
+echo [2/4] Copying configuration files...
+if exist "config.json" (
+    copy "config.json" "%INSTALL_DIR%\" >nul 2>&1
+    echo [OK] config.json copied
+) else (
+    echo [WARN] config.json not found (optional)
+)
+
+echo [3/4] Copying resource directories...
+if exist "resources" (
+    xcopy "resources" "%INSTALL_DIR%\resources\" /E /I /Q >nul 2>&1
+    echo [OK] Resources directory copied
+) else (
+    echo [WARN] Resources directory not found (optional)
+)
+if exist "PyUber" (
+    xcopy "PyUber" "%INSTALL_DIR%\PyUber\" /E /I /Q >nul 2>&1
+    echo [OK] PyUber directory copied
+)
+if exist "Uber" (
+    xcopy "Uber" "%INSTALL_DIR%\Uber\" /E /I /Q >nul 2>&1
+    echo [OK] Uber directory copied
+)
+
+echo [4/4] Creating desktop shortcut...
+powershell -command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%USERPROFILE%\Desktop\Osmosis.lnk'); $Shortcut.TargetPath = '%INSTALL_DIR%\Osmosis.exe'; $Shortcut.WorkingDirectory = '%INSTALL_DIR%'; $Shortcut.Description = 'Osmosis Data Processor'; $Shortcut.Save()" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [OK] Desktop shortcut created
+) else (
+    echo [WARN] Could not create desktop shortcut
+)
+
+echo.
+echo ================================================
+echo           INSTALLATION COMPLETED!
+echo ================================================
+echo.
+echo [OK] Osmosis has been installed to:
+echo     %INSTALL_DIR%
+echo.
+echo [OK] You can now launch Osmosis from:
+echo     * Desktop shortcut: Osmosis.lnk
+echo     * Start menu search: "Osmosis"  
+echo     * Direct path: %INSTALL_DIR%\Osmosis.exe
+echo.
+echo ================================================
+echo.
+set /p launch="Launch Osmosis now? (Y/N): "
+if /i "%launch%"=="Y" (
+    echo.
+    echo Launching Osmosis...
+    start "" "%INSTALL_DIR%\Osmosis.exe"
+)
+echo.
+echo Installation complete! Press any key to exit...
+pause >nul
+exit /b 0
+
+:error
+echo.
+echo ================================================
+echo           INSTALLATION FAILED!
+echo ================================================
+echo.
+echo Please ensure:
+echo 1. You're running as Administrator
+echo 2. Osmosis.exe exists in the current directory
+echo 3. You have write permissions to %USERPROFILE%\Desktop
+echo.
+echo Press any key to exit...
+pause >nul
+exit /b 1
