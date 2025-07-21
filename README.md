@@ -27,10 +27,35 @@ Osmosis is a professional CTV (Clock Tree Verification) data processing applicat
 
 ## 🚀 Quick Start
 
+### For End Users (Compiled Version)
 1. **Download** the [latest release](https://github.com/abdi-awale-intel/osmosis-ctv-tool/releases/latest)
 2. **Extract** `Osmosis_v2.0_Complete.zip` to any folder
 3. **Install** by running `Install_Osmosis.bat` as Administrator
 4. **Launch** using the desktop shortcut
+
+### For Developers (Source Code)
+```bash
+# Clone the repository
+git clone https://github.com/abdi-awale-intel/osmosis-ctv-tool.git
+cd osmosis-ctv-tool
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Test installation
+python test_dependencies.py
+
+# Run the application
+python src/ctvlist_gui.py
+```
+
+**Required Modules:**
+- ✅ **tkinter** - GUI framework (included with Python)
+- ✅ **PIL/Pillow** - Image processing for logo scaling
+- ✅ **pandas** - Data processing and Excel integration
+- ✅ **openpyxl** - Excel file reading/writing
+
+> 📋 **Installation Help:** See [INSTALLATION.md](INSTALLATION.md) for detailed setup instructions
 
 ## 💻 System Requirements
 

@@ -5,9 +5,7 @@ import sys
 import csv
 import re
 import pandas as pd
-
 import time
-import chardet
 import file_functions as fi
 
 #To do, add functionality for customparameter that is simpler than iterator logic
