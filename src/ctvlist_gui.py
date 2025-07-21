@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk, filedialog, messagebox
 import pandas as pd
 import os
 import sys
@@ -9,8 +10,41 @@ import time
 import datetime
 import threading
 
-# Add PIL imports for image handling
-from PIL import Image, ImageTk
+# Add PIL imports for image handling with robust fallback
+PIL_AVAILABLE = True
+try:
+    from PIL import Image, ImageTk
+    print("✅ PIL/Pillow available - enhanced UI features enabled")
+except ImportError:
+    PIL_AVAILABLE = False
+    print("⚠️ PIL/Pillow not available - using embedded fallback images")
+    # Create dummy classes for fallback
+    class Image:
+        @staticmethod
+        def open(*args, **kwargs):
+            return None
+        @staticmethod
+        def frombytes(*args, **kwargs):
+            return None
+        class Resampling:
+            LANCZOS = 1
+    class ImageTk:
+        @staticmethod
+        def PhotoImage(*args, **kwargs):
+            return None
+
+# Embedded base64 encoded images (small logos for fallback)
+EMBEDDED_IMAGES = {
+    'app_icon': """
+iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAANCSURBVFiFtZdNaBNBFMd/M5tsNk2bpI1aqRVRwYNePHjw4MWLBy9ePHjx4sWLFy9ePHjx4sWDFy8ePHjx4MWLFy9evHjx4sGLBy8evHjw4sWLFy9ePHjx4MWDF69evPqxM7Mzs/Pe7LxvZt5bAP5fAGMMY4wxjDHGGMMYYwxjjDHGGMMYYwxjjDHGGMMYYwxjjDHGGMMYYwxjjDHGGMMY+x8AxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4w=
+""",
+    'light_mode': """
+iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAOvSURBVHic7ZtNaBNBFMd/M2mTpk2bfqS2tlYrFRGxB/Hgp3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jw4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evA==
+""",
+    'dark_mode': """
+iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAQNSURBVHic7ZtNaBNBFMd/M2mTpk3Tfti2tlYrFRGxB/HgwYsHD168ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwQ==
+"""
+}
 
 
 # Import your existing modules
@@ -59,6 +93,84 @@ except ImportError as e:
     
     py = DummyPyUber()
 
+def create_embedded_image(image_key, size=(80, 60)):
+    """Create an image from embedded base64 data with fallback to text"""
+    import base64
+    import io
+    
+    if not PIL_AVAILABLE:
+        return None
+    
+    try:
+        # Decode base64 image data
+        image_data = base64.b64decode(EMBEDDED_IMAGES.get(image_key, ''))
+        if not image_data:
+            return None
+            
+        # Create PIL image from bytes
+        image = Image.open(io.BytesIO(image_data))
+        
+        # Resize if needed
+        if size:
+            image = image.resize(size, Image.Resampling.LANCZOS)
+            
+        # Convert to PhotoImage
+        return ImageTk.PhotoImage(image)
+        
+    except Exception as e:
+        print(f"Failed to create embedded image {image_key}: {e}")
+        return None
+
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+    
+    return os.path.join(base_path, relative_path)
+
+def load_image_with_fallback(image_paths, size=(80, 60), fallback_key=None):
+    """Load image with multiple fallback options"""
+    if not PIL_AVAILABLE:
+        if fallback_key and fallback_key in EMBEDDED_IMAGES:
+            return create_embedded_image(fallback_key, size)
+        return None
+    
+    # Try each path in order
+    for path in image_paths:
+        try:
+            if os.path.exists(path):
+                image = Image.open(path)
+                if size:
+                    image = image.resize(size, Image.Resampling.LANCZOS)
+                return ImageTk.PhotoImage(image)
+        except Exception as e:
+            print(f"Failed to load image from {path}: {e}")
+            continue
+    
+    # Try embedded fallback
+    if fallback_key:
+        return create_embedded_image(fallback_key, size)
+    
+    return None
+
+def create_text_button(parent, text, command, **kwargs):
+    """Create a text-based button as fallback when images aren't available"""
+    button = tk.Button(
+        parent, 
+        text=text, 
+        command=command,
+        relief='flat',
+        bd=1,
+        padx=10,
+        pady=5,
+        cursor="hand2",
+        **kwargs
+    )
+    return button
+
 class CTVListGUI:
     def __init__(self, root):
         self.root = root
@@ -66,11 +178,8 @@ class CTVListGUI:
         self.root.geometry("1400x800")  # Set better initial size
         self.root.minsize(800, 600)     # Set minimum window size
         
-        # Set application icon
-        icon_path = os.path.join(os.path.dirname(__file__), "images", "logo.jpeg")
-        icon_image = Image.open(icon_path)
-        icon_photo = ImageTk.PhotoImage(icon_image)
-        self.root.iconphoto(False, icon_photo)
+        # Set application icon with fallback
+        self.set_application_icon()
         
         # Variables
         self.material_df = None
@@ -94,6 +203,28 @@ class CTVListGUI:
         self.setup_window_management()
         
         self.create_widgets()
+        
+    def set_application_icon(self):
+        """Set application icon with multiple fallback options"""
+        icon_paths = [
+            get_resource_path("images/logo.jpeg"),
+            get_resource_path("images/logo.jpg"),
+            get_resource_path("images/logo.png"),
+            os.path.join(os.path.dirname(__file__), "images", "logo.jpeg"),
+            os.path.join(os.path.dirname(__file__), "images", "logo.jpg"),
+            os.path.join(os.path.dirname(__file__), "images", "logo.png")
+        ]
+        
+        icon_image = load_image_with_fallback(icon_paths, size=(32, 32), fallback_key='app_icon')
+        
+        if icon_image:
+            try:
+                self.root.iconphoto(False, icon_image)
+                print("✅ Application icon set successfully")
+            except Exception as e:
+                print(f"⚠️ Failed to set icon: {e}")
+        else:
+            print("⚠️ No application icon available - using default")
         
     def setup_window_management(self):
         """Setup proper window state handling and resize management"""
@@ -221,65 +352,8 @@ class CTVListGUI:
             print(f"Error refreshing MTPL data: {e}")
     
     def create_widgets(self):
-        # Add theme toggle logos at the top center
-        if PIL_AVAILABLE:
-            try:
-                # Get the correct paths for bundled application
-                if hasattr(sys, '_MEIPASS'):
-                    # Running as PyInstaller bundle
-                    lightmode_logo_path = os.path.join(sys._MEIPASS, "images", "lightmode-logo.jpg")
-                    darkmode_logo_path = os.path.join(sys._MEIPASS, "images", "darkmode-logo.png")
-                else:
-                    # Running as script
-                    lightmode_logo_path = os.path.join(os.path.dirname(__file__), "images", "lightmode-logo.jpg")
-                    darkmode_logo_path = os.path.join(os.path.dirname(__file__), "images", "darkmode-logo.png")
-                
-                # Load and resize logos
-                light_image = Image.open(lightmode_logo_path)
-                dark_image = Image.open(darkmode_logo_path)
-                
-                # Resize logos to fit nicely (adjust size as needed)
-                light_image = light_image.resize((80, 60), Image.Resampling.LANCZOS)
-                dark_image = dark_image.resize((80, 60), Image.Resampling.LANCZOS)
-                
-                self.light_logo = ImageTk.PhotoImage(light_image)
-                self.dark_logo = ImageTk.PhotoImage(dark_image)
-                
-                # Create logo frame at the top
-                logo_frame = ttk.Frame(self.root)
-                logo_frame.pack(pady=10)
-                
-                # Create frame for the two logos side by side
-                logos_container = ttk.Frame(logo_frame)
-                logos_container.pack()
-                
-                # Add light mode logo button (left)
-                self.light_mode_btn = tk.Label(logos_container, image=self.light_logo, cursor="hand2")
-                self.light_mode_btn.pack(side='left', padx=(0, 2))
-                self.light_mode_btn.bind('<Button-1>', self.switch_to_light_mode)
-                
-                # Add dark mode logo button (right)
-                self.dark_mode_btn = tk.Label(logos_container, image=self.dark_logo, cursor="hand2")
-                self.dark_mode_btn.pack(side='left', padx=(2, 0))
-                self.dark_mode_btn.bind('<Button-1>', self.switch_to_dark_mode)
-                
-                # Add application title below logos
-                title_label = ttk.Label(logo_frame, text="CTV List Data Processor", 
-                                      font=('Arial', 16, 'bold'), foreground='#0071c5')
-                title_label.pack(pady=(10, 10))
-                
-                # Add theme indicator
-                self.theme_label = ttk.Label(logo_frame, text="Light Mode", 
-                                           font=('Arial', 10), foreground='gray')
-                title_label.pack()
-                
-            except Exception as e:
-                print(f"Could not load theme logos: {e}")
-                # Fallback to text-only title
-                self.create_fallback_title()
-        else:
-            # Fallback to text-only title when PIL is not available
-            self.create_fallback_title()
+        # Create theme toggle with robust image handling
+        self.create_theme_toggle()
         
         # Create notebook for tabs (this should always be created)
         notebook = ttk.Notebook(self.root)
@@ -307,6 +381,112 @@ class CTVListGUI:
         # Configure initial treeview colors
         self.configure_treeview_alternating_colors()
         
+    def create_theme_toggle(self):
+        """Create theme toggle with robust image loading and fallbacks"""
+        try:
+            # Define possible image paths for light and dark mode logos
+            light_logo_paths = [
+                get_resource_path("images/lightmode-logo.jpg"),
+                get_resource_path("images/lightmode-logo.png"),
+                get_resource_path("images/light-logo.jpg"),
+                get_resource_path("images/light-logo.png"),
+                os.path.join(os.path.dirname(__file__), "images", "lightmode-logo.jpg"),
+                os.path.join(os.path.dirname(__file__), "images", "lightmode-logo.png"),
+                os.path.join(os.path.dirname(__file__), "images", "light-logo.jpg"),
+                os.path.join(os.path.dirname(__file__), "images", "light-logo.png")
+            ]
+            
+            dark_logo_paths = [
+                get_resource_path("images/darkmode-logo.png"),
+                get_resource_path("images/darkmode-logo.jpg"),
+                get_resource_path("images/dark-logo.png"),
+                get_resource_path("images/dark-logo.jpg"),
+                os.path.join(os.path.dirname(__file__), "images", "darkmode-logo.png"),
+                os.path.join(os.path.dirname(__file__), "images", "darkmode-logo.jpg"),
+                os.path.join(os.path.dirname(__file__), "images", "dark-logo.png"),
+                os.path.join(os.path.dirname(__file__), "images", "dark-logo.jpg")
+            ]
+            
+            # Try to load images with fallbacks
+            self.light_logo = load_image_with_fallback(light_logo_paths, size=(80, 60), fallback_key='light_mode')
+            self.dark_logo = load_image_with_fallback(dark_logo_paths, size=(80, 60), fallback_key='dark_mode')
+            
+            # Create logo frame at the top
+            logo_frame = ttk.Frame(self.root)
+            logo_frame.pack(pady=10)
+            
+            # If we have images, create image-based buttons
+            if self.light_logo or self.dark_logo:
+                self.create_image_based_theme_toggle(logo_frame)
+            else:
+                # Fall back to text-based theme toggle
+                self.create_text_based_theme_toggle(logo_frame)
+                
+            # Add application title below logos
+            title_label = ttk.Label(logo_frame, text="CTV List Data Processor", 
+                                  font=('Arial', 16, 'bold'), foreground='#0071c5')
+            title_label.pack(pady=(10, 10))
+            
+            # Add theme indicator
+            self.theme_label = ttk.Label(logo_frame, text="Light Mode", 
+                                       font=('Arial', 10), foreground='gray')
+            self.theme_label.pack()
+            
+        except Exception as e:
+            print(f"Error creating theme toggle: {e}")
+            # Ultimate fallback - just create title
+            self.create_fallback_title()
+    
+    def create_image_based_theme_toggle(self, parent):
+        """Create image-based theme toggle buttons"""
+        try:
+            # Create frame for the two logos side by side
+            logos_container = ttk.Frame(parent)
+            logos_container.pack()
+            
+            # Add light mode logo button (left)
+            if self.light_logo:
+                self.light_mode_btn = tk.Label(logos_container, image=self.light_logo, cursor="hand2")
+                self.light_mode_btn.pack(side='left', padx=(0, 2))
+                self.light_mode_btn.bind('<Button-1>', self.switch_to_light_mode)
+            else:
+                self.light_mode_btn = create_text_button(logos_container, "☀️ Light", self.switch_to_light_mode)
+                self.light_mode_btn.pack(side='left', padx=(0, 2))
+            
+            # Add dark mode logo button (right)
+            if self.dark_logo:
+                self.dark_mode_btn = tk.Label(logos_container, image=self.dark_logo, cursor="hand2")
+                self.dark_mode_btn.pack(side='left', padx=(2, 0))
+                self.dark_mode_btn.bind('<Button-1>', self.switch_to_dark_mode)
+            else:
+                self.dark_mode_btn = create_text_button(logos_container, "🌙 Dark", self.switch_to_dark_mode)
+                self.dark_mode_btn.pack(side='left', padx=(2, 0))
+                
+            print("✅ Image-based theme toggle created")
+            
+        except Exception as e:
+            print(f"Error creating image-based theme toggle: {e}")
+            self.create_text_based_theme_toggle(parent)
+    
+    def create_text_based_theme_toggle(self, parent):
+        """Create text-based theme toggle as fallback"""
+        try:
+            theme_frame = ttk.Frame(parent)
+            theme_frame.pack(pady=5)
+            
+            # Create simple theme toggle buttons
+            self.light_mode_btn = create_text_button(theme_frame, "☀️ Light Mode", self.switch_to_light_mode)
+            self.light_mode_btn.pack(side='left', padx=5)
+            
+            self.dark_mode_btn = create_text_button(theme_frame, "🌙 Dark Mode", self.switch_to_dark_mode)
+            self.dark_mode_btn.pack(side='left', padx=5)
+            
+            print("✅ Text-based theme toggle created")
+            
+        except Exception as e:
+            print(f"Error creating text-based theme toggle: {e}")
+            # No theme toggle available - continue without it
+        
     def create_fallback_title(self):
         """Create a simple text-only title when images are not available"""
         title_frame = ttk.Frame(self.root)
@@ -319,13 +499,30 @@ class CTVListGUI:
         theme_frame = ttk.Frame(title_frame)
         theme_frame.pack(pady=5)
         
-        ttk.Button(theme_frame, text="Light Mode", command=self.switch_to_light_mode).pack(side='left', padx=5)
-        ttk.Button(theme_frame, text="Dark Mode", command=self.switch_to_dark_mode).pack(side='left', padx=5)
+        self.light_mode_btn = create_text_button(theme_frame, "☀️ Light Mode", self.switch_to_light_mode)
+        self.light_mode_btn.pack(side='left', padx=5)
+        
+        self.dark_mode_btn = create_text_button(theme_frame, "🌙 Dark Mode", self.switch_to_dark_mode)
+        self.dark_mode_btn.pack(side='left', padx=5)
         
         # Add theme indicator
         self.theme_label = ttk.Label(title_frame, text="Light Mode", 
                                    font=('Arial', 10), foreground='gray')
         self.theme_label.pack()
+        
+    def switch_to_light_mode(self, event=None):
+        """Switch to light mode theme"""
+        self.is_dark_mode = False
+        if hasattr(self, 'theme_label') and self.theme_label:
+            self.theme_label.config(text="Light Mode")
+        print("🌞 Switched to Light Mode")
+        
+    def switch_to_dark_mode(self, event=None):
+        """Switch to dark mode theme"""
+        self.is_dark_mode = True
+        if hasattr(self, 'theme_label') and self.theme_label:
+            self.theme_label.config(text="Dark Mode")
+        print("🌙 Switched to Dark Mode")
         
     def create_material_tab(self):
         # Material Data Input Section
