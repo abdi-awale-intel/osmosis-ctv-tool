@@ -14,13 +14,13 @@ def test_module(module_name, import_statement=None):
             exec(import_statement)
         else:
             __import__(module_name)
-        print(f"✅ {module_name}: OK")
+        print(f"[OK] {module_name}: Available")
         return True
     except ImportError as e:
-        print(f"❌ {module_name}: MISSING - {e}")
+        print(f"[MISSING] {module_name}: {e}")
         return False
     except Exception as e:
-        print(f"⚠️ {module_name}: ERROR - {e}")
+        print(f"[ERROR] {module_name}: {e}")
         return False
 
 def main():
@@ -69,39 +69,39 @@ def main():
     success_count = 0
     total_count = 0
     
-    print("\n🔧 Core Python modules:")
+    print("\n[CORE] Core Python modules:")
     for module, import_stmt in core_modules:
         if test_module(module, import_stmt):
             success_count += 1
         total_count += 1
     
-    print("\n🖥️ GUI modules:")
+    print("\n[GUI] GUI modules:")
     for module, import_stmt in gui_modules:
         if test_module(module, import_stmt):
             success_count += 1
         total_count += 1
     
-    print("\n📊 Data processing modules:")
+    print("\n[DATA] Data processing modules:")
     for module, import_stmt in data_modules:
         if test_module(module, import_stmt):
             success_count += 1
         total_count += 1
     
-    print("\n🖼️ Image processing modules:")
+    print("\n[IMAGE] Image processing modules:")
     for module, import_stmt in image_modules:
         if test_module(module, import_stmt):
             success_count += 1
         total_count += 1
     
-    print("\n⚙️ Optional modules:")
+    print("\n[OPTIONAL] Optional modules:")
     for module, import_stmt in optional_modules:
         test_module(module, import_stmt)
     
     print("\n" + "=" * 50)
-    print(f"✅ {success_count}/{total_count} required modules available")
+    print(f"[SUMMARY] {success_count}/{total_count} required modules available")
     
     # Test specific functionality
-    print("\n🧪 Functionality Tests:")
+    print("\n[TESTS] Functionality Tests:")
     
     # Test tkinter window creation
     try:
@@ -109,28 +109,28 @@ def main():
         root = tk.Tk()
         root.withdraw()  # Hide the window
         root.destroy()
-        print("✅ tkinter GUI: Working")
+        print("[OK] tkinter GUI: Working")
     except Exception as e:
-        print(f"❌ tkinter GUI: {e}")
+        print(f"[ERROR] tkinter GUI: {e}")
     
     # Test PIL image processing
     try:
         from PIL import Image
         # Create a small test image
         img = Image.new('RGB', (10, 10), color='red')
-        print("✅ PIL Image processing: Working")
+        print("[OK] PIL Image processing: Working")
     except Exception as e:
-        print(f"❌ PIL Image processing: {e}")
+        print(f"[ERROR] PIL Image processing: {e}")
     
     # Test pandas DataFrame
     try:
         import pandas as pd
         df = pd.DataFrame({'test': [1, 2, 3]})
-        print("✅ pandas DataFrame: Working")
+        print("[OK] pandas DataFrame: Working")
     except Exception as e:
-        print(f"❌ pandas DataFrame: {e}")
+        print(f"[ERROR] pandas DataFrame: {e}")
     
-    print("\n📋 Installation Instructions:")
+    print("\n[INSTALL] Installation Instructions:")
     if success_count < total_count:
         print("Some required modules are missing. To install:")
         print("pip install -r requirements.txt")
@@ -138,7 +138,7 @@ def main():
         print("Windows/Mac: Reinstall Python from python.org")
         print("Linux: sudo apt install python3-tk")
     else:
-        print("🎉 All required dependencies are installed!")
+        print("[SUCCESS] All required dependencies are installed!")
         print("You can run the CTV List Data Processor with:")
         print("python ctvlist_gui.py")
 
