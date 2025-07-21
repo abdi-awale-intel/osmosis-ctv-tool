@@ -1802,28 +1802,40 @@ class CTVListGUI:
                     self.update_progress(current_iteration, total_iterations, f"Starting test: {test}")
                     
                     # Find matching row in MTPL dataframe with robust column handling
-                    # Try to find test column by name first, fallback to position
-                    test_column = None
-                    possible_test_columns = ['Test', 'TestName', 'test', 'testname']
+                    # Try multiple matching strategies: TestName, TestType, and flexible matching
+                    matching_rows = None
                     
-                    for col_name in possible_test_columns:
+                    # Strategy 1: Try TestName column first
+                    test_name_columns = ['TestName', 'Test', 'test', 'testname']
+                    for col_name in test_name_columns:
                         if col_name in self.mtpl_df.columns:
-                            test_column = col_name
-                            break
+                            matching_rows = self.mtpl_df[self.mtpl_df[col_name] == test]
+                            if not matching_rows.empty:
+                                self.log_message(f"Found match for {test} in {col_name} column")
+                                break
                     
-                    if test_column is None:
-                        # Fallback to column index 1 if no named column found
-                        if len(self.mtpl_df.columns) > 1:
-                            test_column = self.mtpl_df.columns[1]
-                        else:
-                            self.log_message(f"Could not determine test column for test: {test}")
-                            current_iteration += 1
-                            self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (column structure issue)")
-                            continue
+                    # Strategy 2: If no match found, try TestType column  
+                    if matching_rows is None or matching_rows.empty:
+                        test_type_columns = ['TestType', 'Type', 'testtype', 'type']
+                        for col_name in test_type_columns:
+                            if col_name in self.mtpl_df.columns:
+                                matching_rows = self.mtpl_df[self.mtpl_df[col_name] == test]
+                                if not matching_rows.empty:
+                                    self.log_message(f"Found match for {test} in {col_name} column")
+                                    break
                     
-                    matching_rows = self.mtpl_df[self.mtpl_df[test_column] == test]
+                    # Strategy 3: If still no match, try any column containing the test name
+                    if matching_rows is None or matching_rows.empty:
+                        for col_name in self.mtpl_df.columns:
+                            try:
+                                matching_rows = self.mtpl_df[self.mtpl_df[col_name].astype(str).str.contains(test, na=False)]
+                                if not matching_rows.empty:
+                                    self.log_message(f"Found partial match for {test} in {col_name} column")
+                                    break
+                            except:
+                                continue
                     
-                    if matching_rows.empty:
+                    if matching_rows is None or matching_rows.empty:
                         self.log_message(f"No matching MTPL entry found for test: {test}")
                         current_iteration += 1
                         self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (no MTPL entry)")
@@ -2038,6 +2050,31 @@ class CTVListGUI:
         }
         
         self.log_message(f"Module availability: {modules_status}")
+        
+        # Image file availability diagnostics
+        image_paths = [
+            "images/logo.jpeg",
+            "images/logo.jpg", 
+            "images/logo.png",
+            "images/lightmode-logo.jpg",
+            "images/lightmode-logo.png",
+            "images/light-logo.jpg",
+            "images/light-logo.png",
+            "images/darkmode-logo.png"
+        ]
+        
+        image_status = {}
+        for img_path in image_paths:
+            full_path = os.path.join(os.path.dirname(__file__), img_path)
+            resource_path = get_resource_path(img_path)
+            image_status[img_path] = {
+                'file_exists': os.path.exists(full_path),
+                'resource_exists': os.path.exists(resource_path),
+                'full_path': full_path,
+                'resource_path': resource_path
+            }
+        
+        self.log_message(f"Image availability: {image_status}")
         self.log_message("=== END DIAGNOSTIC ===")
 
     def log_message(self, message, level="info"):
