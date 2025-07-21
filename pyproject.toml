@@ -1,0 +1,30 @@
+# Python version specification for pyproject.toml
+[project]
+name = "ctvlist-gui"
+version = "1.0.0"
+description = "CTV List Data Processor GUI"
+requires-python = ">=3.13.1"
+dependencies = [
+    "pandas>=1.5.0",
+    "pillow>=9.0.0",
+    "openpyxl>=3.0.0",
+    "pyinstaller>=6.0.0",
+    "tk>=0.1.0"
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.pyinstaller]
+console = false
+onefile = true
+windowed = true
+name = "ctvlist_gui"
+icon = "images/logo.ico"
+
+[project.scripts]
+ctvlist-gui = "src.ctvlist_gui:main"
