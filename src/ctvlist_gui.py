@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
 import pandas as pd
 import os
 import sys
@@ -10,14 +9,9 @@ import time
 import datetime
 import threading
 
+# Add PIL imports for image handling
+from PIL import Image, ImageTk
 
-# Import PIL for images (with fallback)
-try:
-    from PIL import Image, ImageTk
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-    print("PIL/Pillow not available - images will be disabled")
 
 # Import your existing modules
 import file_functions as fi
@@ -73,20 +67,10 @@ class CTVListGUI:
         self.root.minsize(800, 600)     # Set minimum window size
         
         # Set application icon
-        if PIL_AVAILABLE:
-            try:
-                # Get the correct path for bundled application
-                if hasattr(sys, '_MEIPASS'):
-                    # Running as PyInstaller bundle
-                    icon_path = os.path.join(sys._MEIPASS, "images", "logo.jpeg")
-                else:
-                    # Running as script
-                    icon_path = os.path.join(os.path.dirname(__file__), "images", "logo.jpeg")
-                icon_image = Image.open(icon_path)
-                icon_photo = ImageTk.PhotoImage(icon_image)
-                self.root.iconphoto(False, icon_photo)
-            except Exception as e:
-                print(f"Could not load app icon: {e}")
+        icon_path = os.path.join(os.path.dirname(__file__), "images", "logo.jpeg")
+        icon_image = Image.open(icon_path)
+        icon_photo = ImageTk.PhotoImage(icon_image)
+        self.root.iconphoto(False, icon_photo)
         
         # Variables
         self.material_df = None

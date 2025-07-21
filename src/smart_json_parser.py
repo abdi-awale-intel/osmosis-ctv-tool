@@ -26,19 +26,30 @@ def process_SmartCTV(base_path, JSON_path, config_number='',place_in=''):
     try:
         with open(JSON_path, 'r') as json_file:
             json_obj  = json.load(json_file)
+        print(f"✅ Successfully loaded JSON: {JSON_path}")
     except Exception as e:
         # Print the exception details
-        print(f"An error occurred: {e}")
-        return ''
+        print(f"❌ An error occurred loading JSON {JSON_path}: {e}")
+        return [], []  # Return empty lists instead of empty string
     #map_params = {get hierarchical lists and the names of the modules}
     #Feed map params into the replace section of the gen rows function under the if area
     # Replace using returned value from JSON based on whatever is the current hierarchical list
     #by making a temporary dictionary
     output_paths = []
     suffixes = []
+    print(f"🔍 Processing SmartCTV - config_number: '{config_number}', base_path: {base_path}")
+    
+    # Check if TestConfigurations exists
+    if 'TestConfigurations' not in json_obj:
+        print("❌ No TestConfigurations found in JSON")
+        return [], []
+    
+    print(f"📋 Found {len(json_obj['TestConfigurations'])} test configurations")
     #Iterates per test in smart json to create CTV decoders for each test
     for testconfig in json_obj['TestConfigurations']:
+        print(f"🔄 Processing test config: {testconfig}")
         if testconfig != config_number and config_number!='':#check for ctvtag mode which always has config number as ''
+            print(f"⏩ Skipping config {testconfig} (doesn't match '{config_number}')")
             continue
         CTV_path = ''
         iterator_nest = {}
@@ -135,10 +146,11 @@ def process_SmartCTV(base_path, JSON_path, config_number='',place_in=''):
         clean_up_breaks(output_file_path)
         print(output_file_path+" is decoded!")
         if config_number != '': 
-            return output_file_path
+            return [output_file_path], ['']  # Return as lists for consistency
         output_paths.append(output_file_path)
 
 
+    print(f"📤 SmartCTV processing complete - returning {len(output_paths)} files and {len(suffixes)} suffixes")
     return output_paths, suffixes
 
 def generate_filled_CTV_rows(row, iterator_dict, map_dict, custom_dict, header):
