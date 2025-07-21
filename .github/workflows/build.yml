@@ -24,16 +24,17 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r requirements_python3131.txt
         
     - name: Validate Python modules
       run: |
         python -c "import sys; print(f'Python version: {sys.version}')"
-        python build_validator.py
+        python build_validator_python3131.py
         
     - name: Build executable with PyInstaller
+      working-directory: src
       run: |
-        python -m PyInstaller ctvlist_gui.spec --clean --noconfirm
+        python -m PyInstaller ../ctvlist_gui_python3131.spec --clean --noconfirm
         
     - name: Test executable
       run: |

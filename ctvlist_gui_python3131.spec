@@ -8,6 +8,14 @@ from pathlib import Path
 # Get the directory containing this spec file
 spec_dir = Path(__file__).parent
 
+# Determine if we're running from src directory
+if spec_dir.name == 'src':
+    project_root = spec_dir.parent
+    src_dir = spec_dir
+else:
+    project_root = spec_dir
+    src_dir = spec_dir / "src"
+
 block_cipher = None
 
 # Custom module detection for Python 3.13.1
@@ -16,16 +24,15 @@ def find_custom_modules():
     custom_modules = []
     
     # Look for Python files in src directory
-    src_dir = spec_dir / "src"
     if src_dir.exists():
         for py_file in src_dir.glob("*.py"):
-            if py_file.name != "__init__.py":
+            if py_file.name not in ["__init__.py", "ctvlist_gui.py"]:
                 module_name = py_file.stem
                 custom_modules.append(module_name)
     
     # Look for Python files in root directory
-    for py_file in spec_dir.glob("*.py"):
-        if py_file.name not in ["setup.py", "build_validator.py"]:
+    for py_file in project_root.glob("*.py"):
+        if py_file.name not in ["setup.py", "build_validator.py", "build_validator_python3131.py"]:
             module_name = py_file.stem
             custom_modules.append(module_name)
     
@@ -37,16 +44,16 @@ def find_data_files():
     data_files = []
     
     # Include images directory if it exists
-    images_dir = spec_dir / "images"
+    images_dir = src_dir / "images"
     if images_dir.exists():
         for img_file in images_dir.rglob("*"):
             if img_file.is_file():
-                rel_path = img_file.relative_to(spec_dir)
+                rel_path = img_file.relative_to(src_dir)
                 data_files.append((str(img_file), str(rel_path.parent)))
     
     # Include any config files
     for config_file in ["config.json", "settings.ini", "*.cfg"]:
-        config_path = spec_dir / config_file
+        config_path = project_root / config_file
         if config_path.exists():
             data_files.append((str(config_path), "."))
     
@@ -81,8 +88,8 @@ hidden_imports = [
 
 # Main analysis
 a = Analysis(
-    ['src/ctvlist_gui.py'],
-    pathex=[str(spec_dir), str(spec_dir / "src")],
+    [str(src_dir / 'ctvlist_gui.py')],
+    pathex=[str(project_root), str(src_dir)],
     binaries=[],
     datas=data_files,
     hiddenimports=hidden_imports,
