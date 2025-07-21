@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test script to verify CTV List Data Processor dependencies
 Run this script to check if all required modules are properly installed
@@ -6,6 +7,22 @@ Run this script to check if all required modules are properly installed
 
 import sys
 import traceback
+import os
+
+# Ensure UTF-8 encoding for Windows compatibility
+if sys.platform.startswith('win'):
+    # Set UTF-8 encoding for Windows console output
+    import codecs
+    if hasattr(sys.stdout, 'reconfigure'):
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+            sys.stderr.reconfigure(encoding='utf-8')
+        except:
+            pass
+    # Fallback for older Python versions
+    elif hasattr(sys.stdout, 'encoding'):
+        if sys.stdout.encoding.lower() != 'utf-8':
+            os.environ['PYTHONIOENCODING'] = 'utf-8'
 
 def test_module(module_name, import_statement=None):
     """Test if a module can be imported successfully"""
