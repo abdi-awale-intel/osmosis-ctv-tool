@@ -43,13 +43,29 @@ def find_data_files():
     """Find all data files to include"""
     data_files = []
     
-    # Include images directory if it exists
+    # Include images directory if it exists - EXPLICIT INCLUSION
     images_dir = src_dir / "images"
     if images_dir.exists():
+        print(f"Found images directory: {images_dir}")
         for img_file in images_dir.rglob("*"):
-            if img_file.is_file():
+            if img_file.is_file() and img_file.suffix.lower() in ['.png', '.jpg', '.jpeg', '.gif', '.bmp']:
                 rel_path = img_file.relative_to(src_dir)
                 data_files.append((str(img_file), str(rel_path.parent)))
+                print(f"Adding image: {img_file} -> {rel_path.parent}")
+    
+    # Also add explicit image files (backup)
+    image_files = [
+        'logo.png', 'logo.jpg', 'logo.jpeg',
+        'lightmode-logo.png', 'lightmode-logo.jpg',
+        'light-logo.png', 'light-logo.jpg',
+        'darkmode-logo.png', 'dark-logo.png', 'dark-logo.jpg'
+    ]
+    
+    for img_name in image_files:
+        img_path = images_dir / img_name
+        if img_path.exists():
+            data_files.append((str(img_path), 'images'))
+            print(f"Explicitly adding: {img_name}")
     
     # Include any config files
     for config_file in ["config.json", "settings.ini", "*.cfg"]:
