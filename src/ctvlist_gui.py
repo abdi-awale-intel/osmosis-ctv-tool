@@ -9,21 +9,73 @@ import re
 import time
 import datetime
 import threading
+import traceback  # Add for better error reporting
 
-
-# Import PIL for images (with fallback)
+# Add PIL imports for image handling with robust fallback
+PIL_AVAILABLE = True
 try:
     from PIL import Image, ImageTk
-    PIL_AVAILABLE = True
+    print("✅ PIL/Pillow available - enhanced UI features enabled")
 except ImportError:
     PIL_AVAILABLE = False
-    print("PIL/Pillow not available - images will be disabled")
+    print("⚠️ PIL/Pillow not available - using embedded fallback images")
+    # Create dummy classes for fallback
+    class Image:
+        @staticmethod
+        def open(*args, **kwargs):
+            return None
+        @staticmethod
+        def frombytes(*args, **kwargs):
+            return None
+        class Resampling:
+            LANCZOS = 1
+    class ImageTk:
+        @staticmethod
+        def PhotoImage(*args, **kwargs):
+            return None
 
-# Import your existing modules
-import file_functions as fi
-import mtpl_parser as mt
-import index_ctv as ind
-import smart_json_parser as sm
+# Embedded base64 encoded images (small logos for fallback)
+EMBEDDED_IMAGES = {
+    'app_icon': """
+iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAANCSURBVFiFtZdNaBNBFMd/M5tsNk2bpI1aqRVRwYNePHjw4MWLBy9ePHjx4sWLFy9ePHjx4sWDFy8ePHjx4MWLFy9evHjx4sGLBy8evHjw4sWLFy9ePHjx4MWDF69evPqxM7Mzs/Pe7LxvZt5bAP5fAGMMY4wxjDHGGMMYYwxjjDHGGMMYYwxjjDHGGMMYYwxjjDHGGMMYYwxjjDHGGMMY+x8AxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4w=
+""",
+    'light_mode': """
+iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAOvSURBVHic7ZtNaBNBFMd/M2mTpk2bfqS2tlYrFRGxB/Hgp3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jw4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evA==
+""",
+    'dark_mode': """
+iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAQNSURBVHic7ZtNaBNBFMd/M2mTpk3Tfti2tlYrFRGxB/HgwYsHD168ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwQ==
+"""
+}
+
+
+# Import your existing modules with fallback handling
+try:
+    import file_functions as fi
+    print("✅ file_functions module loaded successfully")
+except ImportError as e:
+    print(f"Warning: file_functions module not available: {e}")
+    fi = None
+
+try:
+    import mtpl_parser as mt
+    print("✅ mtpl_parser module loaded successfully")
+except ImportError as e:
+    print(f"Warning: mtpl_parser module not available: {e}")
+    mt = None
+
+try:
+    import index_ctv as ind
+    print("✅ index_ctv module loaded successfully")
+except ImportError as e:
+    print(f"Warning: index_ctv module not available: {e}")
+    ind = None
+
+try:
+    import smart_json_parser as sm
+    print("✅ smart_json_parser module loaded successfully")
+except ImportError as e:
+    print(f"Warning: smart_json_parser module not available: {e}")
+    sm = None
 
 # Import pyuber_query with fallback handling
 PYUBER_AVAILABLE = True
@@ -34,15 +86,135 @@ try:
         sys.path.insert(0, parent_dir)
     
     import pyuber_query as py
-    print("PyUber module loaded successfully")
+    print("✅ PyUber module loaded successfully")
+    
+    # Test PyUber status
+    pyuber_status = py.get_pyuber_status()
+    if not pyuber_status['available']:
+        PYUBER_AVAILABLE = False
+        print(f"⚠️ PyUber backend not available: {pyuber_status['error']}")
+    else:
+        print(f"✅ PyUber backend ready - Path: {pyuber_status['module_path']}")
+        
 except ImportError as e:
     PYUBER_AVAILABLE = False
-    print(f"PyUber not available - some features will be disabled: {e}")
+    print(f"⚠️ PyUber not available - some features will be disabled: {e}")
     # Create a dummy module for fallback
     class DummyPyUber:
         def uber_request(self, *args, **kwargs):
-            raise ImportError("PyUber module not available")
+            raise ImportError(
+                "❌ PyUber Backend Not Available\n\n"
+                "The PyUber database module is required for data processing but could not be imported.\n\n"
+                "Possible solutions:\n"
+                "1. Install PyUber module\n"
+                "2. Contact your system administrator for PyUber setup\n"
+                "3. Ensure database drivers are properly installed\n\n"
+                "This application requires PyUber for database connectivity to retrieve test data."
+            )
+        
+        def get_pyuber_status(self):
+            return {'available': False, 'error': 'PyUber module not available'}
+    
     py = DummyPyUber()
+except Exception as e:
+    PYUBER_AVAILABLE = False
+    print(f"⚠️ Unexpected error loading PyUber: {e}")
+    # Create a dummy module for fallback
+    class DummyPyUber:
+        def uber_request(self, *args, **kwargs):
+            raise ImportError(f"PyUber Backend Error: {str(e)}")
+        
+        def get_pyuber_status(self):
+            return {'available': False, 'error': f'PyUber error: {str(e)}'}
+    
+    py = DummyPyUber()
+
+def create_embedded_image(image_key, size=(80, 60)):
+    """Create an image from embedded base64 data with fallback to text"""
+    try:
+        import base64
+        import io
+    except ImportError:
+        print("Warning: base64 or io module not available for image processing")
+        return None
+    
+    if not PIL_AVAILABLE:
+        return None
+    
+    try:
+        # Decode base64 image data
+        image_data = base64.b64decode(EMBEDDED_IMAGES.get(image_key, ''))
+        if not image_data:
+            return None
+            
+        # Create PIL image from bytes
+        image = Image.open(io.BytesIO(image_data))
+        
+        # Resize if needed
+        if size:
+            image = image.resize(size, Image.Resampling.LANCZOS)
+            
+        # Convert to PhotoImage
+        return ImageTk.PhotoImage(image)
+        
+    except Exception as e:
+        print(f"Failed to create embedded image {image_key}: {e}")
+        return None
+
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+        print(f"✅ Using PyInstaller resource path: {base_path}")
+    except AttributeError:
+        # We're running in development mode
+        base_path = os.path.abspath(".")
+        print(f"✅ Using development resource path: {base_path}")
+    
+    resource_path = os.path.join(base_path, relative_path)
+    print(f"🔍 Looking for resource: {resource_path}")
+    return resource_path
+
+def load_image_with_fallback(image_paths, size=(80, 60), fallback_key=None):
+    """Load image with multiple fallback options"""
+    if not PIL_AVAILABLE:
+        if fallback_key and fallback_key in EMBEDDED_IMAGES:
+            return create_embedded_image(fallback_key, size)
+        return None
+    
+    # Try each path in order
+    for path in image_paths:
+        try:
+            if os.path.exists(path):
+                image = Image.open(path)
+                if size:
+                    image = image.resize(size, Image.Resampling.LANCZOS)
+                return ImageTk.PhotoImage(image)
+        except Exception as e:
+            print(f"Failed to load image from {path}: {e}")
+            continue
+    
+    # Try embedded fallback
+    if fallback_key:
+        return create_embedded_image(fallback_key, size)
+    
+    return None
+
+def create_text_button(parent, text, command, **kwargs):
+    """Create a text-based button as fallback when images aren't available"""
+    button = tk.Button(
+        parent, 
+        text=text, 
+        command=command,
+        relief='flat',
+        bd=1,
+        padx=10,
+        pady=5,
+        cursor="hand2",
+        **kwargs
+    )
+    return button
 
 class CTVListGUI:
     def __init__(self, root):
@@ -51,16 +223,11 @@ class CTVListGUI:
         self.root.geometry("1400x800")  # Set better initial size
         self.root.minsize(800, 600)     # Set minimum window size
         
-        # Set application icon
-        if PIL_AVAILABLE:
-            try:
-                # Use relative path from the script directory
-                icon_path = os.path.join(os.path.dirname(__file__), "images", "logo.jpeg")
-                icon_image = Image.open(icon_path)
-                icon_photo = ImageTk.PhotoImage(icon_image)
-                self.root.iconphoto(False, icon_photo)
-            except Exception as e:
-                print(f"Could not load app icon: {e}")
+        # Print startup diagnostics
+        self.print_startup_diagnostics()
+        
+        # Set application icon with fallback
+        self.set_application_icon()
         
         # Variables
         self.material_df = None
@@ -84,6 +251,61 @@ class CTVListGUI:
         self.setup_window_management()
         
         self.create_widgets()
+        
+    def print_startup_diagnostics(self):
+        """Print comprehensive startup diagnostics"""
+        print("=" * 60)
+        print("🚀 CTV LIST GUI STARTUP DIAGNOSTICS")
+        print("=" * 60)
+        print(f"📍 Working Directory: {os.getcwd()}")
+        print(f"📍 Script Location: {os.path.abspath(__file__)}")
+        print(f"📍 Python Executable: {sys.executable}")
+        print(f"📍 Python Version: {sys.version}")
+        
+        # Check if running in PyInstaller
+        if hasattr(sys, '_MEIPASS'):
+            print(f"📦 PyInstaller Mode: {sys._MEIPASS}")
+        else:
+            print("🐍 Development Mode")
+            
+        # Module availability summary
+        modules_status = {
+            'file_functions': fi is not None,
+            'mtpl_parser': mt is not None,
+            'index_ctv': ind is not None,
+            'smart_json_parser': sm is not None,
+            'pyuber_query': PYUBER_AVAILABLE,
+            'PIL': PIL_AVAILABLE
+        }
+        
+        print("📚 Module Status:")
+        for module, available in modules_status.items():
+            status = "✅" if available else "❌"
+            print(f"   {status} {module}")
+            
+        print("=" * 60)
+        
+    def set_application_icon(self):
+        """Set application icon with multiple fallback options"""
+        icon_paths = [
+            get_resource_path("images/logo.jpeg"),
+            get_resource_path("images/logo.jpg"),
+            get_resource_path("images/logo.png"),
+            os.path.join(os.path.dirname(__file__), "images", "logo.jpeg"),
+            os.path.join(os.path.dirname(__file__), "images", "logo.jpg"),
+            os.path.join(os.path.dirname(__file__), "images", "logo.png")
+        ]
+        
+        icon_image = load_image_with_fallback(icon_paths, size=(32, 32), fallback_key='app_icon')
+        
+        if icon_image:
+            try:
+                self.root.iconphoto(False, icon_image)
+                print("✅ Application icon set successfully")
+            except Exception as e:
+                print(f"⚠️ Failed to set icon: {e}")
+        else:
+            print("⚠️ No application icon available - using default")
         
     def setup_window_management(self):
         """Setup proper window state handling and resize management"""
@@ -211,59 +433,8 @@ class CTVListGUI:
             print(f"Error refreshing MTPL data: {e}")
     
     def create_widgets(self):
-        # Add theme toggle logos at the top center
-        if PIL_AVAILABLE:
-            try:
-                # Load light mode and dark mode logos using relative paths
-                lightmode_logo_path = os.path.join(os.path.dirname(__file__), "images", "lightmode-logo.jpg")
-                darkmode_logo_path = os.path.join(os.path.dirname(__file__), "images", "darkmode-logo.png")
-                
-                # Load and resize logos
-                light_image = Image.open(lightmode_logo_path)
-                dark_image = Image.open(darkmode_logo_path)
-                
-                # Resize logos to fit nicely (adjust size as needed)
-                light_image = light_image.resize((80, 60), Image.Resampling.LANCZOS)
-                dark_image = dark_image.resize((80, 60), Image.Resampling.LANCZOS)
-                
-                self.light_logo = ImageTk.PhotoImage(light_image)
-                self.dark_logo = ImageTk.PhotoImage(dark_image)
-                
-                # Create logo frame at the top
-                logo_frame = ttk.Frame(self.root)
-                logo_frame.pack(pady=10)
-                
-                # Create frame for the two logos side by side
-                logos_container = ttk.Frame(logo_frame)
-                logos_container.pack()
-                
-                # Add light mode logo button (left)
-                self.light_mode_btn = tk.Label(logos_container, image=self.light_logo, cursor="hand2")
-                self.light_mode_btn.pack(side='left', padx=(0, 2))
-                self.light_mode_btn.bind('<Button-1>', self.switch_to_light_mode)
-                
-                # Add dark mode logo button (right)
-                self.dark_mode_btn = tk.Label(logos_container, image=self.dark_logo, cursor="hand2")
-                self.dark_mode_btn.pack(side='left', padx=(2, 0))
-                self.dark_mode_btn.bind('<Button-1>', self.switch_to_dark_mode)
-                
-                # Add application title below logos
-                title_label = ttk.Label(logo_frame, text="CTV List Data Processor", 
-                                      font=('Arial', 16, 'bold'), foreground='#0071c5')
-                title_label.pack(pady=(10, 10))
-                
-                # Add theme indicator
-                self.theme_label = ttk.Label(logo_frame, text="Light Mode", 
-                                           font=('Arial', 10), foreground='gray')
-                title_label.pack()
-                
-            except Exception as e:
-                print(f"Could not load theme logos: {e}")
-                # Fallback to text-only title
-                self.create_fallback_title()
-        else:
-            # Fallback to text-only title when PIL is not available
-            self.create_fallback_title()
+        # Create theme toggle with robust image handling
+        self.create_theme_toggle()
         
         # Create notebook for tabs (this should always be created)
         notebook = ttk.Notebook(self.root)
@@ -291,6 +462,112 @@ class CTVListGUI:
         # Configure initial treeview colors
         self.configure_treeview_alternating_colors()
         
+    def create_theme_toggle(self):
+        """Create theme toggle with robust image loading and fallbacks"""
+        try:
+            # Define possible image paths for light and dark mode logos
+            light_logo_paths = [
+                get_resource_path("images/lightmode-logo.jpg"),
+                get_resource_path("images/lightmode-logo.png"),
+                get_resource_path("images/light-logo.jpg"),
+                get_resource_path("images/light-logo.png"),
+                os.path.join(os.path.dirname(__file__), "images", "lightmode-logo.jpg"),
+                os.path.join(os.path.dirname(__file__), "images", "lightmode-logo.png"),
+                os.path.join(os.path.dirname(__file__), "images", "light-logo.jpg"),
+                os.path.join(os.path.dirname(__file__), "images", "light-logo.png")
+            ]
+            
+            dark_logo_paths = [
+                get_resource_path("images/darkmode-logo.png"),
+                get_resource_path("images/darkmode-logo.jpg"),
+                get_resource_path("images/dark-logo.png"),
+                get_resource_path("images/dark-logo.jpg"),
+                os.path.join(os.path.dirname(__file__), "images", "darkmode-logo.png"),
+                os.path.join(os.path.dirname(__file__), "images", "darkmode-logo.jpg"),
+                os.path.join(os.path.dirname(__file__), "images", "dark-logo.png"),
+                os.path.join(os.path.dirname(__file__), "images", "dark-logo.jpg")
+            ]
+            
+            # Try to load images with fallbacks
+            self.light_logo = load_image_with_fallback(light_logo_paths, size=(80, 60), fallback_key='light_mode')
+            self.dark_logo = load_image_with_fallback(dark_logo_paths, size=(80, 60), fallback_key='dark_mode')
+            
+            # Create logo frame at the top
+            logo_frame = ttk.Frame(self.root)
+            logo_frame.pack(pady=10)
+            
+            # If we have images, create image-based buttons
+            if self.light_logo or self.dark_logo:
+                self.create_image_based_theme_toggle(logo_frame)
+            else:
+                # Fall back to text-based theme toggle
+                self.create_text_based_theme_toggle(logo_frame)
+                
+            # Add application title below logos
+            title_label = ttk.Label(logo_frame, text="CTV List Data Processor", 
+                                  font=('Arial', 16, 'bold'), foreground='#0071c5')
+            title_label.pack(pady=(10, 10))
+            
+            # Add theme indicator
+            self.theme_label = ttk.Label(logo_frame, text="Light Mode", 
+                                       font=('Arial', 10), foreground='gray')
+            self.theme_label.pack()
+            
+        except Exception as e:
+            print(f"Error creating theme toggle: {e}")
+            # Ultimate fallback - just create title
+            self.create_fallback_title()
+    
+    def create_image_based_theme_toggle(self, parent):
+        """Create image-based theme toggle buttons"""
+        try:
+            # Create frame for the two logos side by side
+            logos_container = ttk.Frame(parent)
+            logos_container.pack()
+            
+            # Add light mode logo button (left)
+            if self.light_logo:
+                self.light_mode_btn = tk.Label(logos_container, image=self.light_logo, cursor="hand2")
+                self.light_mode_btn.pack(side='left', padx=(0, 2))
+                self.light_mode_btn.bind('<Button-1>', self.switch_to_light_mode)
+            else:
+                self.light_mode_btn = create_text_button(logos_container, "☀️ Light", self.switch_to_light_mode)
+                self.light_mode_btn.pack(side='left', padx=(0, 2))
+            
+            # Add dark mode logo button (right)
+            if self.dark_logo:
+                self.dark_mode_btn = tk.Label(logos_container, image=self.dark_logo, cursor="hand2")
+                self.dark_mode_btn.pack(side='left', padx=(2, 0))
+                self.dark_mode_btn.bind('<Button-1>', self.switch_to_dark_mode)
+            else:
+                self.dark_mode_btn = create_text_button(logos_container, "🌙 Dark", self.switch_to_dark_mode)
+                self.dark_mode_btn.pack(side='left', padx=(2, 0))
+                
+            print("✅ Image-based theme toggle created")
+            
+        except Exception as e:
+            print(f"Error creating image-based theme toggle: {e}")
+            self.create_text_based_theme_toggle(parent)
+    
+    def create_text_based_theme_toggle(self, parent):
+        """Create text-based theme toggle as fallback"""
+        try:
+            theme_frame = ttk.Frame(parent)
+            theme_frame.pack(pady=5)
+            
+            # Create simple theme toggle buttons
+            self.light_mode_btn = create_text_button(theme_frame, "☀️ Light Mode", self.switch_to_light_mode)
+            self.light_mode_btn.pack(side='left', padx=5)
+            
+            self.dark_mode_btn = create_text_button(theme_frame, "🌙 Dark Mode", self.switch_to_dark_mode)
+            self.dark_mode_btn.pack(side='left', padx=5)
+            
+            print("✅ Text-based theme toggle created")
+            
+        except Exception as e:
+            print(f"Error creating text-based theme toggle: {e}")
+            # No theme toggle available - continue without it
+        
     def create_fallback_title(self):
         """Create a simple text-only title when images are not available"""
         title_frame = ttk.Frame(self.root)
@@ -303,13 +580,30 @@ class CTVListGUI:
         theme_frame = ttk.Frame(title_frame)
         theme_frame.pack(pady=5)
         
-        ttk.Button(theme_frame, text="Light Mode", command=self.switch_to_light_mode).pack(side='left', padx=5)
-        ttk.Button(theme_frame, text="Dark Mode", command=self.switch_to_dark_mode).pack(side='left', padx=5)
+        self.light_mode_btn = create_text_button(theme_frame, "☀️ Light Mode", self.switch_to_light_mode)
+        self.light_mode_btn.pack(side='left', padx=5)
+        
+        self.dark_mode_btn = create_text_button(theme_frame, "🌙 Dark Mode", self.switch_to_dark_mode)
+        self.dark_mode_btn.pack(side='left', padx=5)
         
         # Add theme indicator
         self.theme_label = ttk.Label(title_frame, text="Light Mode", 
                                    font=('Arial', 10), foreground='gray')
         self.theme_label.pack()
+        
+    def switch_to_light_mode(self, event=None):
+        """Switch to light mode theme"""
+        self.is_dark_mode = False
+        if hasattr(self, 'theme_label') and self.theme_label:
+            self.theme_label.config(text="Light Mode")
+        print("🌞 Switched to Light Mode")
+        
+    def switch_to_dark_mode(self, event=None):
+        """Switch to dark mode theme"""
+        self.is_dark_mode = True
+        if hasattr(self, 'theme_label') and self.theme_label:
+            self.theme_label.config(text="Dark Mode")
+        print("🌙 Switched to Dark Mode")
         
     def create_material_tab(self):
         # Material Data Input Section
@@ -470,6 +764,7 @@ class CTVListGUI:
         self.stop_button = ttk.Button(process_frame, text="Stop", command=self.stop_processing, state='disabled')
         self.stop_button.pack(side='left', padx=10)
         ttk.Button(process_frame, text="Clear All", command=self.clear_all).pack(side='left', padx=10)
+        ttk.Button(process_frame, text="Run Diagnostics", command=self.diagnostic_column_info).pack(side='left', padx=10)
         
         # Progress and log
         progress_frame = ttk.LabelFrame(self.output_frame, text="Progress")
@@ -946,7 +1241,7 @@ class CTVListGUI:
             self.update_status_indicator(self.mtpl_info_label, f"⚠️ Error reading MTPL file: {str(e)}", "error")
     
     def load_mtpl_file(self):
-        """Load and process MTPL file"""
+        """Load and process MTPL file with enhanced error handling"""
         mtpl_path = self.mtpl_file_path.get()
         if not mtpl_path:
             messagebox.showwarning("Warning", "Please select an MTPL file first")
@@ -954,15 +1249,22 @@ class CTVListGUI:
             
         try:
             self.log_message("Processing MTPL file...")
+            
+            # Check if required modules are available
+            if mt is None:
+                raise ImportError("mtpl_parser module is not available")
+            if fi is None:
+                raise ImportError("file_functions module is not available")
+            
             self.mtpl_csv_path = mt.mtpl_to_csv(fi.process_file_input(mtpl_path))
             self.mtpl_df = pd.read_csv(self.mtpl_csv_path)
             
-            # Debug: Print MTPL dataframe info
-            print(f"Debug - MTPL columns: {self.mtpl_df.columns.tolist()}")
-            print(f"Debug - MTPL shape: {self.mtpl_df.shape}")
+            # Debug: Print MTPL dataframe info with enhanced logging
+            self.log_message(f"MTPL columns: {self.mtpl_df.columns.tolist()}")
+            self.log_message(f"MTPL shape: {self.mtpl_df.shape}")
             if not self.mtpl_df.empty:
-                print(f"Debug - First few rows of MTPL:")
-                print(self.mtpl_df.head())
+                self.log_message(f"First few rows of MTPL:")
+                self.log_message(str(self.mtpl_df.head()))
             
             self.update_mtpl_display()
             self.log_message(f"MTPL file processed: {self.mtpl_csv_path}", "success")
@@ -970,9 +1272,14 @@ class CTVListGUI:
             # Set default output folder
             self.set_default_output_folder()
             
+        except ImportError as e:
+            error_msg = f"Required module not available: {str(e)}"
+            self.log_message(error_msg, "error")
+            messagebox.showerror("Module Error", error_msg)
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to process MTPL file: {str(e)}")
-            self.log_message(f"Error processing MTPL: {str(e)}", "error")
+            error_msg = f"Failed to process MTPL file: {str(e)}"
+            messagebox.showerror("Error", error_msg)
+            self.log_message(error_msg, "error")
             
     def update_mtpl_display(self):
         """Update the MTPL data display"""
@@ -1228,21 +1535,34 @@ class CTVListGUI:
         self.selected_tests_label.config(text=str(count))
         
     def get_selected_tests(self):
-        """Get list of selected test names"""
+        """Get list of selected test names with robust column handling"""
         selected_tests = []
         # Get from stored data, not just visible items
         for item_data in self.all_mtpl_items:
             if 'checked' in item_data['tags']:
                 values = item_data['values']
-                # Debug: Print the values to understand the structure
-                print(f"Debug - Selected item values: {values}")
-                # The first column is checkbox, so test name should be in index 2 (third column)
-                # Based on the processing logic where row[2] is the test name
-                if len(values) > 2:  
-                    test_name = values[2]  # This should be the test name column
+                self.log_message(f"Debug - Selected item values: {values}")
+                
+                # Robust test name extraction
+                test_name = None
+                
+                # Try to find test name in common column positions
+                # The first column is checkbox (index 0), so try indices 1, 2, 3
+                for test_index in [1, 2, 3]:
+                    if len(values) > test_index:
+                        potential_test = str(values[test_index]).strip()
+                        # Skip empty values and checkbox indicators
+                        if potential_test and potential_test not in ['☐', '☑', '✓', '', 'None']:
+                            test_name = potential_test
+                            break
+                
+                if test_name:
                     selected_tests.append(test_name)
-                    print(f"Debug - Added test: {test_name}")
-        print(f"Debug - Total selected tests: {selected_tests}")
+                    self.log_message(f"Debug - Added test: {test_name}")
+                else:
+                    self.log_message(f"Warning - Could not extract test name from values: {values}")
+                    
+        self.log_message(f"Debug - Total selected tests: {selected_tests}")
         return selected_tests
         
     def browse_output_folder(self):
@@ -1360,6 +1680,24 @@ class CTVListGUI:
             self.log_message("Starting data processing...")
             self.progress_var.set(0)
             
+            # Check if required modules are available
+            required_modules = [
+                ('file_functions', fi),
+                ('index_ctv', ind),
+                ('smart_json_parser', sm)
+            ]
+            
+            missing_modules = []
+            for module_name, module_obj in required_modules:
+                if module_obj is None:
+                    missing_modules.append(module_name)
+            
+            if missing_modules:
+                error_msg = f"Required modules not available: {', '.join(missing_modules)}"
+                self.log_message(error_msg, "error")
+                messagebox.showerror("Module Error", f"{error_msg}\n\nPlease ensure all required modules are properly installed and available.")
+                return
+            
             # Default values
             default_values = {
                 'Lot': ['Not Null'],
@@ -1464,20 +1802,72 @@ class CTVListGUI:
                     self.log_message(f"Processing test: {test} ({current_iteration + 1}/{total_iterations})")
                     self.update_progress(current_iteration, total_iterations, f"Starting test: {test}")
                     
-                    # Find matching row in MTPL dataframe (enhanced from master.py)
-                    matching_rows = self.mtpl_df[self.mtpl_df.iloc[:, 1] == test]  # Assuming test name is in column 1
+                    # Find matching row in MTPL dataframe with robust column handling
+                    # Try multiple matching strategies: TestName, TestType, and flexible matching
+                    matching_rows = None
                     
-                    if matching_rows.empty:
+                    # Strategy 1: Try TestName column first
+                    test_name_columns = ['TestName', 'Test', 'test', 'testname']
+                    for col_name in test_name_columns:
+                        if col_name in self.mtpl_df.columns:
+                            matching_rows = self.mtpl_df[self.mtpl_df[col_name] == test]
+                            if not matching_rows.empty:
+                                self.log_message(f"Found match for {test} in {col_name} column")
+                                break
+                    
+                    # Strategy 2: If no match found, try TestType column  
+                    if matching_rows is None or matching_rows.empty:
+                        test_type_columns = ['TestType', 'Type', 'testtype', 'type']
+                        for col_name in test_type_columns:
+                            if col_name in self.mtpl_df.columns:
+                                matching_rows = self.mtpl_df[self.mtpl_df[col_name] == test]
+                                if not matching_rows.empty:
+                                    self.log_message(f"Found match for {test} in {col_name} column")
+                                    break
+                    
+                    # Strategy 3: If still no match, try any column containing the test name
+                    if matching_rows is None or matching_rows.empty:
+                        for col_name in self.mtpl_df.columns:
+                            try:
+                                matching_rows = self.mtpl_df[self.mtpl_df[col_name].astype(str).str.contains(test, na=False)]
+                                if not matching_rows.empty:
+                                    self.log_message(f"Found partial match for {test} in {col_name} column")
+                                    break
+                            except:
+                                continue
+                    
+                    if matching_rows is None or matching_rows.empty:
                         self.log_message(f"No matching MTPL entry found for test: {test}")
                         current_iteration += 1
                         self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (no MTPL entry)")
                         continue
                         
                     row = matching_rows.iloc[0]
-                    test_type = row.iloc[0]  # Assuming test type is in column 0
-                    mode = row.iloc[4]  # Assuming mode is in column 4
-                    mode=str(mode)
-                    config_path = fi.process_file_input(row.iloc[2][row.iloc[2].find('Modules'):].strip('\"'))  # Assuming config path is in column 2
+                    
+                    # Robust column access with fallbacks
+                    def get_column_value(row, possible_names, fallback_index, default_value=""):
+                        """Get column value by name with fallback to index"""
+                        for col_name in possible_names:
+                            if col_name in self.mtpl_df.columns:
+                                return row[col_name]
+                        # Fallback to index if available
+                        if len(self.mtpl_df.columns) > fallback_index:
+                            return row.iloc[fallback_index]
+                        return default_value
+                    
+                    test_type = get_column_value(row, ['TestType', 'Type', 'testtype', 'type'], 0, "")
+                    mode = get_column_value(row, ['Mode', 'mode'], 4, "")
+                    mode = str(mode)
+                    
+                    # Get config path with robust handling
+                    config_path_raw = get_column_value(row, ['ConfigPath', 'Path', 'configpath', 'path'], 2, "")
+                    if config_path_raw and 'Modules' in str(config_path_raw):
+                        config_path = fi.process_file_input(str(config_path_raw)[str(config_path_raw).find('Modules'):].strip('\"'))
+                    else:
+                        self.log_message(f"Invalid config path for test {test}: {config_path_raw}")
+                        current_iteration += 1
+                        self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (invalid config path)")
+                        continue
                     module_name = fi.get_module_name(config_path).strip('\\')
                     test_file = os.path.join(base_dir, config_path)
                     
@@ -1532,15 +1922,19 @@ class CTVListGUI:
                                     self.update_progress(current_iteration, total_iterations, f"Failed test: {test} (SmartCTV error)")
                                     continue
                             else:
-                                config_number = str(int(row.iloc[3]))
-                                self.log_message(f"Processing SmartCtvDc for test: {test}")
-                                ctv_file = sm.process_SmartCTV(base_dir, test_file, config_number, place_in)
-                                intermediary_file_list.append(ctv_file)
-                                indexed_file, csv_identifier, need_suffix, tag_header_names = ind.index_CTV(ctv_file, test, module_name, place_in)
-                                intermediary_file_list.append(indexed_file)
-                                datainput_file, datacombine_file = py.uber_request(indexed_file, test, test_type, need_suffix, place_in, program, csv_identifier, lot_list, wafer_list, prefetch, databases)
-                                intermediary_file_list.append(datainput_file)
-                                output_files.append(datacombine_file)
+                                try:
+                                    config_number = str(int(row[3]))                    
+                                    ctv_file = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
+                                    intermediary_file_list.append(ctv_file)
+                                    indexed_file,csv_identifier,need_suffix = ind.index_CTV(ctv_file, test,module_name,place_in)
+                                    self.log_message(f"Processing SmartCtvDc for test: {test}")
+                                    current_iteration += 1
+                                    intermediary_file_list.append(indexed_file)
+                                except Exception as e:
+                                    self.log_message(f"❌ Error in SmartCTV processing for test {test}: {str(e)}")
+                                    current_iteration += 1
+                                    self.update_progress(current_iteration, total_iterations, f"Failed test: {test} (SmartCTV error)")
+                                    continue
                         else:
                             self.log_message(f"Unknown test type: {test_type}")
                             current_iteration += 1
@@ -1597,6 +1991,81 @@ class CTVListGUI:
         except Exception as e:
             print(f"Could not update treeview row colors: {e}")
     
+    def diagnostic_column_info(self):
+        """Generate comprehensive diagnostic information about data structure"""
+        self.log_message("=== DIAGNOSTIC INFORMATION ===")
+        
+        # Material DataFrame info
+        if hasattr(self, 'material_df') and self.material_df is not None:
+            self.log_message(f"Material DataFrame columns: {list(self.material_df.columns)}")
+            self.log_message(f"Material DataFrame shape: {self.material_df.shape}")
+            if not self.material_df.empty:
+                self.log_message(f"Material sample data: {self.material_df.iloc[0].to_dict()}")
+        else:
+            self.log_message("No Material DataFrame available")
+            
+        # MTPL DataFrame info  
+        if hasattr(self, 'mtpl_df') and self.mtpl_df is not None:
+            self.log_message(f"MTPL DataFrame columns: {list(self.mtpl_df.columns)}")
+            self.log_message(f"MTPL DataFrame shape: {self.mtpl_df.shape}")
+            if not self.mtpl_df.empty:
+                self.log_message(f"MTPL sample data: {self.mtpl_df.iloc[0].to_dict()}")
+                
+                # Check for common column names
+                common_test_columns = ['Test', 'TestName', 'test', 'testname']
+                common_type_columns = ['TestType', 'Type', 'testtype', 'type']
+                common_mode_columns = ['Mode', 'mode']
+                common_config_columns = ['ConfigPath', 'Path', 'configpath', 'path']
+                
+                found_columns = {
+                    'test_columns': [col for col in common_test_columns if col in self.mtpl_df.columns],
+                    'type_columns': [col for col in common_type_columns if col in self.mtpl_df.columns],
+                    'mode_columns': [col for col in common_mode_columns if col in self.mtpl_df.columns],
+                    'config_columns': [col for col in common_config_columns if col in self.mtpl_df.columns]
+                }
+                
+                for category, cols in found_columns.items():
+                    self.log_message(f"Found {category}: {cols}")
+        else:
+            self.log_message("No MTPL DataFrame available")
+            
+        # Module availability
+        modules_status = {
+            'file_functions': fi is not None,
+            'mtpl_parser': mt is not None,  
+            'index_ctv': ind is not None,
+            'smart_json_parser': sm is not None,
+            'pyuber_query': PYUBER_AVAILABLE
+        }
+        
+        self.log_message(f"Module availability: {modules_status}")
+        
+        # Image file availability diagnostics
+        image_paths = [
+            "images/logo.jpeg",
+            "images/logo.jpg", 
+            "images/logo.png",
+            "images/lightmode-logo.jpg",
+            "images/lightmode-logo.png",
+            "images/light-logo.jpg",
+            "images/light-logo.png",
+            "images/darkmode-logo.png"
+        ]
+        
+        image_status = {}
+        for img_path in image_paths:
+            full_path = os.path.join(os.path.dirname(__file__), img_path)
+            resource_path = get_resource_path(img_path)
+            image_status[img_path] = {
+                'file_exists': os.path.exists(full_path),
+                'resource_exists': os.path.exists(resource_path),
+                'full_path': full_path,
+                'resource_path': resource_path
+            }
+        
+        self.log_message(f"Image availability: {image_status}")
+        self.log_message("=== END DIAGNOSTIC ===")
+
     def log_message(self, message, level="info"):
         """Add message to log with timestamp, formatting, and color coding"""
         import datetime
@@ -2248,9 +2717,55 @@ class CTVListGUI:
             print(f"Error in force_widget_refresh: {e}")
     
 def main():
-    root = tk.Tk()
-    app = CTVListGUI(root)
-    root.mainloop()
+    """Main entry point with comprehensive error handling for CI/Git builds"""
+    try:
+        print("🚀 Starting CTV List GUI Application...")
+        
+        # Initialize Tkinter with error handling
+        try:
+            root = tk.Tk()
+            print("✅ Tkinter initialized successfully")
+        except Exception as e:
+            print(f"❌ Failed to initialize Tkinter: {e}")
+            return 1
+        
+        # Create the application with error handling
+        try:
+            app = CTVListGUI(root)
+            print("✅ Application instance created successfully")
+        except Exception as e:
+            print(f"❌ Failed to create application: {e}")
+            try:
+                # Show error dialog if possible
+                messagebox.showerror("Startup Error", f"Failed to initialize application:\n{str(e)}")
+            except:
+                pass
+            return 1
+        
+        # Start the main loop
+        try:
+            print("🎯 Starting main event loop...")
+            root.mainloop()
+            print("✅ Application closed normally")
+            return 0
+        except KeyboardInterrupt:
+            print("⚠️ Application interrupted by user")
+            return 0
+        except Exception as e:
+            print(f"❌ Error in main loop: {e}")
+            try:
+                # Show error dialog if possible
+                messagebox.showerror("Runtime Error", f"Application error:\n{str(e)}")
+            except:
+                pass
+            return 1
+            
+    except Exception as e:
+        print(f"❌ Critical error in main(): {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
 
 if __name__ == "__main__":
-    main()
+    exit_code = main()
+    sys.exit(exit_code)
