@@ -1,11 +1,4 @@
 import pandas as pd
-import sys
-import os
-# Add the parent directory to Python path to find PyUber module
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
-
 import PyUber
 import csv
 import pandas
@@ -13,6 +6,8 @@ import datetime
 from datetime import date
 from dateutil.relativedelta import relativedelta
 import time
+import sys
+import os
 import file_functions as fi
 #def uber_request(indexed_input, test_name_file,test_type, output_folder,extra_identifier=''):
 def uber_request(indexed_input, test_name_file, test_type='',needed_suffix=False, output_folder='', program='DAC%', extra_identifier='', lot = ['Not Null'], wafer_id = ['Not Null'], prefetch = '1', databases = ['D1D_PROD_XEUS','F24_PROD_XEUS']):
@@ -45,7 +40,7 @@ def uber_request(indexed_input, test_name_file, test_type='',needed_suffix=False
     max_bytes = 31000 #Estimated max number of bytes for a smaller SQL query system
     
     #print(token_names)
-    if needed_suffix and test_type != "SmartCtvDc":
+    if test_type == 'ClkUtils' or (needed_suffix and test_type != "SmartCtvDc"):
         token_names_list = token_names
         #token_names_string = "',\n'".join(token_names)
     elif needed_suffix:
@@ -129,6 +124,7 @@ def uber_request(indexed_input, test_name_file, test_type='',needed_suffix=False
             start_time = time.time()
             #connect to database and execute query
             conn = PyUber.connect(datasource=database)
+            #conn = PyUber.connect(datasource=database)
             cursor = conn.execute(query)
 
             # Record the end time and calculate the duration
@@ -190,33 +186,51 @@ def uber_request(indexed_input, test_name_file, test_type='',needed_suffix=False
     # Read CSV
     df = pd.read_csv(intermediary_file)###this is the the datainput file
 
-    pass_cols = [col for col in df.columns if col.endswith('_PASS')]#Empty if ClkUtils
-    for pass_col in pass_cols:
-        test_name = pass_col[:-5]  # Remove '_PASS'
-        fail_col = test_name + '_FAIL'
-        combined_col = test_name + '_combined'
-        if fail_col in df.columns:
-            # Generate combined string
-            df[combined_col] = df.apply(lambda row: combine_pipe_fields(str(row[pass_col]), str(row[fail_col])), axis=1)
-        else:
-            # _FAIL column missing, combine _PASS with empty string
-            df[combined_col] = df[pass_col].astype(str).apply(lambda x: combine_pipe_fields(x, ''))
 
-        # Split the combined column into multiple columns
-        split_cols = df[combined_col].str.split('|', expand=True)
+    if test_type == 'ClkUtils':
+            cols_to_drop = df.columns[5:]
+            # Process each column that needs to be split
+            new_columns = []
+            for col_name in cols_to_drop:
+                # Split the column into multiple columns
+                split_cols = df[col_name].str.split('|', expand=True)
+                # Rename columns with suffixes _0, _1, ...
+                split_cols = split_cols.rename(columns=lambda x: f"{col_name}_{x}")
+                new_columns.append(split_cols)
+            
+            # Concatenate all new split columns to original dataframe
+            if new_columns:
+                df = pd.concat([df] + new_columns, axis=1)
+            df.drop(columns=cols_to_drop, inplace=True)
+    else:
+        pass_cols = [col for col in df.columns if col.endswith('_PASS')]#Empty if ClkUtils
+        for pass_col in pass_cols:
+            test_name = pass_col[:-5]  # Remove '_PASS'
+            fail_col = test_name + '_FAIL'
+            combined_col = test_name + '_combined'
+            # Check if the fail column exists
+            if fail_col in df.columns:
+                # Generate combined string
+                df[combined_col] = df.apply(lambda row: combine_pipe_fields(str(row[pass_col]), str(row[fail_col])), axis=1)
+            else:
+                # _FAIL column missing, combine _PASS with empty string
+                df[combined_col] = df[pass_col].astype(str).apply(lambda x: combine_pipe_fields(x, ''))
 
-        # Rename columns with suffixes _0, _1, ...
-        split_cols = split_cols.rename(columns=lambda x: f"{test_name}_combined_{x}")
+            # Split the combined column into multiple columns
+            split_cols = df[combined_col].str.split('|', expand=True)
 
-        # Concatenate split columns to original dataframe
-        df = pd.concat([df, split_cols], axis=1)
+            # Rename columns with suffixes _0, _1, ...
+            split_cols = split_cols.rename(columns=lambda x: f"{test_name}_combined_{x}")
 
-    # Drop columns that contain 'CTV' but do NOT contain 'combined_'
-    cols_to_drop = [col for col in df.columns if 'CTV' in col and 'combined_' not in col]#Only affects CTV
-    df.drop(columns=cols_to_drop, inplace=True)#####QUESTION THIS LOGIC IF NEW COLUMNS
+            # Concatenate split columns to original dataframe
+            df = pd.concat([df, split_cols], axis=1)
 
-    # Remove '_combined' substring from any column name that contains it
-    df.rename(columns=lambda x: x.replace('_combined', '') if '_combined' in x else x, inplace=True)
+        # Drop columns that contain 'CTV' but do NOT contain 'combined_'
+        cols_to_drop = [col for col in df.columns if 'CTV' in col and 'combined_' not in col]#Only affects CTV
+        df.drop(columns=cols_to_drop, inplace=True)#####QUESTION THIS LOGIC IF NEW COLUMNS
+
+        # Remove '_combined' substring from any column name that contains it
+        df.rename(columns=lambda x: x.replace('_combined', '') if '_combined' in x else x, inplace=True)
 
     # Exclude the first two columns from sorting
     excluded_columns = df.columns[:5]
@@ -230,8 +244,6 @@ def uber_request(indexed_input, test_name_file, test_type='',needed_suffix=False
 
     # Reindex the DataFrame with the new column order
     df = df.reindex(new_column_order, axis=1)
-
-    #print(len(decoder_df['combined_string'].tolist()))
 
     # Create a set of original column names from df_pivot
     original_columns_set = set(df_pivot.columns)
@@ -252,8 +264,8 @@ def uber_request(indexed_input, test_name_file, test_type='',needed_suffix=False
         df.columns = df.columns[:5].tolist() + filtered_df['combined_string'].tolist()
         print('Mapping!')
     except:
-        #print(set(filtered_df['Name'].tolist()))
-        #print(df_columns_set)
+        print(set(filtered_df['Name'].tolist()))
+        print(df_columns_set)
         print('No mapping!')
 
     #print(data_out_file)

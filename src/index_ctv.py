@@ -57,11 +57,11 @@ def process_CTV(csv_input_file, log_file, test_name_prefix, MAX_VALUE_PRINT=1433
             need_suffix = True
         if need_suffix:
             local_index = 0
-            suffix_counter = 0
+            suffix_counter = 1
             test_name = ''
             test_name_suffix = ''
             if len(rows)>MAX_VALUE_PRINT:
-                test_name_suffix = '_0'
+                test_name_suffix = f'_{suffix_counter}'
             for row in rows:
                 #if row['ItuffToken'] == '-' or row['ItuffToken'] == '':
                 test_name = f"{test_name_prefix + test_name_suffix}"
@@ -89,7 +89,7 @@ def process_CTV(csv_input_file, log_file, test_name_prefix, MAX_VALUE_PRINT=1433
             last_ITUFF = ''
             for row in rows:
                 #Skips if no Ituff Token modifiers
-                if row['ItuffToken'] == '-':#solution for clkutils (maybe add an extra qualifier about test type)
+                if row['ItuffToken'] == '-' and "CLK" in test_name_prefix.upper():#solution for clkutils (maybe add an extra qualifier about test type)
                     continue
                 if row['ItuffToken'] == '' or row['ItuffToken']=='-':#solution for not clkutils
                     test_name= f"{test_name_prefix}"
@@ -157,7 +157,7 @@ def index_CTV(input_file,test_name,module_name='',place_in='',mode=''):
             combined_df['combined_string'] = combined_df['combined_string'] + '---' + combined_df[f'{col}'].astype(str)
             #print(col)
             break
-        elif col != "Index" and col != "Name" and col != 'OriginalField':
+        elif col != "Index" and col != "Name" and col != "Name_Index":
             combined_df['combined_string'] = combined_df['combined_string'] + '---' + combined_df[f'{col}'].astype(str)
             #print(col)
     # Strip leading '---' if present. Using --- instead of @ to avoid jsl jmp column error
@@ -168,13 +168,9 @@ def index_CTV(input_file,test_name,module_name='',place_in='',mode=''):
     test_config = os.path.basename(input_file).split('_')[1]#new change for test_config
     out_file = ''
     if colon_index != -1:
-        #out_file = os.path.normpath(f'{os.path.dirname(input_file)}\{module_name}_{test_name[colon_index+len("::"):]}_indexed_ctv_decoder.csv')#check here for errors
-        #out_file = os.path.normpath(f'{test_config}_{module_name}_{test_name[colon_index+len("::"):]}_indexed_ctv_decoder.csv')#might need test config number as well
-        out_file = os.path.join(place_in,f'{module_name}_{test_name[colon_index+len("::"):]}_indexed_ctv_decoder.csv')
+        out_file = os.path.join(place_in,f'{module_name}_{test_name[colon_index+len("::"):]}_indexed.csv')
     else:
-        #out_file= os.path.normpath(f'{os.path.dirname(input_file)}\{test_name}_indexed_ctv_decoder.csv')
-        #out_file = os.path.normpath()#might need test config number as well
-        out_file = os.path.join(place_in,f'{test_name}_indexed_ctv_decoder.csv')
+        out_file = os.path.join(place_in,f'{test_name}_indexed.csv')
     out_file = fi.check_write_permission(out_file)
 
     combined_df.to_csv(out_file,index = False)
@@ -196,7 +192,25 @@ def index_CTV(input_file,test_name,module_name='',place_in='',mode=''):
         elif last_slash_index != -1 and end_index != -1:
             csv_identifier = input_file[last_slash_index+1:end_index]
 
-    return out_file, csv_identifier,need_suffix
+    tag_header_names = get_columns_btwn_index_name(combined_df)
+
+    return out_file, csv_identifier,need_suffix,tag_header_names
+
+def get_columns_btwn_index_name(df):
+    columns = df.columns.tolist()
+    
+    try:
+        index_pos = columns.index('Index')
+        name_pos = columns.index('Name')
+        
+        # Return columns between Index and Name (exclusive)
+        tag_header_columns = columns[index_pos + 1:name_pos]
+
+        return tag_header_columns
+    except ValueError:
+        # If 'Index' or 'Name' columns don't exist, return empty list
+        return []
+
 
 if __name__ == "__main__":
     input_file = input("Absolute CTV decoder csv file path: ")

@@ -1447,6 +1447,7 @@ class CTVListGUI:
                 
                 self.log_message(f"Output directory: {place_in}")
                 intermediary_file_list = []
+                output_files = []
                 
                 # Reset iteration counter for each program
                 current_iteration = 0
@@ -1498,50 +1499,48 @@ class CTVListGUI:
                         if "ctvdecoder" in test_type.lower():  # simple CTV indexing
                             self.log_message(f"Processing CtvDecoderSpm for test: {test}")
                             self.update_progress(current_iteration + 0.4, total_iterations, f"Indexing CTV for: {test}")
-                            indexed_file, csv_identifier,need_suffix = ind.index_CTV(test_file, test, module_name, place_in)
+                            indexed_file, csv_identifier, need_suffix, tag_header_names = ind.index_CTV(test_file, test, module_name, place_in)
                             intermediary_file_list.append(indexed_file)
                             self.log_message(f"Performing data request for test: {test}")
-                            datainput_file,datacombine_file = py.uber_request(indexed_file,test,test_type,need_suffix,place_in,program, csv_identifier,lot_list,wafer_list,prefetch,databases)
+                            datainput_file, datacombine_file = py.uber_request(indexed_file, test, test_type, need_suffix, place_in, program, csv_identifier, lot_list, wafer_list, prefetch, databases)
                             intermediary_file_list.append(datainput_file)
+                            output_files.append(datacombine_file)
 
-                        elif  "smartctv" in test_type.lower(): # SMART CTV loop/check logic and indexing
-                            if "CtvTag" in mode:
-                                mode = mode.strip('\"\'')  # Assuming mode is in column 4
+                        elif "smartctv" in test_type.lower():  # SMART CTV loop/check logic and indexing
+                            if "ctvtag" in str(mode).lower():
+                                mode = mode.strip('\"\'')
                                 config_number = ''
                                 self.log_message(f"Processing CTV Tag SmartCtvDc for test: {test}")
                                 self.log_message(f"Config number: {config_number}")
                                 self.update_progress(current_iteration + 0.3, total_iterations, f"Processing SmartCTV for: {test}")
                                 try:
-                                    ctv_files,ITUFF_suffixes = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
-                                    for ctv_file,ITUFF_suffix in zip(ctv_files,ITUFF_suffixes):
+                                    ctv_files, ITUFF_suffixes = sm.process_SmartCTV(base_dir, test_file, config_number, place_in)
+                                    for ctv_file, ITUFF_suffix in zip(ctv_files, ITUFF_suffixes):
                                         intermediary_file_list.append(ctv_file)
                                         test = test + ITUFF_suffix
                                         self.update_progress(current_iteration + 0.6, total_iterations, f"Indexing SmartCTV for: {test}")
-                                        indexed_file, csv_identifier,need_suffix  = ind.index_CTV(ctv_file, test, module_name, place_in,mode)
+                                        indexed_file, csv_identifier, need_suffix, tag_header_names = ind.index_CTV(ctv_file, test, module_name, place_in, mode)
                                         intermediary_file_list.append(indexed_file)
                                         self.log_message(f"Performing data request for test: {test}")
-                                        datainput_file,datacombine_file = py.uber_request(indexed_file,test,test_type,need_suffix,place_in,program, csv_identifier,lot_list,wafer_list,prefetch,databases)
+                                        datainput_file, datacombine_file = py.uber_request(indexed_file, test, test_type, need_suffix, place_in, program, csv_identifier, lot_list, wafer_list, prefetch, databases)
                                         intermediary_file_list.append(datainput_file)
-                                        test = test.replace(ITUFF_suffix,'')
+                                        output_files.append(datacombine_file)
+                                        test = test.replace(ITUFF_suffix, '')
                                 except Exception as e:
                                     self.log_message(f"❌ Error in SmartCTV processing for test {test}: {str(e)}")
                                     current_iteration += 1
                                     self.update_progress(current_iteration, total_iterations, f"Failed test: {test} (SmartCTV error)")
                                     continue
                             else:
-                                try:
-                                    config_number = str(int(row[3]))                    
-                                    ctv_file = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
-                                    intermediary_file_list.append(ctv_file)
-                                    indexed_file,csv_identifier,need_suffix = ind.index_CTV(ctv_file, test,module_name,place_in)
-                                    self.log_message(f"Processing SmartCtvDc for test: {test}")
-                                    current_iteration += 1
-                                    intermediary_file_list.append(indexed_file)
-                                except Exception as e:
-                                    self.log_message(f"❌ Error in SmartCTV processing for test {test}: {str(e)}")
-                                    current_iteration += 1
-                                    self.update_progress(current_iteration, total_iterations, f"Failed test: {test} (SmartCTV error)")
-                                    continue
+                                config_number = str(int(row.iloc[3]))
+                                self.log_message(f"Processing SmartCtvDc for test: {test}")
+                                ctv_file = sm.process_SmartCTV(base_dir, test_file, config_number, place_in)
+                                intermediary_file_list.append(ctv_file)
+                                indexed_file, csv_identifier, need_suffix, tag_header_names = ind.index_CTV(ctv_file, test, module_name, place_in)
+                                intermediary_file_list.append(indexed_file)
+                                datainput_file, datacombine_file = py.uber_request(indexed_file, test, test_type, need_suffix, place_in, program, csv_identifier, lot_list, wafer_list, prefetch, databases)
+                                intermediary_file_list.append(datainput_file)
+                                output_files.append(datacombine_file)
                         else:
                             self.log_message(f"Unknown test type: {test_type}")
                             current_iteration += 1

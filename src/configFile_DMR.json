@@ -1,0 +1,776 @@
+{
+	"file_path": {
+		"input_files_path": "$inputFolder",
+		"output_files_path": "outputFiles",
+		"input_spfspec_file": "\\\\sc8-samba.sc.intel.com\\nfs\\site\\disks\\mfg_dmr_009\\fjaguile\\collateralsDMR\\spf_tap_architecture.spfspec",
+		"input_crif_file": "\\\\sc8-samba.sc.intel.com\\nfs\\site\\disks\\mfg_dmr_009\\fjaguile\\collateralsDMR\\CBB_soc_wrapper_crif.xml",
+		"reduced_files_path": "reduceFiles",
+		"prepar_files": {
+			"input_config_files": "..\\prepar",
+			"output_files_path": "outputFilesPrepar"
+		}
+	},
+
+	"general_settings": {
+		"workers": 28,
+		"sort_valid_interface_bin": "1:10000",
+		"socket_naming_convention": {
+			"sort": "_INF_",
+			"class": "_VCCINF_"
+		}
+	},
+
+	"CtvDecoderSpm_test_case_config": [
+		{
+			"test_config_name": "FLL_RELOCK",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CTVDEC_K_(SDTBEGIN|BEGIN)_(TAP)_INF_(MIN|MAX|NOM)_X_(FLL_RELOCK)_(CRO|DFD|RINGE|RINGW)_r_([0-9]+)_rd_rlk_(cd|ts|bkpt)_?(pass|fail)"
+			]
+		},
+		{
+			"test_config_name": "FLL_FASTGV",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CTVDEC_K_(SDTBEGIN|BEGIN)_(TAP)_INF_(MIN|MAX|NOM)_X_(FLL_FASTGV)_ratio_([0-9]+)_itr_([0-9]+)_(ringe|ringw)_rd_(rlk|rlk_bkpt)_?(pass|fail)"
+			]
+		},
+		{
+			"test_config_name": "FLL_FASTGV_TOP",
+			"regular_expression": [
+				"^CLK_PLL_TOP::LJPLL_TOP_CTVDEC_K_(SDTBEGIN|BEGIN)_(TAP)_CORE_(MIN|MAX|NOM)_X_DCM_(FLL_FASTGV)_(D[0-9]+S[0-9]+)_R_([0-9]+)_ITR_([0-9]+)_(RD_RLK|RD_RLK_BKPT)_?(PASS|FAIL)"
+			]
+		},
+		{
+			"test_config_name": "FLL_LDOMEAS",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CTVDEC_K_(SDTBEGIN|BEGIN)_(TAP)_INF_(MIN|MAX|NOM)_X_(FLL_LDOMEAS)_(CRO|DFD|RINGE|RINGW)_rd_(ldo1_rlk|ldo1_rlk_bkpt|ldo1_adc|ldo2_rlk|ldo2_rlk_bkpt|ldo2_adc)_?(pass|fail)"			
+			]
+		},
+		{
+			"test_config_name": "PLL_RELOCK",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CTVDEC_K_(SDTBEGIN|BEGIN)_(TAP)_INF_(MIN|MAX|NOM)_X_(PLL_RELOCK)_(SA|FIVR)_r_([0-9]+)_rd_rlk_?(pass|fail)"
+			]
+		},
+		{
+			"test_config_name": "PLL_FREQCRAWL",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CTVDEC_K_(SDTBEGIN|BEGIN)_(TAP)_INF_(MIN|MAX|NOM)_X_(PLL_FREQCRAWL)_ratio_([0-9]+)_itr_([0-9]+)_rd_rlk_?(pass|fail)"
+			]
+		},
+		{
+			"test_config_name": "PLL_LDOMEAS",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CTVDEC_K_(SDTBEGIN|BEGIN)_(TAP)_INF_(MIN|MAX|NOM)_X_(PLL_LDOMEAS)_(SA|FIVR)_rd_(ldo1_rlk|ldo1_adc)_?(pass|fail)"
+			]
+		},
+		{
+			"test_config_name": "FLL_FVCURVE",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CTVDEC_E_(SDTBEGIN|BEGIN)_(TAP)_X_X_X_(FLL_FVCURVE)_(CRO|DFD|RINGE|RINGW)_([0-9]+)_rd_(rlk|rlk_bkpt|adc)_?(pass|fail)"
+			]
+		},
+		{
+			"test_config_name": "FLL_VREFTRIM",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CTVDEC_E_(SDTBEGIN|BEGIN)_(TAP)_X_X_X_(FLL_VREFTRIM)_(CRO|DFD|RINGE|RINGW)_vrefsel_([0-9]+)_rd_(rlk|rlk_bkpt|adc)_?(pass|fail)"
+			]
+		},
+		{
+			"test_config_name": "PLL_FVCURVE",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CTVDEC_E_(SDTBEGIN|BEGIN)_(TAP)_X_X_X_(PLL_FVCURVE)_(SA|FIVR|)_([0-9]+)_rd_(rlk|adc)_?(pass|fail)"
+			]
+		},
+		{
+			"test_config_name": "PLL_VREFTRIM",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CTVDEC_E_(SDTBEGIN|BEGIN)_(TAP)_X_X_X_(PLL_VREFTRIM)_(SA|FIVR)_vrefsel_([0-9]+)_rd_(rlk|adc)_?(pass|fail)"
+			]
+		},
+		{
+			"test_config_name": "PLL_SPE",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CTVDEC_E_(SDTBEGIN|BEGIN)_(TAP)_X_X_X_(PLL_SPE)_(SA|FIVR)_rd_(rlk|en_trigger)_?(pass|fail)"
+			]
+		},
+		{
+			"test_config_name": "PLL_SPETRIM",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CTVDEC_E_(SDTBEGIN|BEGIN)_(TAP)_X_X_X_(PLL_SPETRIM)_(spe[0-9]+)_rd_en_trigger_?(pass|fail)"
+			]
+		},
+		{
+			"test_config_name": "UCIEPHY_RELOCK",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LCPLL_BASE_CTVDEC_K_(SDTBEGIN|BEGIN)_(TAP)_INF_(MIN|MAX|NOM)_X_(UCIEPHY_RELOCK)_(UCIE[0-9]+_PLL[0-9]+)_rd_rlk_?(pass|fail)"
+			]
+		},
+		{
+			"test_config_name": "UCIEPHY_ADC_BIAS",
+			"regular_expression": [
+				"^CLK_PLL_BASE::LCPLL_BASE_CTVDEC_K_(SDTBEGIN|BEGIN)_(TAP)_INF_(MIN|MAX|NOM)_X_(UCIEPHY_ADC_BIAS)_(UCIE[0-9]+_PLL[0-9]+)_rd_rlk_?(pass|fail)"
+			]
+		}
+	],
+
+	"ClkUtils_test_case_config": [
+		{
+			"test_config_name": "LJPLL_CORE_IREFTRIM",
+			"output_multiple_files": false,
+			"regular_expression": [
+				"^CLK_PLL_TOP::LJPLL_TOP_CLKUTILS_K_(SDTBEGIN|BEGIN)_TAP_CORE_(MIN|MAX|NOM)_X_DCM_FLL_IREFTRIM(?!_(corerecovery|Profile))"
+			],
+			"setup": "$setup",
+			"ratios": "4",
+			"ctv_sequence": [
+				{
+					"stage": "DFF",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "DELTA_FMINFMAX", "default": "", "output_enable": true },
+						{ "name": "CURRENT_DFF", "default": "", "output_enable": true },
+						{ "name": "PREVIOUS_DFF", "default": "", "output_enable": true }
+					 ]
+				},
+				{
+					"stage": "IREF_FMIN",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNEXPECTED_UNLOCK", "default": "0", "output_enable": true },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_EARLY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_TAR_RATIO", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_CUR_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_NXT_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_FLL_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CALIBRATE_ENABLE", "default": "1", "output_enable": true }
+					]
+				},
+				{
+					"stage": "IREF_FMAX",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNEXPECTED_UNLOCK", "default": "0", "output_enable": true },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_EARLY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_TAR_RATIO", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_CUR_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_NXT_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_FLL_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CALIBRATE_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "ALGORITHM_ERROR", "default": "", "output_enable": true }
+					]
+				}
+			]
+		},
+		{
+			"test_config_name": "LJPLL_CORE_DCATRIM",
+			"output_multiple_files": false,
+			"regular_expression": [
+				"^CLK_PLL_TOP::LJPLL_TOP_CLKUTILS_K_(SDTBEGIN|BEGIN)_TAP_CORE_(?:MIN|MAX|NOM)_X_DCM_FLL_DCATRIM(?!_CORERECOVERY)"
+			],
+			"setup": "$setup",
+			"ratios": "40",
+			"ctv_sequence": [
+				{
+					"stage": "result",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PREVIOUS_DFF", "default": "", "output_enable": true },
+						{ "name": "CURRENT_DFF", "default": "", "output_enable": true },
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNEXPECTED_UNLOCK", "default": "0", "output_enable": true },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_EARLY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_TAR_RATIO", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_NXT_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_FLL_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CALIBRATE_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "ERROR_PER", "default": "", "output_enable": true },
+						{ "name": "DCS_START", "default": "1", "output_enable": true },
+						{ "name": "DCS_DONE", "default": "1", "output_enable": true },
+						{ "name": "DCA_CODE", "default": "", "output_enable": true },
+						{ "name": "DL_CODE_OVFL", "default": "1", "output_enable": true },
+						{ "name": "DCA_CODE_OVFL", "default": "1", "output_enable": true }
+					]
+				}
+			]
+		},
+		{
+			"test_config_name": "LJPLL_CORE_AFSTRIM",
+			"output_multiple_files": false,
+			"regular_expression": [
+				"^CLK_PLL_TOP::LJPLL_TOP_CLKUTILS_K_(SDTBEGIN|BEGIN)_TAP_CORE_(?:MIN|MAX|NOM)_X_DCM_FLL_AFSDDTRIM(?!_corerecovery)"
+			],
+			"setup": "$setup",
+			"ratios": "40",
+			"ctv_sequence": [
+				{
+					"stage": "dff",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "CORE", "default": "", "output_enable": true },
+						{ "name": "D0_M0", "default": "", "output_enable": true },
+						{ "name": "D0_M1", "default": "", "output_enable": true },
+						{ "name": "D1_M0", "default": "", "output_enable": true },
+						{ "name": "D1_M1", "default": "", "output_enable": true },
+						{ "name": "D2_M0", "default": "", "output_enable": true },
+						{ "name": "D2_M1", "default": "", "output_enable": true },
+						{ "name": "D3_M0", "default": "", "output_enable": true },
+						{ "name": "D3_M1", "default": "", "output_enable": true }
+					 ]
+				},
+				{
+					"stage": "relock",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNEXPECTED_UNLOCK", "default": "0", "output_enable": true },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_EARLY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_TAR_RATIO", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_NXT_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_FLL_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CALIBRATE_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "ERROR_PER", "default": "", "output_enable": true }
+					]
+				},
+				{
+					"stage": "result",
+					"Loop_num": "8",
+					"fields": [
+						{ "name": "CALIB_MODE", "default": "", "output_enable": true },
+						{ "name": "DD", "default": "", "output_enable": true },
+						{ "name": "CAL_DIRECTION", "default": "", "output_enable": true },
+						{ "name": "CAL_OFFSET", "default": "", "output_enable": true }
+					 ]
+				}
+			]
+		},
+		{
+			"test_config_name": "LJPLL_CORE_FLLRELOCK",
+			"output_multiple_files": false,
+			"regular_expression": [
+				"^CLK_PLL_TOP::LJPLL_TOP_CLKUTILS_K_(SDTBEGIN|BEGIN)_TAP_CORE_(?:MIN|MAX|NOM)_X_DCM_FLL_RELOCK(?!_(corerecovery|Profile))"
+			],
+			"setup": "$setup",
+			"ratios": "24, 30, 36, 42, 48, 54, 60, 66, 72, 78, 84, 90, 96, 102, 108, 114, 120, 126, 132, 138, 144, 150, 156, 162, 168, 174, 180, 186, 192, 198, 204, 210, 216, 222, 228, 234, 240, 246, 252, 258, 264, 270, 276, 282, 288, 294",
+			"ctv_sequence": [
+				{
+					"stage": "RD_RLK",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNEXPECTED_UNLOCK", "default": "0", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true }
+					]
+				},
+				{
+					"stage": "RD_RLK_BKPT",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "DCOA_FLL_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_EARLY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_CUR_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_NXT_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_FLL_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CALIBRATE_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "ERROR_PER", "default": "", "output_enable": true }
+					]
+				}  
+			] 
+		},
+		{
+			"test_config_name": "LJPLL_UNCORE_IREFTRIM_RING_C01",
+			"output_multiple_files": false,
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CLKUTILS_K_(SDTBEGIN|BEGIN)_TAP_INF_(?:MIN|MAX|NOM)_X_FLL_RING_CLST01_IREFTRIM(?:_WFR)?$"
+			],
+			"setup": [ "RING_C01" ],
+			"ratios": "4",
+			"ctv_sequence": [
+				{
+					"stage": "dff",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "DELTA_FMINFMAX", "default": "", "output_enable": true },
+						{ "name": "CURRENT_DFF", "default": "", "output_enable": true },
+						{ "name": "PREVIOUS_DFF", "default": "", "output_enable": true }
+					 ]
+				},
+				{
+					"stage": "freqMin",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CAL_DONE", "default": "1", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNLOCK_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "ERROR_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_EARLY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_TAR_RATIO", "default": "1", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_CUR_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_NXT_STS", "default": "", "output_enable": true },
+						{ "name": "PLL_LOCKEN", "default": "1", "output_enable": true },
+						{ "name": "CALIBRATE_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "PLL_REFCLK_VALID", "default": "1", "output_enable": true }
+					]
+				},
+				{
+					"stage": "freqMax",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CAL_DONE", "default": "1", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNLOCK_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "ERROR_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_EARLY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_TAR_RATIO", "default": "1", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_CUR_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_NXT_STS", "default": "", "output_enable": true },
+						{ "name": "PLL_LOCKEN", "default": "1", "output_enable": true },
+						{ "name": "CALIBRATE_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "PLL_REFCLK_VALID", "default": "1", "output_enable": true },
+						{ "name": "ALGORITHM_ERROR", "default": "", "output_enable": true }
+					]
+				}
+			]
+		},
+		{
+			"test_config_name": "LJPLL_UNCORE_IREFTRIM_RING_C23",
+			"output_multiple_files": false,
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CLKUTILS_K_(SDTBEGIN|BEGIN)_TAP_INF_(?:MIN|MAX|NOM)_X_FLL_RING_CLST23_IREFTRIM(?:_WFR)?$"
+			],
+			"setup": [ "RING_C23" ],
+			"ratios": "4",
+			"ctv_sequence": [
+				{
+					"stage": "dff",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "DELTA_FMINFMAX", "default": "", "output_enable": true },
+						{ "name": "CURRENT_DFF", "default": "", "output_enable": true },
+						{ "name": "PREVIOUS_DFF", "default": "", "output_enable": true }
+					 ]
+				},
+				{
+					"stage": "freqMin",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CAL_DONE", "default": "1", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNLOCK_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "ERROR_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_EARLY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_TAR_RATIO", "default": "1", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_CUR_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_NXT_STS", "default": "", "output_enable": true },
+						{ "name": "PLL_LOCKEN", "default": "1", "output_enable": true },
+						{ "name": "CALIBRATE_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "PLL_REFCLK_VALID", "default": "1", "output_enable": true }
+					]
+				},
+				{
+					"stage": "freqMax",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CAL_DONE", "default": "1", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNLOCK_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "ERROR_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_EARLY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_TAR_RATIO", "default": "1", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_CUR_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_NXT_STS", "default": "", "output_enable": true },
+						{ "name": "PLL_LOCKEN", "default": "1", "output_enable": true },
+						{ "name": "CALIBRATE_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "PLL_REFCLK_VALID", "default": "1", "output_enable": true },
+						{ "name": "ALGORITHM_ERROR", "default": "", "output_enable": true }
+					]
+				}
+			]
+		},
+		{
+			"test_config_name": "LJPLL_UNCORE_IREFTRIM_DFDB",
+			"output_multiple_files": false,
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CLKUTILS_K_(SDTBEGIN|BEGIN)_TAP_INF_(?:MIN|MAX|NOM)_X_FLL_DFD_IREFTRIM(?:_WFR)?$"
+			],
+			"setup": [ "DFDB" ],
+			"ratios": "4",
+			"ctv_sequence": [
+				{
+					"stage": "dff",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "DELTA_FMINFMAX", "default": "", "output_enable": true },
+						{ "name": "CURRENT_DFF", "default": "", "output_enable": true },
+						{ "name": "PREVIOUS_DFF", "default": "", "output_enable": true }
+					 ]
+				},
+				{
+					"stage": "freqMin",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CAL_DONE", "default": "1", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNLOCK_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "ERROR_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_EARLY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_TAR_RATIO", "default": "1", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_CUR_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_NXT_STS", "default": "", "output_enable": true },
+						{ "name": "PLL_LOCKEN", "default": "1", "output_enable": true },
+						{ "name": "CALIBRATE_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "PLL_REFCLK_VALID", "default": "1", "output_enable": true }
+					]
+				},
+				{
+					"stage": "freqMax",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CAL_DONE", "default": "1", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNLOCK_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "ERROR_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_EARLY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_TAR_RATIO", "default": "1", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_CUR_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_NXT_STS", "default": "", "output_enable": true },
+						{ "name": "PLL_LOCKEN", "default": "1", "output_enable": true },
+						{ "name": "CALIBRATE_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "PLL_REFCLK_VALID", "default": "1", "output_enable": true },
+						{ "name": "ALGORITHM_ERROR", "default": "", "output_enable": true }
+					]
+				}
+			]
+		},
+		{
+			"test_config_name": "LJPLL_UNCORE_PLL_DCATRIM",
+			"output_multiple_files": false,
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CLKUTILS_K_(SDTBEGIN|BEGIN)_TAP_INF_(?:MIN|MAX|NOM)_X_PLL_DCATRIM(?:_WFR)?$"
+			],
+			"setup": [ "SAB", "FIVRB" ],
+			"ratios": "40",
+			"ctv_sequence": [
+				{
+					"stage": "result",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PREVIOUS_DFF", "default": "", "output_enable": true },
+						{ "name": "CURRENT_DFF", "default": "", "output_enable": true },
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CAL_DONE", "default": "1", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNLOCK_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "ERROR_FLAG", "default": "0", "output_enable": true },
+						{ "name": "LOCK_TIME", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_LOCK_TIME", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "TAP_STATUS_DCS_STAT_STARTED", "default": "1", "output_enable": true },
+						{ "name": "TAP_STATUS_DCS_STAT_DCA_CODE", "default": "", "output_enable": true }
+					]
+				}
+			]
+		},
+		{
+			"test_config_name": "LJPLL_UNCORE_FLL_DCATRIM",
+			"output_multiple_files": false,
+			"regular_expression": [
+				"^CLK_PLL_BASE::LJPLL_BASE_CLKUTILS_K_(SDTBEGIN|BEGIN)_TAP_INF_(?:MIN|MAX|NOM)_X_FLL_DCATRIM(?:_WFR)?$"
+			],
+			"setup": [ "DFDB", "RING_C01", "RING_C23" ],
+			"ratios": "40",
+			"ctv_sequence": [
+				{
+					"stage": "result",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PREVIOUS_DFF", "default": "", "output_enable": true },
+						{ "name": "CURRENT_DFF", "default": "", "output_enable": true },
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "CAL_DONE", "default": "1", "output_enable": true },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": true },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "UNLOCK_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": true },
+						{ "name": "ERROR_FLAG", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "TAP_STATUS_DCS_STAT_STARTED", "default": "1", "output_enable": true },
+						{ "name": "TAP_STATUS_DCS_STAT_DCA_CODE", "default": "", "output_enable": true },
+						{ "name": "DCOA_FLL_RAW_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_EARLY_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_FLL_FINAL_LOCK", "default": "1", "output_enable": true },
+						{ "name": "DCOA_TAR_RATIO", "default": "1", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_CUR_STS", "default": "", "output_enable": true },
+						{ "name": "DCOA_DCO_CODE_NXT_STS", "default": "", "output_enable": true },
+						{ "name": "PLL_LOCKEN", "default": "1", "output_enable": true },
+						{ "name": "CALIBRATE_ENABLE", "default": "1", "output_enable": true },
+						{ "name": "PLL_REFCLK_VALID", "default": "1", "output_enable": true },
+						{ "name": "ERROR_PER", "default": "", "output_enable": true }
+					]
+				}
+			]
+		},
+		{
+			"test_config_name": "TestForHexPrint",
+			"output_multiple_files": false,
+			"regular_expression": [
+				"CLK_PLL_TOP::LJPLL_X_TRIM_K_(SDTBEGIN|BEGIN)_X_\\w+_V?(?:MIN|MAX|NOM)_X_Test_HexPrint"
+			],
+			"setup": "$setup",
+			"ratios": "4",
+			"ctv_sequence": [
+				{
+					"stage": "dff",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "DELTA_FMINFMAX", "default": "", "output_enable": true },
+						{ "name": "CLASS_DFF", "default": "", "output_enable": true },
+						{ "name": "SORT_DFF", "default": "", "output_enable": true }
+					 ]
+				},
+				{
+					"stage": "freqMin",
+					"Loop_num": "1",
+					"register": [
+						{ 
+							"name": "LJPLL_FLLTAPSTATUS",
+							"pll_tap": "spfspec/RING",
+							"in_sequence": false,
+							"output_enable": true,
+							"fields_for_DA": [
+								{ "name": "DCOA_FLL_EARLY_LOCK" },
+								{ "name": "DCOA_FLL_FINAL_LOCK" },
+								{ "name": "DCOA_DCO_CODE_NXT_STS" },
+								{ "name": "DCOA_DCO_CODE_CUR_STS" },
+								{ "name": "PLL_LOCKEN" },
+								{ "name": "CALIBRATE_ENABLE" },
+								{ "name": "PLL_REFCLK_VALID" }
+							]
+						}
+					]
+				},
+				{
+					"stage": "freqMax",
+					"Loop_num": "1",
+					"register": [
+						{ 
+							"name": "LJPLL_FLLTAPSTATUS",
+							"pll_tap": "spfspec/RING",
+							"in_sequence": false,
+							"output_enable": true,
+							"fields_for_DA": [
+								{ "name": "DCOA_FLL_EARLY_LOCK" },
+								{ "name": "DCOA_FLL_FINAL_LOCK" },
+								{ "name": "DCOA_DCO_CODE_NXT_STS" },
+								{ "name": "DCOA_DCO_CODE_CUR_STS" },
+								{ "name": "PLL_LOCKEN" },
+								{ "name": "CALIBRATE_ENABLE" },
+								{ "name": "PLL_REFCLK_VALID" }
+							]
+						}
+					]
+				}
+			]
+		}
+	],
+
+	"pll_taps": {
+		"spfspec": [
+			{"tap": "PAR_BASE_CCF2CCF_CLST01_S12_S12_RINGPLL_TOP", "tap_alias_name": "RING"}
+		],
+		"crif": [
+			{"tap": "CBB_soc_wrapper/base/d2d_stack_1/ucie_ophy/ucie_lcpll_0", "tap_alias_name": "UCIE"}
+		]
+	},
+
+	"setups": {
+		"setup": {
+			"cbb": {
+				"UX.U3": "0, 1, 2, 3, 4, 5, 6, 7",
+				"UX.U4": "8, 9, 10, 11, 12, 13, 14, 15",
+				"UX.U5": "16, 17, 18, 19, 20, 21, 22, 23",
+				"UX.U6": "24, 25, 26, 27, 28, 29, 30, 31"
+			},
+			"top": {
+				"UX": "0, 1, 2, 3, 4, 5, 6, 7"
+			}
+		},
+		"setup_map": {
+			"0": "d0s0",
+			"1": "d1s0",
+			"2": "d2s0",
+			"3": "d3s0",
+			"4": "d4s0",
+			"5": "d5s0",
+			"6": "d6s0",
+			"7": "d7s0",
+			"8": "d0s1",
+			"9": "d1s1",
+			"10": "d2s1",
+			"11": "d3s1",
+			"12": "d4s1",
+			"13": "d5s1",
+			"14": "d6s1",
+			"15": "d7s1",
+			"16": "d0s2",
+			"17": "d1s2",
+			"18": "d2s2",
+			"19": "d3s2",
+			"20": "d4s2",
+			"21": "d5s2",
+			"22": "d6s2",
+			"23": "d7s2",
+			"24": "d0s3",
+			"25": "d1s3",
+			"26": "d2s3",
+			"27": "d3s3",
+			"28": "d4s3",
+			"29": "d5s3",
+			"30": "d6s3",
+			"31": "d7s3"
+		}
+	}
+}
