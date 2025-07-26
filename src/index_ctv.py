@@ -37,11 +37,21 @@ def process_CTV(csv_input_file, log_file, test_name_prefix, MAX_VALUE_PRINT=1433
         counter = counter + 1
     tag_header_names = header_names[1:counter]#LEAVE THIS IN
 
-    # Apply the function to every 'ItuffToken' in rows
+    # Detect which token key is available (storageToken or ItuffToken)
+    token_key = "ItuffToken"
+    if 'ItuffToken' in available_columns:
+        token_key = 'ItuffToken'
+    elif 'StorageToken' in available_columns:
+        token_key = 'StorageToken'
+    # Apply the function to every token in rows
     for row in rows:
-        original_value = row['ItuffToken']
+        original_value = row[token_key]
         new_value = replace_placeholders(original_value, row)
-        row['ItuffToken'] = new_value  #Update the row with the new value
+        row[token_key] = new_value  #Update the row with the new value
+    
+    # Sort rows by token_key
+    rows = sorted(rows, key=lambda row: row[token_key])
+
 # # Write the processed data to a new CSV file
     with open(log_file, mode='w', newline='') as file:
         fieldnames = ['Index'] 
@@ -51,66 +61,37 @@ def process_CTV(csv_input_file, log_file, test_name_prefix, MAX_VALUE_PRINT=1433
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
 
-        #Check if there will be one large ITUFF token
-        need_suffix = False    
-        if all(row['ItuffToken'] == '-' or row['ItuffToken'] == '' for row in rows):
-            need_suffix = True
-        if need_suffix:
-            local_index = 0
-            suffix_counter = 1
-            test_name = ''
-            test_name_suffix = ''
-            if len(rows)>MAX_VALUE_PRINT:
-                test_name_suffix = f'_{suffix_counter}'
-            for row in rows:
-                #if row['ItuffToken'] == '-' or row['ItuffToken'] == '':
-                test_name = f"{test_name_prefix + test_name_suffix}"
-                #else:
-                    #test_name = f"{test_name_prefix + '_' + row['ItuffToken'] + test_name_suffix}"
+        # Dictionary to track occurrences of each unique token_key
+        token_occurrence_count = {}
+        
+        for row in rows:
+            #Skips if no Ituff Token modifiers
+            if row[token_key] == '-' and "CLK" in test_name_prefix.upper():#solution for clkutils (maybe add an extra qualifier about test type)
+                continue
+            if row[token_key] == '' or row[token_key]=='-' and "MIO_DDR" in test_name_prefix.upper():#solution for mio
+                continue
+            elif row[token_key] == '' or row[token_key]=='-':
+                test_name= f"{test_name_prefix}"  
+            else:
+                test_name = f"{test_name_prefix +'_' + row[token_key]}"                
+            
+            # Track occurrences and get current index for this test_name
+            if test_name not in token_occurrence_count:
+                token_occurrence_count[test_name] = 0
+            current_index = token_occurrence_count[test_name]
+            
+            # Create row dict with Index and Name
+            row_dict = {'Index': current_index, 'Name': test_name}
                 
-                # Create row dict with Index and Name
-                row_dict = {'Index': local_index, 'Name': test_name}
-                    
-                # Add the tag header values dynamically
-                for i in range(len(tag_header_names)):
-                    row_dict[f"{tag_header_names[i]}"] = row[tag_header_names[i]]
-                    
-                writer.writerow(row_dict)
-                local_index += 1
-
-                #Updates suffix if ITUFF Token needs to be split
-                if local_index > MAX_VALUE_PRINT:
-                    local_index = 0
-                    suffix_counter += 1
-                    print(suffix_counter)
-                    test_name_suffix = f'_{suffix_counter}'
-        else:
-            local_index = 0
-            last_ITUFF = ''
-            for row in rows:
-                #Skips if no Ituff Token modifiers
-                if row['ItuffToken'] == '-' and "CLK" in test_name_prefix.upper():#solution for clkutils (maybe add an extra qualifier about test type)
-                    continue
-                if row['ItuffToken'] == '' or row['ItuffToken']=='-':#solution for not clkutils
-                    test_name= f"{test_name_prefix}"
-                else:
-                    test_name = f"{test_name_prefix +'_' + row['ItuffToken']}"                
-                #Assigns full Ituff Token and checks to see if new index needed
-                #test_name = f"{test_name_prefix +'_' + row['ItuffToken']}"
-                if last_ITUFF != test_name:
-                    local_index = 0
-
-                # Create row dict with Index and Name
-                row_dict = {'Index': local_index, 'Name': test_name}
-                    
-                # Add the tag header values dynamically
-                for i in range(len(tag_header_names)):
-                    row_dict[f"{tag_header_names[i]}"] = row[tag_header_names[i]]
-                    
-                writer.writerow(row_dict)
-                local_index += 1
-                last_ITUFF = test_name
-    return tag_header_names,need_suffix
+            # Add the tag header values dynamically
+            for i in range(len(tag_header_names)):
+                row_dict[f"{tag_header_names[i]}"] = row[tag_header_names[i]]
+                
+            writer.writerow(row_dict)
+            
+            # Increment the count for this test_name
+            token_occurrence_count[test_name] += 1
+    return 
 #Repeat from indexed_ctvdecoder_gen
 def ingest_input(input_file):
     input_data = []
@@ -132,7 +113,7 @@ def replace_placeholders(field_value, row):
     return field_value
 
 #Modified from indexed_ctvdecoder_gen
-def index_CTV(input_file,test_name,module_name='',place_in='',mode=''):
+def index_CTV(input_file,test_name,module_name='',place_in='',mode='',config_number=''):
     #module_name = input("Name of test module prefix (e.g. CLK_PLL_BASE):")#removed as input is provided into function
     if module_name != '':
         test_name = module_name + "::" + test_name
@@ -141,22 +122,41 @@ def index_CTV(input_file,test_name,module_name='',place_in='',mode=''):
 
     #print(f"Processing {test_name}")
     # process each original input csv, get important information from it, and create a new "log" csv which is easier to use
-    tag_header_names,need_suffix = process_CTV(input_file, 'log.csv', test_name)
+    process_CTV(input_file, 'log.csv', test_name)
     # Apply the function to each element in 'Column1'
     combined_df = pd.read_csv('log.csv')
     #combined_df['Name'] = combined_df.apply(lambda row: replace_placeholders(row['Name'], row), axis=1) 
     combined_df['Name_Index'] = combined_df['Name']+'_'+combined_df['Index'].astype(str)
     combined_df = combined_df.sort_values(by=['Name','Index'])
     combined_df['combined_string'] = ''
-    num_added_col = 0
     
-    #Instead, loop through columns
-    #print(combined_df.columns)
+    #RIGHT HERE ABDI PLEASE ADD THE FOLLOWING
+    # Replace cells that have only -, nan, or blanks with &
     for col in combined_df.columns:
+        # Create a mask for cells that are -, nan, or blank
+        if col == 'combined_string':
+            continue
+        mask = (
+            combined_df[col].isna() |                                    # NaN values
+            (combined_df[col].astype(str).str.strip() == '') |          # Empty strings
+            (combined_df[col].astype(str).str.strip() == '-') |         # Just dashes
+            (combined_df[col].astype(str).str.upper() == 'NAN')         # 'NaN' strings
+        )
+   
+        # Replace matching cells with &
+        combined_df.loc[mask, col] = '&'    
+  
+    #Instead, loop through columns
+    #print(combined_df)
+    for col in combined_df.columns:
+        is_all_empty = combined_df[col].isna().all() or (combined_df[col].astype(str).str.strip() == '').all() or (combined_df[col].astype(str).str.strip() == '-').all() or (combined_df[col].astype(str).str.strip() == '&').all()
         if col == "Field":
             combined_df['combined_string'] = combined_df['combined_string'] + '---' + combined_df[f'{col}'].astype(str)
             #print(col)
             break
+        elif is_all_empty:
+            combined_df.drop(columns=[col], inplace=True)
+            continue
         elif col != "Index" and col != "Name" and col != "Name_Index":
             combined_df['combined_string'] = combined_df['combined_string'] + '---' + combined_df[f'{col}'].astype(str)
             #print(col)
@@ -165,12 +165,33 @@ def index_CTV(input_file,test_name,module_name='',place_in='',mode=''):
 
 
     colon_index=test_name.find('::')
-    test_config = os.path.basename(input_file).split('_')[1]#new change for test_config
+    if config_number != '':
+        config_number = f'_{config_number}'
+    else:
+        config_number = ''
+
+
+    # data_out_file = f'{test_name}{config_number}{ituff_suffix}indexed.csv'
+        # Get the first non-blank or hyphen ItuffToken for file naming
+    first_ituff_token = ''
+    if 'Name' in combined_df.columns:
+        for token in combined_df['Name'].tolist():
+            if pd.notna(token) and str(token).strip() != '' and str(token).strip() != '-' and str(token).strip().replace(test_name,'').split('::')[-1] != '':
+                first_ituff_token = str(token).strip().replace(test_name,'').split('::')[-1]
+                break
+
+     # Include ItuffToken in output file name if available
+    if mode == 'CtvTag':
+        ituff_suffix = f'{first_ituff_token}' if first_ituff_token else '_' + config_number
+    else:
+        ituff_suffix = ''
+
+
     out_file = ''
     if colon_index != -1:
-        out_file = os.path.join(place_in,f'{module_name}_{test_name[colon_index+len("::"):]}_indexed.csv')
+        out_file = os.path.join(place_in,f'{module_name}_{test_name[colon_index+len("::"):]}{config_number}{ituff_suffix}_indexed.csv')
     else:
-        out_file = os.path.join(place_in,f'{test_name}_indexed.csv')
+        out_file = os.path.join(place_in,f'{test_name}{config_number}{ituff_suffix}_indexed.csv')
     out_file = fi.check_write_permission(out_file)
 
     combined_df.to_csv(out_file,index = False)
@@ -194,7 +215,7 @@ def index_CTV(input_file,test_name,module_name='',place_in='',mode=''):
 
     tag_header_names = get_columns_btwn_index_name(combined_df)
 
-    return out_file, csv_identifier,need_suffix,tag_header_names
+    return out_file, csv_identifier, tag_header_names
 
 def get_columns_btwn_index_name(df):
     columns = df.columns.tolist()

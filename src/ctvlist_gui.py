@@ -9,73 +9,63 @@ import re
 import time
 import datetime
 import threading
-import traceback  # Add for better error reporting
 
-# Add PIL imports for image handling with robust fallback
-PIL_AVAILABLE = True
+# Import CustomTkinter for modern GUI
+try:
+    import customtkinter as ctk
+    ctk.set_appearance_mode("light")  # Modes: "System" (standard), "Dark", "Light"
+    ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+    CTK_AVAILABLE = True
+except ImportError:
+    CTK_AVAILABLE = False
+    print("CustomTkinter not available - using standard tkinter")
+
+# Import PIL for images (with fallback)
 try:
     from PIL import Image, ImageTk
-    print("✅ PIL/Pillow available - enhanced UI features enabled")
+    PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
-    print("⚠️ PIL/Pillow not available - using embedded fallback images")
-    # Create dummy classes for fallback
-    class Image:
-        @staticmethod
-        def open(*args, **kwargs):
-            return None
-        @staticmethod
-        def frombytes(*args, **kwargs):
-            return None
-        class Resampling:
-            LANCZOS = 1
-    class ImageTk:
-        @staticmethod
-        def PhotoImage(*args, **kwargs):
-            return None
+    print("PIL/Pillow not available - images will be disabled")
 
-# Embedded base64 encoded images (small logos for fallback)
-EMBEDDED_IMAGES = {
-    'app_icon': """
-iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAANCSURBVFiFtZdNaBNBFMd/M5tsNk2bpI1aqRVRwYNePHjw4MWLBy9ePHjx4sWLFy9ePHjx4sWDFy8ePHjx4MWLFy9evHjx4sGLBy8evHjw4sWLFy9ePHjx4MWDF69evPqxM7Mzs/Pe7LxvZt5bAP5fAGMMY4wxjDHGGMMYYwxjjDHGGMMYYwxjjDHGGMMYYwxjjDHGGMMYYwxjjDHGGMMY+x8AxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4w=
-""",
-    'light_mode': """
-iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAOvSURBVHic7ZtNaBNBFMd/M2mTpk2bfqS2tlYrFRGxB/Hgp3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jwg3jw4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evHjx4sWLFy9evA==
-""",
-    'dark_mode': """
-iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAQNSURBVHic7ZtNaBNBFMd/M2mTpk3Tfti2tlYrFRGxB/HgwYsHD168ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwQ==
-"""
-}
+# Helper functions for widget creation with CustomTkinter fallback
+def create_frame(parent, **kwargs):
+    """Create a frame using CustomTkinter if available, otherwise use ttk.Frame"""
+    if CTK_AVAILABLE:
+        return ctk.CTkFrame(parent, **kwargs)
+    else:
+        return ttk.Frame(parent)
 
+def create_button(parent, text="", command=None, **kwargs):
+    """Create a button using CustomTkinter if available, otherwise use ttk.Button"""
+    if CTK_AVAILABLE:
+        return ctk.CTkButton(parent, text=text, command=command, **kwargs)
+    else:
+        return ttk.Button(parent, text=text, command=command, **kwargs)
 
-# Import your existing modules with fallback handling
-try:
-    import file_functions as fi
-    print("✅ file_functions module loaded successfully")
-except ImportError as e:
-    print(f"Warning: file_functions module not available: {e}")
-    fi = None
+def create_label(parent, text="", **kwargs):
+    """Create a label using CustomTkinter if available, otherwise use ttk.Label"""
+    if CTK_AVAILABLE:
+        return ctk.CTkLabel(parent, text=text, **kwargs)
+    else:
+        return ttk.Label(parent, text=text, **kwargs)
 
-try:
-    import mtpl_parser as mt
-    print("✅ mtpl_parser module loaded successfully")
-except ImportError as e:
-    print(f"Warning: mtpl_parser module not available: {e}")
-    mt = None
+def create_entry(parent, **kwargs):
+    """Create an entry using CustomTkinter if available, otherwise use ttk.Entry"""
+    if CTK_AVAILABLE:
+        return ctk.CTkEntry(parent, **kwargs)
+    else:
+        return ttk.Entry(parent, **kwargs)
 
-try:
-    import index_ctv as ind
-    print("✅ index_ctv module loaded successfully")
-except ImportError as e:
-    print(f"Warning: index_ctv module not available: {e}")
-    ind = None
+def create_notebook(parent, **kwargs):
+    """Create a notebook - CustomTkinter doesn't have notebook, so use ttk.Notebook"""
+    return ttk.Notebook(parent, **kwargs)
 
-try:
-    import smart_json_parser as sm
-    print("✅ smart_json_parser module loaded successfully")
-except ImportError as e:
-    print(f"Warning: smart_json_parser module not available: {e}")
-    sm = None
+# Import your existing modules
+import file_functions as fi
+import mtpl_parser as mt
+import index_ctv as ind
+import smart_json_parser as sm
 
 # Import pyuber_query with fallback handling
 PYUBER_AVAILABLE = True
@@ -86,149 +76,49 @@ try:
         sys.path.insert(0, parent_dir)
     
     import pyuber_query as py
-    print("✅ PyUber module loaded successfully")
-    
-    # Test PyUber status
-    pyuber_status = py.get_pyuber_status()
-    if not pyuber_status['available']:
-        PYUBER_AVAILABLE = False
-        print(f"⚠️ PyUber backend not available: {pyuber_status['error']}")
-    else:
-        print(f"✅ PyUber backend ready - Path: {pyuber_status['module_path']}")
-        
+    print("PyUber module loaded successfully")
 except ImportError as e:
     PYUBER_AVAILABLE = False
-    print(f"⚠️ PyUber not available - some features will be disabled: {e}")
+    print(f"PyUber not available - some features will be disabled: {e}")
     # Create a dummy module for fallback
     class DummyPyUber:
         def uber_request(self, *args, **kwargs):
-            raise ImportError(
-                "❌ PyUber Backend Not Available\n\n"
-                "The PyUber database module is required for data processing but could not be imported.\n\n"
-                "Possible solutions:\n"
-                "1. Install PyUber module\n"
-                "2. Contact your system administrator for PyUber setup\n"
-                "3. Ensure database drivers are properly installed\n\n"
-                "This application requires PyUber for database connectivity to retrieve test data."
-            )
-        
-        def get_pyuber_status(self):
-            return {'available': False, 'error': 'PyUber module not available'}
-    
+            raise ImportError("PyUber module not available")
     py = DummyPyUber()
-except Exception as e:
-    PYUBER_AVAILABLE = False
-    print(f"⚠️ Unexpected error loading PyUber: {e}")
-    # Create a dummy module for fallback
-    class DummyPyUber:
-        def uber_request(self, *args, **kwargs):
-            raise ImportError(f"PyUber Backend Error: {str(e)}")
-        
-        def get_pyuber_status(self):
-            return {'available': False, 'error': f'PyUber error: {str(e)}'}
-    
-    py = DummyPyUber()
-
-def create_embedded_image(image_key, size=(80, 60)):
-    """Create an image from embedded base64 data with fallback to text"""
-    try:
-        import base64
-        import io
-    except ImportError:
-        print("Warning: base64 or io module not available for image processing")
-        return None
-    
-    if not PIL_AVAILABLE:
-        return None
-    
-    try:
-        # Decode base64 image data
-        image_data = base64.b64decode(EMBEDDED_IMAGES.get(image_key, ''))
-        if not image_data:
-            return None
-            
-        # Create PIL image from bytes
-        image = Image.open(io.BytesIO(image_data))
-        
-        # Resize if needed
-        if size:
-            image = image.resize(size, Image.Resampling.LANCZOS)
-            
-        # Convert to PhotoImage
-        return ImageTk.PhotoImage(image)
-        
-    except Exception as e:
-        print(f"Failed to create embedded image {image_key}: {e}")
-        return None
-
-def get_resource_path(relative_path):
-    """Get absolute path to resource, works for dev and for PyInstaller"""
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-        print(f"✅ Using PyInstaller resource path: {base_path}")
-    except AttributeError:
-        # We're running in development mode
-        base_path = os.path.abspath(".")
-        print(f"✅ Using development resource path: {base_path}")
-    
-    resource_path = os.path.join(base_path, relative_path)
-    print(f"🔍 Looking for resource: {resource_path}")
-    return resource_path
-
-def load_image_with_fallback(image_paths, size=(80, 60), fallback_key=None):
-    """Load image with multiple fallback options"""
-    if not PIL_AVAILABLE:
-        if fallback_key and fallback_key in EMBEDDED_IMAGES:
-            return create_embedded_image(fallback_key, size)
-        return None
-    
-    # Try each path in order
-    for path in image_paths:
-        try:
-            if os.path.exists(path):
-                image = Image.open(path)
-                if size:
-                    image = image.resize(size, Image.Resampling.LANCZOS)
-                return ImageTk.PhotoImage(image)
-        except Exception as e:
-            print(f"Failed to load image from {path}: {e}")
-            continue
-    
-    # Try embedded fallback
-    if fallback_key:
-        return create_embedded_image(fallback_key, size)
-    
-    return None
-
-def create_text_button(parent, text, command, **kwargs):
-    """Create a text-based button as fallback when images aren't available"""
-    button = tk.Button(
-        parent, 
-        text=text, 
-        command=command,
-        relief='flat',
-        bd=1,
-        padx=10,
-        pady=5,
-        cursor="hand2",
-        **kwargs
-    )
-    return button
 
 class CTVListGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("CTV List Data Processor")
-        self.root.geometry("1400x800")  # Set better initial size
-        self.root.minsize(800, 600)     # Set minimum window size
+        self.root.title("Osmosis CTV List Data Processor")
         
-        # Print startup diagnostics
-        self.print_startup_diagnostics()
+        # Initialize scaling and window management variables
+        self.current_zoom_level = 1.0
+        self.zoom_levels = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0]
+        self.default_font_size = 9
+        self.compact_mode = False
+        self.compact_mode_var = tk.BooleanVar(value=self.compact_mode)
         
-        # Set application icon with fallback
-        self.set_application_icon()
+        # Detect screen resolution and set appropriate initial size
+        self.setup_window_sizing()
         
+        # Ensure images directory exists
+        self.setup_images_directory()
+        
+        # Set application icon
+        if PIL_AVAILABLE:
+     
+            icon_name ="icon.png"  
+            try:
+                icon_path = os.path.join(os.path.dirname(__file__), "images", icon_name)
+                if os.path.exists(icon_path):
+                    icon_image = Image.open(icon_path)
+                    icon_photo = ImageTk.PhotoImage(icon_image)
+                    self.root.iconphoto(False, icon_photo)
+                    print(f"Successfully loaded app icon: {icon_name}")
+                    icon_loaded = True
+            except Exception as e:
+                print(f"Could not load app icon: {e}")
+            
         # Variables
         self.material_df = None
         self.mtpl_df = None
@@ -252,60 +142,268 @@ class CTVListGUI:
         
         self.create_widgets()
         
-    def print_startup_diagnostics(self):
-        """Print comprehensive startup diagnostics"""
-        print("=" * 60)
-        print("🚀 CTV LIST GUI STARTUP DIAGNOSTICS")
-        print("=" * 60)
-        print(f"📍 Working Directory: {os.getcwd()}")
-        print(f"📍 Script Location: {os.path.abspath(__file__)}")
-        print(f"📍 Python Executable: {sys.executable}")
-        print(f"📍 Python Version: {sys.version}")
+        # Load user preferences for zoom and window state
+        self.load_user_preferences()
         
-        # Check if running in PyInstaller
-        if hasattr(sys, '_MEIPASS'):
-            print(f"📦 PyInstaller Mode: {sys._MEIPASS}")
-        else:
-            print("🐍 Development Mode")
+        # Setup keyboard shortcuts
+        self.setup_keyboard_shortcuts()
+        
+        # Setup window close handler to save preferences
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+    def setup_window_sizing(self):
+        """Setup window sizing based on screen resolution with responsive scaling"""
+        try:
+            # Get screen dimensions
+            screen_width = self.root.winfo_screenwidth()
+            screen_height = self.root.winfo_screenheight()
             
-        # Module availability summary
-        modules_status = {
-            'file_functions': fi is not None,
-            'mtpl_parser': mt is not None,
-            'index_ctv': ind is not None,
-            'smart_json_parser': sm is not None,
-            'pyuber_query': PYUBER_AVAILABLE,
-            'PIL': PIL_AVAILABLE
+            print(f"Screen resolution detected: {screen_width}x{screen_height}")
+            
+            # Calculate appropriate window size based on screen resolution
+            if screen_width <= 1366:  # Small screens
+                window_width = int(screen_width * 0.95)
+                window_height = int(screen_height * 0.85)
+                self.current_zoom_level = 0.8
+            elif screen_width <= 1920:  # Standard HD screens
+                window_width = min(1400, int(screen_width * 0.85))
+                window_height = min(900, int(screen_height * 0.85))
+                self.current_zoom_level = 1.0
+            else:  # Large/4K screens
+                window_width = min(1600, int(screen_width * 0.75))
+                window_height = min(1000, int(screen_height * 0.80))
+                self.current_zoom_level = 1.1
+            
+            # Set window geometry
+            self.root.geometry(f"{window_width}x{window_height}")
+            
+            # Center window on screen
+            x = (screen_width - window_width) // 2
+            y = (screen_height - window_height) // 2
+            self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+            
+            # Set minimum size based on screen
+            min_width = min(800, int(screen_width * 0.5))
+            min_height = min(600, int(screen_height * 0.5))
+            self.root.minsize(min_width, min_height)
+            
+            # Make window resizable
+            self.root.resizable(True, True)
+            
+            print(f"Window sized to: {window_width}x{window_height}, Zoom level: {self.current_zoom_level}")
+            
+        except Exception as e:
+            print(f"Error setting up window sizing: {e}")
+            # Fallback to default sizing
+            self.root.geometry("1200x800")
+            self.root.minsize(800, 600)
+            self.current_zoom_level = 1.0
+    
+    def setup_keyboard_shortcuts(self):
+        """Setup keyboard shortcuts for window operations"""
+        # Window management shortcuts
+        self.root.bind('<F11>', lambda e: self.toggle_fullscreen())
+        
+        # Zoom shortcuts
+        self.root.bind('<Control-plus>', lambda e: self.zoom_in())
+        self.root.bind('<Control-equal>', lambda e: self.zoom_in())  # For keyboards where + requires shift
+        self.root.bind('<Control-minus>', lambda e: self.zoom_out())
+        self.root.bind('<Control-0>', lambda e: self.reset_zoom())
+        
+        # Focus the root window to ensure shortcuts work
+        self.root.focus_set()
+        
+    def zoom_in(self):
+        """Increase zoom level"""
+        current_index = self.zoom_levels.index(self.current_zoom_level) if self.current_zoom_level in self.zoom_levels else 5
+        if current_index < len(self.zoom_levels) - 1:
+            self.current_zoom_level = self.zoom_levels[current_index + 1]
+            self.apply_zoom()
+            
+    def zoom_out(self):
+        """Decrease zoom level"""
+        current_index = self.zoom_levels.index(self.current_zoom_level) if self.current_zoom_level in self.zoom_levels else 5
+        if current_index > 0:
+            self.current_zoom_level = self.zoom_levels[current_index - 1]
+            self.apply_zoom()
+            
+    def reset_zoom(self):
+        """Reset zoom to 100%"""
+        self.current_zoom_level = 1.0
+        self.apply_zoom()
+        
+    def set_zoom(self, level):
+        """Set specific zoom level"""
+        if level in self.zoom_levels:
+            self.current_zoom_level = level
+            self.apply_zoom()
+            
+    def apply_zoom(self):
+        """Apply current zoom level to all UI elements"""
+        try:
+            # Calculate scaled font size
+            scaled_font_size = max(6, int(self.default_font_size * self.current_zoom_level))
+            
+            # Update style configuration for all ttk widgets
+            style = ttk.Style()
+            
+            # Configure fonts for different widget types
+            style.configure('TLabel', font=('Segoe UI', scaled_font_size))
+            style.configure('TButton', font=('Segoe UI', scaled_font_size))
+            style.configure('TEntry', font=('Segoe UI', scaled_font_size))
+            style.configure('TCheckbutton', font=('Segoe UI', scaled_font_size))
+            style.configure('Treeview', font=('Segoe UI', scaled_font_size), rowheight=int(30 * self.current_zoom_level))
+            style.configure('Treeview.Heading', font=('Segoe UI', scaled_font_size, 'bold'))
+            style.configure('TCombobox', font=('Segoe UI', scaled_font_size))
+            style.configure('TLabelFrame.Label', font=('Segoe UI', scaled_font_size, 'bold'))
+            
+            # Update specific UI elements that need special scaling
+            if hasattr(self, 'log_text'):
+                self.log_text.configure(font=('Courier New', scaled_font_size))
+            
+            # Update zoom status
+            if hasattr(self, 'zoom_label'):
+                self.zoom_label.configure(text=f"{int(self.current_zoom_level * 100)}%")
+            
+            # Force refresh of all widgets
+            self.root.update_idletasks()
+            
+            print(f"Applied zoom level: {self.current_zoom_level} (Font size: {scaled_font_size})")
+            
+        except Exception as e:
+            print(f"Error applying zoom: {e}")
+            
+    def toggle_fullscreen(self):
+        """Toggle fullscreen mode"""
+        current_state = self.root.attributes('-fullscreen')
+        self.root.attributes('-fullscreen', not current_state)
+        
+    def fit_to_screen(self):
+        """Fit window to screen size optimally"""
+        self.setup_window_sizing()
+        self.apply_zoom()
+        
+    def toggle_compact_mode(self):
+        """Toggle compact mode for smaller screens"""
+        self.compact_mode = not self.compact_mode
+        self.compact_mode_var.set(self.compact_mode)
+        self.apply_compact_mode()
+        
+    def on_compact_mode_toggle(self):
+        """Handle compact mode toggle from checkbutton"""
+        self.compact_mode = self.compact_mode_var.get()
+        self.apply_compact_mode()
+        
+    def apply_compact_mode(self):
+        """Apply or remove compact mode styling"""
+        if self.compact_mode:
+            # Reduce padding and spacing
+            self.root.configure(padx=5, pady=5)
+            # Update zoom status
+            if hasattr(self, 'compact_mode_label'):
+                self.compact_mode_label.configure(text="Compact Mode: ON")
+        else:
+            # Normal padding and spacing
+            self.root.configure(padx=16, pady=16)
+            if hasattr(self, 'compact_mode_label'):
+                self.compact_mode_label.configure(text="Compact Mode: OFF") 
+                
+    def save_user_preferences(self):
+        """Save user preferences like zoom level and window state"""
+        try:
+            preferences = {
+                'zoom_level': self.current_zoom_level,
+                'compact_mode': self.compact_mode,
+                'window_geometry': self.root.geometry(),
+                'theme_mode': 'dark' if self.is_dark_mode else 'light'
+            }
+            
+            # Save to a preferences file
+            import json
+            prefs_file = os.path.join(os.path.dirname(__file__), 'user_preferences.json')
+            with open(prefs_file, 'w') as f:
+                json.dump(preferences, f, indent=2)
+                
+        except Exception as e:
+            print(f"Error saving preferences: {e}")
+            
+    def load_user_preferences(self):
+        """Load user preferences from previous session"""
+        try:
+            prefs_file = os.path.join(os.path.dirname(__file__), 'user_preferences.json')
+            if os.path.exists(prefs_file):
+                with open(prefs_file, 'r') as f:
+                    preferences = json.load(f)
+                
+                # Apply saved preferences
+                self.current_zoom_level = preferences.get('zoom_level', 1.0)
+                self.compact_mode = preferences.get('compact_mode', False)
+                self.compact_mode_var.set(self.compact_mode)
+                
+                # Apply zoom after a short delay to ensure widgets are created
+                self.root.after(100, self.apply_zoom)
+                self.root.after(100, self.apply_compact_mode)
+                
+                print(f"Loaded user preferences: Zoom {self.current_zoom_level}, Compact: {self.compact_mode}")
+                
+        except Exception as e:
+            print(f"Error loading preferences: {e}")
+        
+        # Ensure zoom level is applied and label is updated even if no preferences file exists
+        self.root.after(200, self.update_zoom_display)
+    
+    def update_zoom_display(self):
+        """Update the zoom display label"""
+        if hasattr(self, 'zoom_label'):
+            self.zoom_label.configure(text=f"{int(self.current_zoom_level * 100)}%")
+    
+    def on_closing(self):
+        """Handle application closing - save preferences and cleanup"""
+        try:
+            self.save_user_preferences()
+            print("User preferences saved successfully")
+        except Exception as e:
+            print(f"Error saving preferences on close: {e}")
+        finally:
+            self.root.destroy()
+    
+    def setup_images_directory(self):
+        """Setup the images directory and provide guidance if images are missing"""
+        images_dir = os.path.join(os.path.dirname(__file__), "images")
+        
+        # Create images directory if it doesn't exist
+        if not os.path.exists(images_dir):
+            try:
+                os.makedirs(images_dir)
+                print(f"Created images directory: {images_dir}")
+            except Exception as e:
+                print(f"Could not create images directory: {e}")
+                return
+        
+        # Check for expected image files and provide guidance
+        expected_files = {
+            "App Icon": ["logo.jpeg", "logo.jpg", "logo.png", "icon.png", "icon.jpg", "icon.jpeg"],
+            "Light Mode Logo": ["lightmode-logo.jpg", "lightmode-logo.png", "light-logo.jpg", "light-logo.png"],
+            "Dark Mode Logo": ["darkmode-logo.jpg", "darkmode-logo.png", "dark-logo.jpg", "dark-logo.png"]
         }
         
-        print("📚 Module Status:")
-        for module, available in modules_status.items():
-            status = "✅" if available else "❌"
-            print(f"   {status} {module}")
-            
-        print("=" * 60)
+        missing_categories = []
+        for category, files in expected_files.items():
+            found = False
+            for filename in files:
+                if os.path.exists(os.path.join(images_dir, filename)):
+                    found = True
+                    break
+            if not found:
+                missing_categories.append(category)
         
-    def set_application_icon(self):
-        """Set application icon with multiple fallback options"""
-        icon_paths = [
-            get_resource_path("images/logo.jpeg"),
-            get_resource_path("images/logo.jpg"),
-            get_resource_path("images/logo.png"),
-            os.path.join(os.path.dirname(__file__), "images", "logo.jpeg"),
-            os.path.join(os.path.dirname(__file__), "images", "logo.jpg"),
-            os.path.join(os.path.dirname(__file__), "images", "logo.png")
-        ]
-        
-        icon_image = load_image_with_fallback(icon_paths, size=(32, 32), fallback_key='app_icon')
-        
-        if icon_image:
-            try:
-                self.root.iconphoto(False, icon_image)
-                print("✅ Application icon set successfully")
-            except Exception as e:
-                print(f"⚠️ Failed to set icon: {e}")
-        else:
-            print("⚠️ No application icon available - using default")
+        if missing_categories:
+            print(f"Images directory: {images_dir}")
+            print("Missing image files for:", ", ".join(missing_categories))
+            print("Expected files:")
+            for category in missing_categories:
+                print(f"  {category}: {' or '.join(expected_files[category])}")
+            print("The application will use text-based fallbacks for missing images.")
         
     def setup_window_management(self):
         """Setup proper window state handling and resize management"""
@@ -433,25 +531,134 @@ class CTVListGUI:
             print(f"Error refreshing MTPL data: {e}")
     
     def create_widgets(self):
-        # Create theme toggle with robust image handling
-        self.create_theme_toggle()
+        # Add theme toggle logos at the top center
+        if PIL_AVAILABLE:
+            try:
+                # Try different possible image paths and extensions
+                possible_paths = [
+                    # Try different extensions for light mode logo
+                    ("lightmode-logo.jpg", "darkmode-logo.jpg"),
+                    ("lightmode-logo.png", "darkmode-logo.png"),
+                    ("light-logo.jpg", "dark-logo.jpg"),
+                    ("light-logo.png", "dark-logo.png")
+                ]
+                
+                light_image = None
+                dark_image = None
+                
+                # Try to find existing image files
+                for light_name, dark_name in possible_paths:
+                    try:
+                        lightmode_logo_path = os.path.join(os.path.dirname(__file__), "images", light_name)
+                        darkmode_logo_path = os.path.join(os.path.dirname(__file__), "images", dark_name)
+                        
+                        if os.path.exists(lightmode_logo_path) and os.path.exists(darkmode_logo_path):
+                            light_image = Image.open(lightmode_logo_path)
+                            dark_image = Image.open(darkmode_logo_path)
+                            print(f"Successfully loaded theme logos: {light_name}, {dark_name}")
+                            break
+                    except Exception as e:
+                        print(f"Failed to load {light_name}/{dark_name}: {e}")
+                        continue
+                
+                if light_image and dark_image:
+                    # Resize logos to fit nicely (adjust size as needed)
+                    light_image = light_image.resize((100, 80), Image.Resampling.LANCZOS)
+                    dark_image = dark_image.resize((100, 80), Image.Resampling.LANCZOS)
+
+                    self.light_logo = ImageTk.PhotoImage(light_image)
+                    self.dark_logo = ImageTk.PhotoImage(dark_image)
+                    
+                    # Create logo frame at the top
+                    logo_frame = create_frame(self.root)
+                    logo_frame.pack(pady=10)
+                    
+                    # Create frame for the two logos side by side
+                    logos_container = create_frame(logo_frame)
+                    logos_container.pack()
+                    
+                    # Add light mode logo button (left)
+                    self.light_mode_btn = tk.Label(logos_container, image=self.light_logo, cursor="hand2")
+                    self.light_mode_btn.pack(side='left', padx=(0, 2))
+                    self.light_mode_btn.bind('<Button-1>', self.switch_to_light_mode)
+                    
+                    # Add dark mode logo button (right)
+                    self.dark_mode_btn = tk.Label(logos_container, image=self.dark_logo, cursor="hand2")
+                    self.dark_mode_btn.pack(side='left', padx=(2, 0))
+                    self.dark_mode_btn.bind('<Button-1>', self.switch_to_dark_mode)
+                    
+                    # Add application title below logos
+                    title_label = create_label(logo_frame, text="CTV List Data Processor")
+                    if CTK_AVAILABLE:
+                        title_label.configure(font=ctk.CTkFont(size=16, weight="bold"))
+                    else:
+                        title_label.configure(font=('Arial', 16, 'bold'), foreground="#ff6e25")
+                    title_label.pack(pady=(10, 5))
+                    
+                    # Add zoom controls
+                    zoom_frame = create_frame(logo_frame)
+                    zoom_frame.pack(pady=5)
+                    
+                    zoom_label_widget = create_label(zoom_frame, text="Zoom:")
+                    if not CTK_AVAILABLE:
+                        zoom_label_widget.configure(font=('Arial', 9))
+                    zoom_label_widget.pack(side='left', padx=(0, 5))
+                    
+                    zoom_out_btn = create_button(zoom_frame, text="🔍−", command=self.zoom_out)
+                    if not CTK_AVAILABLE:
+                        zoom_out_btn.configure(width=1)
+                    zoom_out_btn.pack(side='left', padx=2)
+                    
+                    self.zoom_label = create_label(zoom_frame, text=f"{int(self.current_zoom_level * 100)}%")
+                    if CTK_AVAILABLE:
+                        self.zoom_label.configure(font=ctk.CTkFont(weight="bold"))
+                    else:
+                        self.zoom_label.configure(font=('Arial', 9, 'bold'), foreground='blue', width=2)
+                    self.zoom_label.pack(side='left', padx=5)
+                    
+                    zoom_in_btn = create_button(zoom_frame, text="🔍+", command=self.zoom_in)
+                    if not CTK_AVAILABLE:
+                        zoom_in_btn.configure(width=1)
+                    zoom_in_btn.pack(side='left', padx=2)
+                    
+                    reset_btn = create_button(zoom_frame, text="Reset", command=self.reset_zoom)
+                    if not CTK_AVAILABLE:
+                        reset_btn.configure(width=6)
+                    reset_btn.pack(side='left', padx=(10, 0))
+                    
+                    # Add theme indicator
+                    self.theme_label = create_label(logo_frame, text="Light Mode")
+                    if not CTK_AVAILABLE:
+                        self.theme_label.configure(font=('Arial', 10), foreground='gray')
+                    self.theme_label.pack()
+                else:
+                    print("Could not find theme logo images, using fallback")
+                    self.create_fallback_title()
+                
+            except Exception as e:
+                print(f"Could not load theme logos: {e}")
+                # Fallback to text-only title
+                self.create_fallback_title()
+        else:
+            # Fallback to text-only title when PIL is not available
+            self.create_fallback_title()
         
         # Create notebook for tabs (this should always be created)
-        notebook = ttk.Notebook(self.root)
+        notebook = create_notebook(self.root)
         notebook.pack(fill='both', expand=True, padx=16, pady=16)  # Increased padding
         
         # Tab 1: Material Data Input
-        self.material_frame = ttk.Frame(notebook)
+        self.material_frame = create_frame(notebook)
         notebook.add(self.material_frame, text="📊 Material Data")  # Added icon
         self.create_material_tab()
         
         # Tab 2: MTPL and Test Selection
-        self.mtpl_frame = ttk.Frame(notebook)
+        self.mtpl_frame = create_frame(notebook)
         notebook.add(self.mtpl_frame, text="🧪 MTPL & Test Selection")  # Added icon
         self.create_mtpl_tab()
         
         # Tab 3: Output Settings and Processing
-        self.output_frame = ttk.Frame(notebook)
+        self.output_frame = create_frame(notebook)
         notebook.add(self.output_frame, text="⚙️ Output & Processing")  # Added icon
         self.create_output_tab()
         
@@ -462,148 +669,61 @@ class CTVListGUI:
         # Configure initial treeview colors
         self.configure_treeview_alternating_colors()
         
-    def create_theme_toggle(self):
-        """Create theme toggle with robust image loading and fallbacks"""
-        try:
-            # Define possible image paths for light and dark mode logos
-            light_logo_paths = [
-                get_resource_path("images/lightmode-logo.jpg"),
-                get_resource_path("images/lightmode-logo.png"),
-                get_resource_path("images/light-logo.jpg"),
-                get_resource_path("images/light-logo.png"),
-                os.path.join(os.path.dirname(__file__), "images", "lightmode-logo.jpg"),
-                os.path.join(os.path.dirname(__file__), "images", "lightmode-logo.png"),
-                os.path.join(os.path.dirname(__file__), "images", "light-logo.jpg"),
-                os.path.join(os.path.dirname(__file__), "images", "light-logo.png")
-            ]
-            
-            dark_logo_paths = [
-                get_resource_path("images/darkmode-logo.png"),
-                get_resource_path("images/darkmode-logo.jpg"),
-                get_resource_path("images/dark-logo.png"),
-                get_resource_path("images/dark-logo.jpg"),
-                os.path.join(os.path.dirname(__file__), "images", "darkmode-logo.png"),
-                os.path.join(os.path.dirname(__file__), "images", "darkmode-logo.jpg"),
-                os.path.join(os.path.dirname(__file__), "images", "dark-logo.png"),
-                os.path.join(os.path.dirname(__file__), "images", "dark-logo.jpg")
-            ]
-            
-            # Try to load images with fallbacks
-            self.light_logo = load_image_with_fallback(light_logo_paths, size=(80, 60), fallback_key='light_mode')
-            self.dark_logo = load_image_with_fallback(dark_logo_paths, size=(80, 60), fallback_key='dark_mode')
-            
-            # Create logo frame at the top
-            logo_frame = ttk.Frame(self.root)
-            logo_frame.pack(pady=10)
-            
-            # If we have images, create image-based buttons
-            if self.light_logo or self.dark_logo:
-                self.create_image_based_theme_toggle(logo_frame)
-            else:
-                # Fall back to text-based theme toggle
-                self.create_text_based_theme_toggle(logo_frame)
-                
-            # Add application title below logos
-            title_label = ttk.Label(logo_frame, text="CTV List Data Processor", 
-                                  font=('Arial', 16, 'bold'), foreground='#0071c5')
-            title_label.pack(pady=(10, 10))
-            
-            # Add theme indicator
-            self.theme_label = ttk.Label(logo_frame, text="Light Mode", 
-                                       font=('Arial', 10), foreground='gray')
-            self.theme_label.pack()
-            
-        except Exception as e:
-            print(f"Error creating theme toggle: {e}")
-            # Ultimate fallback - just create title
-            self.create_fallback_title()
-    
-    def create_image_based_theme_toggle(self, parent):
-        """Create image-based theme toggle buttons"""
-        try:
-            # Create frame for the two logos side by side
-            logos_container = ttk.Frame(parent)
-            logos_container.pack()
-            
-            # Add light mode logo button (left)
-            if self.light_logo:
-                self.light_mode_btn = tk.Label(logos_container, image=self.light_logo, cursor="hand2")
-                self.light_mode_btn.pack(side='left', padx=(0, 2))
-                self.light_mode_btn.bind('<Button-1>', self.switch_to_light_mode)
-            else:
-                self.light_mode_btn = create_text_button(logos_container, "☀️ Light", self.switch_to_light_mode)
-                self.light_mode_btn.pack(side='left', padx=(0, 2))
-            
-            # Add dark mode logo button (right)
-            if self.dark_logo:
-                self.dark_mode_btn = tk.Label(logos_container, image=self.dark_logo, cursor="hand2")
-                self.dark_mode_btn.pack(side='left', padx=(2, 0))
-                self.dark_mode_btn.bind('<Button-1>', self.switch_to_dark_mode)
-            else:
-                self.dark_mode_btn = create_text_button(logos_container, "🌙 Dark", self.switch_to_dark_mode)
-                self.dark_mode_btn.pack(side='left', padx=(2, 0))
-                
-            print("✅ Image-based theme toggle created")
-            
-        except Exception as e:
-            print(f"Error creating image-based theme toggle: {e}")
-            self.create_text_based_theme_toggle(parent)
-    
-    def create_text_based_theme_toggle(self, parent):
-        """Create text-based theme toggle as fallback"""
-        try:
-            theme_frame = ttk.Frame(parent)
-            theme_frame.pack(pady=5)
-            
-            # Create simple theme toggle buttons
-            self.light_mode_btn = create_text_button(theme_frame, "☀️ Light Mode", self.switch_to_light_mode)
-            self.light_mode_btn.pack(side='left', padx=5)
-            
-            self.dark_mode_btn = create_text_button(theme_frame, "🌙 Dark Mode", self.switch_to_dark_mode)
-            self.dark_mode_btn.pack(side='left', padx=5)
-            
-            print("✅ Text-based theme toggle created")
-            
-        except Exception as e:
-            print(f"Error creating text-based theme toggle: {e}")
-            # No theme toggle available - continue without it
-        
     def create_fallback_title(self):
         """Create a simple text-only title when images are not available"""
-        title_frame = ttk.Frame(self.root)
+        title_frame = create_frame(self.root)
         title_frame.pack(pady=10)
-        title_label = ttk.Label(title_frame, text="CTV List Data Processor", 
-                              font=('Arial', 16, 'bold'))
+        
+        title_label = create_label(title_frame, text="CTV List Data Processor")
+        if CTK_AVAILABLE:
+            title_label.configure(font=ctk.CTkFont(size=16, weight="bold"))
+        else:
+            title_label.configure(font=('Arial', 16, 'bold'))
         title_label.pack()
         
         # Create simple theme toggle buttons
-        theme_frame = ttk.Frame(title_frame)
+        theme_frame = create_frame(title_frame)
         theme_frame.pack(pady=5)
         
-        self.light_mode_btn = create_text_button(theme_frame, "☀️ Light Mode", self.switch_to_light_mode)
-        self.light_mode_btn.pack(side='left', padx=5)
+        create_button(theme_frame, text="Light Mode", command=self.switch_to_light_mode).pack(side='left', padx=5)
+        create_button(theme_frame, text="Dark Mode", command=self.switch_to_dark_mode).pack(side='left', padx=5)
         
-        self.dark_mode_btn = create_text_button(theme_frame, "🌙 Dark Mode", self.switch_to_dark_mode)
-        self.dark_mode_btn.pack(side='left', padx=5)
+        # Add zoom controls
+        zoom_frame = create_frame(title_frame)
+        zoom_frame.pack(pady=5)
+        
+        zoom_label_widget = create_label(zoom_frame, text="Zoom:")
+        if not CTK_AVAILABLE:
+            zoom_label_widget.configure(font=('Arial', 9))
+        zoom_label_widget.pack(side='left', padx=(0, 5))
+        
+        zoom_out_btn = create_button(zoom_frame, text="🔍−", command=self.zoom_out)
+        if not CTK_AVAILABLE:
+            zoom_out_btn.configure(width=4)
+        zoom_out_btn.pack(side='left', padx=2)
+        
+        self.zoom_label = create_label(zoom_frame, text=f"{int(self.current_zoom_level * 100)}%")
+        if CTK_AVAILABLE:
+            self.zoom_label.configure(font=ctk.CTkFont(weight="bold"))
+        else:
+            self.zoom_label.configure(font=('Arial', 9, 'bold'), foreground='blue', width=5)
+        self.zoom_label.pack(side='left', padx=5)
+        
+        zoom_in_btn = create_button(zoom_frame, text="🔍+", command=self.zoom_in)
+        if not CTK_AVAILABLE:
+            zoom_in_btn.configure(width=4)
+        zoom_in_btn.pack(side='left', padx=2)
+        
+        reset_btn = create_button(zoom_frame, text="Reset", command=self.reset_zoom)
+        if not CTK_AVAILABLE:
+            reset_btn.configure(width=6)
+        reset_btn.pack(side='left', padx=(10, 0))
         
         # Add theme indicator
-        self.theme_label = ttk.Label(title_frame, text="Light Mode", 
-                                   font=('Arial', 10), foreground='gray')
+        self.theme_label = create_label(title_frame, text="Light Mode")
+        if not CTK_AVAILABLE:
+            self.theme_label.configure(font=('Arial', 10), foreground='gray')
         self.theme_label.pack()
-        
-    def switch_to_light_mode(self, event=None):
-        """Switch to light mode theme"""
-        self.is_dark_mode = False
-        if hasattr(self, 'theme_label') and self.theme_label:
-            self.theme_label.config(text="Light Mode")
-        print("🌞 Switched to Light Mode")
-        
-    def switch_to_dark_mode(self, event=None):
-        """Switch to dark mode theme"""
-        self.is_dark_mode = True
-        if hasattr(self, 'theme_label') and self.theme_label:
-            self.theme_label.config(text="Dark Mode")
-        print("🌙 Switched to Dark Mode")
         
     def create_material_tab(self):
         # Material Data Input Section
@@ -668,10 +788,42 @@ class CTVListGUI:
         self.material_tree.configure(xscrollcommand=material_h_scrollbar.set)
         
     def create_mtpl_tab(self):
-        ttk.Label(self.mtpl_frame, text="MTPL File and Test Selection", font=('Arial', 14, 'bold')).pack(pady=10)
+        # Create a canvas and scrollbar for scrollable content
+        canvas = tk.Canvas(self.mtpl_frame, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.mtpl_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        # Configure scrolling
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack the canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Bind mouse wheel to canvas for smooth scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        def _bind_to_mousewheel(event):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        def _unbind_from_mousewheel(event):
+            canvas.unbind_all("<MouseWheel>")
+        
+        canvas.bind('<Enter>', _bind_to_mousewheel)
+        canvas.bind('<Leave>', _unbind_from_mousewheel)
+        
+        # Now create all the content in the scrollable_frame instead of self.mtpl_frame
+        ttk.Label(scrollable_frame, text="MTPL File and Test Selection", font=('Arial', 14, 'bold')).pack(pady=10)
         
         # MTPL file loading
-        mtpl_load_frame = ttk.LabelFrame(self.mtpl_frame, text="Load MTPL File")
+        mtpl_load_frame = ttk.LabelFrame(scrollable_frame, text="Load MTPL File")
         mtpl_load_frame.pack(fill='x', padx=20, pady=10)
         
         ttk.Label(mtpl_load_frame, text="MTPL File Path:").grid(row=0, column=0, sticky='w', padx=10, pady=5)
@@ -685,27 +837,59 @@ class CTVListGUI:
         self.mtpl_info_label.grid(row=2, column=0, columnspan=3, sticky=tk.W, pady=(5, 0))
         
         # MTPL data display with proper layout management
-        mtpl_display_frame = ttk.LabelFrame(self.mtpl_frame, text="MTPL Data")
+        mtpl_display_frame = ttk.LabelFrame(scrollable_frame, text="MTPL Data")
         mtpl_display_frame.pack(fill='both', expand=True, padx=20, pady=10)
         
         # Configure grid weights for proper resizing
         mtpl_display_frame.grid_rowconfigure(1, weight=1)  # Make treeview area expandable
         mtpl_display_frame.grid_columnconfigure(0, weight=1)
         
-        # Search/Filter frame
-        search_frame = ttk.Frame(mtpl_display_frame)
-        search_frame.pack(fill='x', padx=10, pady=(10, 5))
+        # Enhanced Search and Filter Controls
+        filter_control_frame = ttk.LabelFrame(mtpl_display_frame, text="🔍 Search & Filter Controls")
+        filter_control_frame.pack(fill='x', padx=10, pady=(10, 5))
         
-        ttk.Label(search_frame, text="Search/Filter Tests:").pack(side='left', padx=(0, 10))
+        # Top row: Search and main controls
+        top_filter_row = ttk.Frame(filter_control_frame)
+        top_filter_row.pack(fill='x', padx=10, pady=5)
+        
+        # Search section with icon
+        search_section = ttk.Frame(top_filter_row)
+        search_section.pack(side='left', fill='x', expand=True)
+        
+        ttk.Label(search_section, text="🔍 Quick Search:", font=('Arial', 9, 'bold')).pack(side='left', padx=(0, 5))
         self.search_var = tk.StringVar()
         self.search_var.trace('w', self.on_search_change)
-        search_entry = ttk.Entry(search_frame, textvariable=self.search_var, width=40)
+        search_entry = ttk.Entry(search_section, textvariable=self.search_var, width=35, font=('Arial', 9))
         search_entry.pack(side='left', padx=(0, 10))
-        ttk.Button(search_frame, text="Clear Filter", command=self.clear_filter).pack(side='left', padx=(0, 10))
+        search_entry.bind('<Return>', lambda e: self.apply_all_filters())
         
-        # Filter status label
-        self.filter_status_label = ttk.Label(search_frame, text="", foreground='blue')
-        self.filter_status_label.pack(side='left', padx=(10, 0))
+        # Control buttons
+        control_section = ttk.Frame(top_filter_row)
+        control_section.pack(side='right')
+        
+        ttk.Button(control_section, text="🗑️ Clear All", command=self.clear_all_filters, width=12).pack(side='left', padx=(0, 5))
+        ttk.Button(control_section, text="🔄 Refresh", command=self.refresh_filters, width=12).pack(side='left', padx=(0, 5))
+        self.toggle_filters_btn = ttk.Button(control_section, text="▼ Show Filters", command=self.toggle_column_filters, width=15)
+        self.toggle_filters_btn.pack(side='left')
+        
+        # Filter status row
+        status_row = ttk.Frame(filter_control_frame)
+        status_row.pack(fill='x', padx=10, pady=(0, 5))
+        
+        self.filter_status_label = ttk.Label(status_row, text="", font=('Arial', 9), foreground='blue')
+        self.filter_status_label.pack(side='left')
+        
+        # Active filters display
+        self.active_filters_label = ttk.Label(status_row, text="", font=('Arial', 8), foreground='orange')
+        self.active_filters_label.pack(side='right')
+        
+        # Collapsible Column filters frame
+        self.column_filters_frame = ttk.LabelFrame(mtpl_display_frame, text="📋 Advanced Column Filters")
+        self.column_filters_visible = False  # Start collapsed
+        
+        # Initialize column filter variables
+        self.column_filters = {}
+        self.column_filter_combos = {}
         
         # Create frame for treeview and scrollbars
         mtpl_tree_frame = ttk.Frame(mtpl_display_frame)
@@ -726,15 +910,58 @@ class CTVListGUI:
         mtpl_h_scrollbar.grid(row=1, column=0, sticky='ew')
         self.mtpl_tree.configure(xscrollcommand=mtpl_h_scrollbar.set)
         
-        # Test selection
-        test_selection_frame = ttk.LabelFrame(self.mtpl_frame, text="Test Selection")
-        test_selection_frame.pack(fill='x', padx=20, pady=10)
+        # Add mouse wheel support for the treeview
+        def _on_treeview_mousewheel(event):
+            self.mtpl_tree.yview_scroll(int(-1*(event.delta/120)), "units")
         
-        ttk.Button(test_selection_frame, text="Select All Tests", command=self.select_all_tests).pack(side='left', padx=10, pady=10)
-        ttk.Button(test_selection_frame, text="Clear Selection", command=self.clear_test_selection).pack(side='left', padx=10, pady=10)
-        ttk.Label(test_selection_frame, text="Selected Tests:").pack(side='left', padx=10)
-        self.selected_tests_label = ttk.Label(test_selection_frame, text="0")
-        self.selected_tests_label.pack(side='left', padx=5)
+        self.mtpl_tree.bind("<MouseWheel>", _on_treeview_mousewheel)
+        
+        # Bind click events for test selection
+        self.mtpl_tree.bind('<Double-1>', self.toggle_test_selection)
+        self.mtpl_tree.bind('<Button-1>', self.on_treeview_click)
+        
+        # Enhanced Test Selection and Management
+        test_management_frame = ttk.LabelFrame(scrollable_frame, text="🎯 Test Selection & Management")
+        test_management_frame.pack(fill='x', padx=20, pady=10)
+        
+        # Selection controls row
+        selection_row = ttk.Frame(test_management_frame)
+        selection_row.pack(fill='x', padx=10, pady=5)
+        
+        # Left side: Basic selection controls
+        basic_controls = ttk.Frame(selection_row)
+        basic_controls.pack(side='left')
+        
+        ttk.Button(basic_controls, text="☑️ Select All Visible", command=self.select_all_visible_tests, width=18).pack(side='left', padx=(0, 5))
+        ttk.Button(basic_controls, text="☐ Clear All", command=self.clear_test_selection, width=12).pack(side='left', padx=(0, 10))
+        
+        # Selection info
+        info_frame = ttk.Frame(basic_controls)
+        info_frame.pack(side='left', padx=(10, 0))
+        ttk.Label(info_frame, text="Selected:", font=('Arial', 9, 'bold')).pack(side='left')
+        self.selected_tests_label = ttk.Label(info_frame, text="0", font=('Arial', 10, 'bold'), foreground='blue')
+        self.selected_tests_label.pack(side='left', padx=(5, 0))
+        
+        # Right side: Advanced controls
+        advanced_controls = ttk.Frame(selection_row)
+        advanced_controls.pack(side='right')
+        
+        ttk.Button(advanced_controls, text="↕️ Reorder Tests", command=self.open_reorder_window, width=15).pack(side='left', padx=(0, 5))
+        ttk.Button(advanced_controls, text="🔄 Invert Selection", command=self.invert_selection, width=15).pack(side='left')
+        
+        # Export controls row
+        export_row = ttk.Frame(test_management_frame)
+        export_row.pack(fill='x', padx=10, pady=(5, 10))
+        
+        ttk.Label(export_row, text="📤 Export Options:", font=('Arial', 9, 'bold')).pack(side='left', padx=(0, 10))
+        ttk.Button(export_row, text="📋 Selected Tests", command=self.export_selected_tests, width=15).pack(side='left', padx=(0, 5))
+        ttk.Button(export_row, text="📊 Visible Tests", command=self.export_visible_tests, width=15).pack(side='left', padx=(0, 5))
+        ttk.Button(export_row, text="📄 All Tests", command=self.export_all_tests, width=12).pack(side='left', padx=(0, 5))
+        
+        # Test order display (when reordering is active)
+        self.order_info_frame = ttk.Frame(test_management_frame)
+        self.order_info_label = ttk.Label(self.order_info_frame, text="", font=('Arial', 8), foreground='green')
+        self.order_info_label.pack()
         
     def create_output_tab(self):
         ttk.Label(self.output_frame, text="Output Settings and Processing", font=('Arial', 14, 'bold')).pack(pady=10)
@@ -756,6 +983,11 @@ class CTVListGUI:
         self.delete_files_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(options_frame, text="Delete intermediary files", variable=self.delete_files_var).pack(anchor='w', padx=10, pady=5)
         
+        # Always generate stacked output files for JMP; option removed
+        
+        self.run_jmp_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(options_frame, text="Run JMP on stacked files", variable=self.run_jmp_var).pack(anchor='w', padx=10, pady=5)
+        
         # Processing controls
         process_frame = ttk.Frame(self.output_frame)
         process_frame.pack(pady=20)
@@ -764,7 +996,6 @@ class CTVListGUI:
         self.stop_button = ttk.Button(process_frame, text="Stop", command=self.stop_processing, state='disabled')
         self.stop_button.pack(side='left', padx=10)
         ttk.Button(process_frame, text="Clear All", command=self.clear_all).pack(side='left', padx=10)
-        ttk.Button(process_frame, text="Run Diagnostics", command=self.diagnostic_column_info).pack(side='left', padx=10)
         
         # Progress and log
         progress_frame = ttk.LabelFrame(self.output_frame, text="Progress")
@@ -1039,11 +1270,19 @@ class CTVListGUI:
             if 'Lot' in self.material_df.columns:
                 self.lot_var.set(str(first_row['Lot']))
             if 'Wafer' in self.material_df.columns:
-                self.wafer_var.set(str(first_row['Wafer']))
+                # Convert to integer if it's a float
+                wafer_value = first_row['Wafer']
+                if isinstance(wafer_value, float) and wafer_value.is_integer():
+                    wafer_value = int(wafer_value)
+                self.wafer_var.set(str(wafer_value))
             if 'Program' in self.material_df.columns:
                 self.program_var.set(str(first_row['Program']))
             if 'Prefetch' in self.material_df.columns:
-                self.prefetch_var.set(str(first_row['Prefetch']))
+                # Convert to integer if it's a float
+                prefetch_value = first_row['Prefetch']
+                if isinstance(prefetch_value, float) and prefetch_value.is_integer():
+                    prefetch_value = int(prefetch_value)
+                self.prefetch_var.set(str(prefetch_value))
             if 'Database' in self.material_df.columns:
                 self.database_var.set(str(first_row['Database']))
                 
@@ -1076,13 +1315,37 @@ class CTVListGUI:
             
             # Parse inputs into lists
             lot_list = parse_input(lot_input, default_values['Lot'])
-            wafer_list = parse_input(wafer_input, default_values['Wafer'])
+            wafer_raw_list = parse_input(wafer_input, default_values['Wafer'])
             program_list = parse_input(program_input, default_values['Program'])
             database_list = parse_input(database_input, default_values['Database'])
             
+            # Convert wafer values to integers where possible
+            wafer_list = []
+            for w in wafer_raw_list:
+                try:
+                    # Try to convert to float first, then to int if it's a whole number
+                    if str(w).strip() and str(w).strip().replace('.', '').isdigit():
+                        float_val = float(w)
+                        if float_val.is_integer():
+                            wafer_list.append(int(float_val))
+                        else:
+                            wafer_list.append(str(w))  # Keep as string if not a whole number
+                    else:
+                        wafer_list.append(str(w))  # Keep as string if not numeric
+                except:
+                    wafer_list.append(str(w))
+            
             # Handle prefetch specially as it should be an integer
-            if prefetch_input.strip() and prefetch_input.strip().isdigit():
-                prefetch_value = int(prefetch_input.strip())
+            if prefetch_input.strip():
+                try:
+                    # Handle both string digits and float values
+                    prefetch_float = float(prefetch_input.strip())
+                    if prefetch_float.is_integer():
+                        prefetch_value = int(prefetch_float)
+                    else:
+                        prefetch_value = int(prefetch_float)  # Round down if not integer
+                except:
+                    prefetch_value = default_values['Prefetch'][0]
             else:
                 prefetch_value = default_values['Prefetch'][0]
             
@@ -1097,12 +1360,24 @@ class CTVListGUI:
             
             # For backward compatibility, create a simple DataFrame for display
             # Convert lists to comma-separated strings for display
+            def format_list_for_display(item_list):
+                """Convert list items to strings, handling integers and floats properly"""
+                formatted_items = []
+                for item in item_list:
+                    if isinstance(item, float) and item.is_integer():
+                        formatted_items.append(str(int(item)))  # Convert 841.0 to "841"
+                    elif isinstance(item, int):
+                        formatted_items.append(str(item))  # Convert 841 to "841"
+                    else:
+                        formatted_items.append(str(item))  # Convert everything else to string
+                return formatted_items
+            
             display_data = {
-                'Lot': [', '.join(lot_list)],
-                'Wafer': [', '.join(wafer_list)],
-                'Program': [', '.join(program_list)],
+                'Lot': [', '.join(format_list_for_display(lot_list))],
+                'Wafer': [', '.join(format_list_for_display(wafer_list))],
+                'Program': [', '.join(format_list_for_display(program_list))],
                 'Prefetch': [str(prefetch_value)],
-                'Database': [', '.join(database_list)]
+                'Database': [', '.join(format_list_for_display(database_list))]
             }
             
             self.material_df = pd.DataFrame(display_data)
@@ -1241,7 +1516,7 @@ class CTVListGUI:
             self.update_status_indicator(self.mtpl_info_label, f"⚠️ Error reading MTPL file: {str(e)}", "error")
     
     def load_mtpl_file(self):
-        """Load and process MTPL file with enhanced error handling"""
+        """Load and process MTPL file"""
         mtpl_path = self.mtpl_file_path.get()
         if not mtpl_path:
             messagebox.showwarning("Warning", "Please select an MTPL file first")
@@ -1249,22 +1524,15 @@ class CTVListGUI:
             
         try:
             self.log_message("Processing MTPL file...")
-            
-            # Check if required modules are available
-            if mt is None:
-                raise ImportError("mtpl_parser module is not available")
-            if fi is None:
-                raise ImportError("file_functions module is not available")
-            
             self.mtpl_csv_path = mt.mtpl_to_csv(fi.process_file_input(mtpl_path))
             self.mtpl_df = pd.read_csv(self.mtpl_csv_path)
             
-            # Debug: Print MTPL dataframe info with enhanced logging
-            self.log_message(f"MTPL columns: {self.mtpl_df.columns.tolist()}")
-            self.log_message(f"MTPL shape: {self.mtpl_df.shape}")
+            # Debug: Print MTPL dataframe info
+            print(f"Debug - MTPL columns: {self.mtpl_df.columns.tolist()}")
+            print(f"Debug - MTPL shape: {self.mtpl_df.shape}")
             if not self.mtpl_df.empty:
-                self.log_message(f"First few rows of MTPL:")
-                self.log_message(str(self.mtpl_df.head()))
+                print(f"Debug - First few rows of MTPL:")
+                print(self.mtpl_df.head())
             
             self.update_mtpl_display()
             self.log_message(f"MTPL file processed: {self.mtpl_csv_path}", "success")
@@ -1272,14 +1540,9 @@ class CTVListGUI:
             # Set default output folder
             self.set_default_output_folder()
             
-        except ImportError as e:
-            error_msg = f"Required module not available: {str(e)}"
-            self.log_message(error_msg, "error")
-            messagebox.showerror("Module Error", error_msg)
         except Exception as e:
-            error_msg = f"Failed to process MTPL file: {str(e)}"
-            messagebox.showerror("Error", error_msg)
-            self.log_message(error_msg, "error")
+            messagebox.showerror("Error", f"Failed to process MTPL file: {str(e)}")
+            self.log_message(f"Error processing MTPL: {str(e)}", "error")
             
     def update_mtpl_display(self):
         """Update the MTPL data display"""
@@ -1303,6 +1566,9 @@ class CTVListGUI:
                 self.mtpl_tree.heading(col, text=col)
                 self.mtpl_tree.column(col, width=150, anchor='center')
                 
+            # Create column filters
+            self.create_column_filters()
+                
             # Store all items for filtering
             self.all_mtpl_items = []
             for index, row in self.mtpl_df.iterrows():
@@ -1321,13 +1587,9 @@ class CTVListGUI:
             # Display all items initially
             self.display_filtered_items(self.all_mtpl_items)
             
-            # Bind selection events
-            self.mtpl_tree.bind('<Double-1>', self.toggle_test_selection)
-            self.mtpl_tree.bind('<Button-1>', self.on_treeview_click)
-            
             # Clear search
             self.search_var.set("")
-            self.update_filter_status(len(self.all_mtpl_items), len(self.all_mtpl_items))
+            self.update_filter_status()
             
             # Enhance visual feedback
             self.enhance_visual_feedback()
@@ -1372,36 +1634,258 @@ class CTVListGUI:
         except Exception as e:
             print(f"Debug - Error in display_filtered_items: {e}")
                                 
-    def on_search_change(self, *args):
-        """Handle search text changes"""
-        search_text = self.search_var.get().lower()
+    def create_column_filters(self):
+        """Create dropdown filters for each column"""
+        # Clear existing filters
+        for widget in self.column_filters_frame.winfo_children():
+            widget.destroy()
         
-        if not search_text:
-            # Show all items if search is empty
-            filtered_items = self.all_mtpl_items
-        else:
-            # Filter items based on search text
-            filtered_items = []
-            for item_data in self.all_mtpl_items:
-                # Search in all columns (skip the checkbox column)
-                item_text = ' '.join(str(val).lower() for val in item_data['values'][1:])
-                if search_text in item_text:
-                    filtered_items.append(item_data)
-                    
+        self.column_filters = {}
+        self.column_filter_combos = {}
+        
+        if self.mtpl_df is None:
+            return
+            
+        # Create filters for each column (skip the checkbox column)
+        columns = list(self.mtpl_df.columns)
+        
+        # Create a scrollable frame for filters if needed
+        filters_container = ttk.Frame(self.column_filters_frame)
+        filters_container.pack(fill='x', padx=5, pady=5)
+        
+        # Arrange filters in rows (3 per row to fit better)
+        filters_per_row = 3
+        current_row = 0
+        current_col = 0
+        
+        for i, col in enumerate(columns):
+            # Get unique values for this column
+            unique_values = sorted(self.mtpl_df[col].astype(str).unique())
+            # Add "All" option at the beginning
+            filter_options = ["All"] + unique_values
+            
+            # Create filter frame
+            filter_frame = ttk.Frame(filters_container)
+            filter_frame.grid(row=current_row, column=current_col, padx=5, pady=2, sticky='w')
+            
+            # Create label
+            ttk.Label(filter_frame, text=f"{col}:", font=('Arial', 8)).pack(side='left', padx=(0, 5))
+            
+            # Create combobox
+            filter_var = tk.StringVar(value="All")
+            combo = ttk.Combobox(filter_frame, textvariable=filter_var, values=filter_options, 
+                               state="readonly", width=15, font=('Arial', 8))
+            combo.pack(side='left')
+            
+            # Bind change event
+            combo.bind('<<ComboboxSelected>>', lambda e, col=col: self.on_column_filter_change(col))
+            
+            # Store references
+            self.column_filters[col] = filter_var
+            self.column_filter_combos[col] = combo
+            
+            # Update grid position
+            current_col += 1
+            if current_col >= filters_per_row:
+                current_col = 0
+                current_row += 1
+                
+    def on_column_filter_change(self, column):
+        """Handle column filter changes"""
+        self.apply_all_filters()
+        
+    def apply_all_filters(self):
+        """Apply both text search and column filters"""
+        if not hasattr(self, 'all_mtpl_items') or not self.all_mtpl_items:
+            return
+            
+        filtered_items = []
+        
+        # Get current filter values
+        text_filter = self.search_var.get().lower().strip()
+        
+        for item_data in self.all_mtpl_items:
+            values = item_data['values']
+            # Skip checkbox column for filtering
+            row_values = values[1:]  
+            
+            # Apply text filter
+            text_match = True
+            if text_filter:
+                item_text = ' '.join(str(val).lower() for val in row_values)
+                text_match = text_filter in item_text
+            
+            # Apply column filters
+            column_match = True
+            for i, col in enumerate(self.mtpl_df.columns):
+                if col in self.column_filters:
+                    filter_value = self.column_filters[col].get()
+                    if filter_value != "All":
+                        # Compare with the actual value in this column
+                        if i < len(row_values) and str(row_values[i]) != filter_value:
+                            column_match = False
+                            break
+            
+            # Include item if it passes both filters
+            if text_match and column_match:
+                filtered_items.append(item_data)
+        
         self.display_filtered_items(filtered_items)
-        self.update_filter_status(len(filtered_items), len(self.all_mtpl_items))
+        self.update_filter_status()
         self.update_selected_tests_count()
         
-    def clear_filter(self):
-        """Clear the search filter"""
+    def clear_all_filters(self):
+        """Clear all filters including text search and column filters"""
+        # Clear text search
         self.search_var.set("")
         
-    def update_filter_status(self, shown_count, total_count):
-        """Update the filter status label"""
-        if shown_count == total_count:
-            self.filter_status_label.config(text=f"Showing all {total_count} tests")
-        else:
-            self.filter_status_label.config(text=f"Showing {shown_count} of {total_count} tests")
+        # Clear column filters
+        for col, filter_var in self.column_filters.items():
+            filter_var.set("All")
+            
+    def on_search_change(self, *args):
+        """Handle text search changes"""
+        self.apply_all_filters()
+        
+    def export_selected_tests(self):
+        """Export only the selected tests to CSV"""
+        try:
+            if not hasattr(self, 'all_mtpl_items') or not self.all_mtpl_items:
+                messagebox.showwarning("Warning", "No MTPL data available to export")
+                return
+                
+            # Get selected tests
+            selected_items = []
+            selected_count = 0
+            
+            print("Debug - Starting export of selected tests...")
+            print(f"Debug - Total items to check: {len(self.all_mtpl_items)}")
+            
+            for i, item_data in enumerate(self.all_mtpl_items):
+                print(f"Debug - Item {i}: tags={item_data.get('tags', 'No tags')}, values={item_data.get('values', 'No values')}")
+                
+                # Check if item is selected
+                tags = item_data.get('tags', ())
+                if 'checked' in tags:
+                    selected_count += 1
+                    values = item_data.get('values', [])
+                    if len(values) > 1:
+                        # Remove checkbox column (first column) and convert to list
+                        row_data = list(values[1:])  # Skip checkbox column
+                        selected_items.append(row_data)
+                        print(f"Debug - Added selected item: {row_data}")
+                    else:
+                        print(f"Debug - Warning: Selected item has insufficient values: {values}")
+            
+            print(f"Debug - Found {selected_count} selected items, {len(selected_items)} valid for export")
+            
+            if not selected_items:
+                messagebox.showwarning("Warning", "No tests selected for export")
+                return
+                
+            self._export_to_csv(selected_items, "selected_tests.csv", f"Export {len(selected_items)} Selected Tests")
+            
+        except Exception as e:
+            error_msg = f"Error in export_selected_tests: {str(e)}"
+            print(f"Debug - {error_msg}")
+            messagebox.showerror("Export Error", error_msg)
+            if hasattr(self, 'log_message'):
+                self.log_message(error_msg, "error")
+        
+    def export_visible_tests(self):
+        """Export currently visible (filtered) tests to CSV"""
+        if not hasattr(self, 'mtpl_tree') or not self.mtpl_tree.get_children():
+            messagebox.showwarning("Warning", "No visible tests to export")
+            return
+            
+        # Get all visible items from treeview
+        visible_items = []
+        for item_id in self.mtpl_tree.get_children():
+            values = self.mtpl_tree.item(item_id, 'values')
+            # Remove checkbox column
+            row_data = values[1:]  # Skip checkbox column
+            visible_items.append(row_data)
+            
+        if not visible_items:
+            messagebox.showwarning("Warning", "No visible tests to export")
+            return
+            
+        self._export_to_csv(visible_items, "visible_tests.csv", f"Export {len(visible_items)} Visible Tests")
+        
+    def export_all_tests(self):
+        """Export all tests from MTPL to CSV"""
+        if self.mtpl_df is None or self.mtpl_df.empty:
+            messagebox.showwarning("Warning", "No MTPL data available to export")
+            return
+            
+        # Convert dataframe to list of lists
+        all_items = []
+        for index, row in self.mtpl_df.iterrows():
+            all_items.append(list(row))
+            
+        self._export_to_csv(all_items, "all_tests.csv", f"Export {len(all_items)} All Tests")
+        
+    def _export_to_csv(self, data_items, default_filename, dialog_title):
+        """Helper method to export data to CSV file"""
+        try:
+            print(f"Debug - Starting CSV export with {len(data_items)} items")
+            print(f"Debug - Sample data item: {data_items[0] if data_items else 'No data'}")
+            
+            # Ask user for save location
+            file_path = filedialog.asksaveasfilename(
+                title=dialog_title,
+                defaultextension=".csv",
+                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+                initialfile=default_filename
+            )
+            
+            if not file_path:
+                print("Debug - User cancelled file save dialog")
+                return  # User cancelled
+                
+            print(f"Debug - Saving to: {file_path}")
+                
+            # Write to CSV
+            with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Write header
+                if hasattr(self, 'mtpl_df') and self.mtpl_df is not None:
+                    header = list(self.mtpl_df.columns)
+                    writer.writerow(header)
+                    print(f"Debug - Wrote header: {header}")
+                else:
+                    print("Debug - No MTPL dataframe available for header")
+                    
+                # Write data
+                rows_written = 0
+                for i, row_data in enumerate(data_items):
+                    try:
+                        writer.writerow(row_data)
+                        rows_written += 1
+                        if i < 3:  # Log first few rows for debugging
+                            print(f"Debug - Wrote row {i}: {row_data}")
+                    except Exception as row_error:
+                        print(f"Debug - Error writing row {i}: {row_error}")
+                        continue
+                
+                print(f"Debug - Successfully wrote {rows_written} rows")
+                
+            # Success message
+            success_msg = f"✅ Exported {len(data_items)} tests to: {os.path.basename(file_path)}"
+            if hasattr(self, 'log_message'):
+                self.log_message(success_msg, "success")
+            messagebox.showinfo("Export Successful", f"Successfully exported {len(data_items)} tests to:\n{file_path}")
+            
+        except Exception as e:
+            error_msg = f"Failed to export tests: {str(e)}"
+            print(f"Debug - Export error: {error_msg}")
+            import traceback
+            print(f"Debug - Full traceback: {traceback.format_exc()}")
+            
+            if hasattr(self, 'log_message'):
+                self.log_message(f"❌ {error_msg}", "error")
+            messagebox.showerror("Export Error", error_msg)
             
     def on_treeview_click(self, event):
         """Handle single click on treeview to toggle selection when clicking checkbox column"""
@@ -1532,38 +2016,305 @@ class CTVListGUI:
                 count += 1
                 print(f"Debug - Checked item: {item_data['values']}")
         print(f"Debug - Total checked count: {count}")
-        self.selected_tests_label.config(text=str(count))
+        self.selected_tests_label.configure(text=str(count))
         
     def get_selected_tests(self):
-        """Get list of selected test names with robust column handling"""
+        """Get list of selected test names"""
         selected_tests = []
         # Get from stored data, not just visible items
         for item_data in self.all_mtpl_items:
             if 'checked' in item_data['tags']:
                 values = item_data['values']
-                self.log_message(f"Debug - Selected item values: {values}")
-                
-                # Robust test name extraction
-                test_name = None
-                
-                # Try to find test name in common column positions
-                # The first column is checkbox (index 0), so try indices 1, 2, 3
-                for test_index in [1, 2, 3]:
-                    if len(values) > test_index:
-                        potential_test = str(values[test_index]).strip()
-                        # Skip empty values and checkbox indicators
-                        if potential_test and potential_test not in ['☐', '☑', '✓', '', 'None']:
-                            test_name = potential_test
-                            break
-                
-                if test_name:
+                # Debug: Print the values to understand the structure
+                print(f"Debug - Selected item values: {values}")
+                # The first column is checkbox, so test name should be in index 2 (third column)
+                # Based on the processing logic where row[2] is the test name
+                if len(values) > 2:  
+                    test_name = values[2]  # This should be the test name column
                     selected_tests.append(test_name)
-                    self.log_message(f"Debug - Added test: {test_name}")
-                else:
-                    self.log_message(f"Warning - Could not extract test name from values: {values}")
-                    
-        self.log_message(f"Debug - Total selected tests: {selected_tests}")
+                    print(f"Debug - Added test: {test_name}")
+        print(f"Debug - Total selected tests: {selected_tests}")
         return selected_tests
+    
+    def toggle_column_filters(self):
+        """Toggle visibility of column filters"""
+        if hasattr(self, 'column_filters_frame'):
+            if self.column_filters_frame.winfo_viewable():
+                self.column_filters_frame.pack_forget()
+                self.toggle_filters_btn.configure(text="▼ Show Column Filters")
+                self.filter_status_label.configure(text="Column filters hidden")
+            else:
+                self.column_filters_frame.pack(fill='x', padx=10, pady=5, after=self.search_controls_frame)
+                self.toggle_filters_btn.configure(text="▲ Hide Column Filters")
+                self.update_filter_status()
+    
+    def refresh_filters(self):
+        """Refresh all filters and update display"""
+        # Clear search box
+        self.search_var.set("")
+        
+        # Reset all column filters
+        if hasattr(self, 'column_filters'):
+            for filter_var in self.column_filters.values():
+                filter_var.set("")
+        
+        # Update status
+        self.filter_status_label.configure(text="All filters cleared")
+        self.active_filters_label.configure(text="Active filters: 0")
+        
+        # Refresh the display
+        self.apply_all_filters()
+    
+    def update_filter_status(self):
+        """Update the filter status display"""
+        active_count = 0
+        
+        # Check search filter
+        if self.search_var.get().strip():
+            active_count += 1
+        
+        # Check column filters
+        if hasattr(self, 'column_filters'):
+            for filter_var in self.column_filters.values():
+                if filter_var.get() and filter_var.get() != "All":
+                    active_count += 1
+        
+        if active_count == 0:
+            self.filter_status_label.configure(text="No active filters", foreground='gray')
+            self.active_filters_label.configure(text="Active filters: 0", foreground='gray')
+        else:
+            self.filter_status_label.configure(text="Filters applied", foreground='green')
+            self.active_filters_label.configure(text=f"Active filters: {active_count}", foreground='blue')
+    
+    def select_all_visible_tests(self):
+        """Select all currently visible tests"""
+        # Get current filtered items and mark them as selected
+        search_text = self.search_var.get().lower()
+        
+        # Apply current filters to get visible items
+        filtered_items = self.all_mtpl_items.copy()
+        
+        # Apply search filter
+        if search_text:
+            filtered_items = [
+                item for item in filtered_items
+                if search_text in ' '.join(str(val).lower() for val in item['values'][1:])
+            ]
+        
+        # Apply column filters
+        if hasattr(self, 'column_filters'):
+            for col_name, filter_var in self.column_filters.items():
+                filter_value = filter_var.get()
+                if filter_value and filter_value != "All":
+                    col_index = self.get_column_index(col_name)
+                    if col_index is not None:
+                        filtered_items = [
+                            item for item in filtered_items
+                            if str(item['values'][col_index]).strip() == filter_value.strip()
+                        ]
+        
+        # Mark filtered items as selected
+        for item_data in filtered_items:
+            values = list(item_data['values'])
+            values[0] = '☑'  # Set checkbox to checked
+            item_data['values'] = values
+            item_data['tags'] = ('checked',)
+        
+        # Refresh display
+        self.display_filtered_items(filtered_items)
+        self.update_selected_tests_count()
+    
+    def invert_selection(self):
+        """Invert the current selection"""
+        # Get current filtered items
+        search_text = self.search_var.get().lower()
+        
+        # Apply current filters to get visible items
+        filtered_items = self.all_mtpl_items.copy()
+        
+        # Apply search filter
+        if search_text:
+            filtered_items = [
+                item for item in filtered_items
+                if search_text in ' '.join(str(val).lower() for val in item['values'][1:])
+            ]
+        
+        # Apply column filters
+        if hasattr(self, 'column_filters'):
+            for col_name, filter_var in self.column_filters.items():
+                filter_value = filter_var.get()
+                if filter_value and filter_value != "All":
+                    col_index = self.get_column_index(col_name)
+                    if col_index is not None:
+                        filtered_items = [
+                            item for item in filtered_items
+                            if str(item['values'][col_index]).strip() == filter_value.strip()
+                        ]
+        
+        # Invert selection for visible items
+        for item_data in filtered_items:
+            values = list(item_data['values'])
+            current_state = values[0]
+            values[0] = '☐' if current_state == '☑' else '☑'
+            item_data['values'] = values
+            item_data['tags'] = ('unchecked' if current_state == '☑' else 'checked',)
+        
+        # Refresh display
+        self.display_filtered_items(filtered_items)
+        self.update_selected_tests_count()
+    
+    def open_reorder_window(self):
+        """Open a window to reorder selected tests"""
+        selected_tests = self.get_selected_tests()
+        if not selected_tests:
+            messagebox.showwarning("No Selection", "Please select tests to reorder first.")
+            return
+        
+        # Create reorder window
+        reorder_window = tk.Toplevel(self.root)
+        reorder_window.title("Reorder Selected Tests")
+        reorder_window.geometry("600x500")
+        reorder_window.transient(self.root)
+        reorder_window.grab_set()
+        
+        # Instructions
+        ttk.Label(reorder_window, text="🔄 Drag and drop tests to reorder them", 
+                 font=('Arial', 11, 'bold')).pack(pady=10)
+        
+        # Create listbox with scrollbar
+        list_frame = ttk.Frame(reorder_window)
+        list_frame.pack(fill='both', expand=True, padx=20, pady=10)
+        
+        scrollbar = ttk.Scrollbar(list_frame)
+        scrollbar.pack(side='right', fill='y')
+        
+        reorder_listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set, 
+                                    selectmode=tk.SINGLE, height=15)
+        reorder_listbox.pack(side='left', fill='both', expand=True)
+        scrollbar.configure(command=reorder_listbox.yview)
+        
+        # Populate listbox with selected tests
+        test_data = selected_tests.copy()
+        for test_name in test_data:
+            reorder_listbox.insert(tk.END, f"📝 {test_name}")
+        
+        # Mouse drag functionality
+        def on_drag_start(event):
+            reorder_listbox.selection_clear(0, tk.END)
+            reorder_listbox.selection_set(reorder_listbox.nearest(event.y))
+            reorder_listbox.drag_start_index = reorder_listbox.nearest(event.y)
+        
+        def on_drag_motion(event):
+            current_index = reorder_listbox.nearest(event.y)
+            if hasattr(reorder_listbox, 'drag_start_index') and current_index != reorder_listbox.drag_start_index:
+                reorder_listbox.selection_clear(0, tk.END)
+                reorder_listbox.selection_set(current_index)
+        
+        def on_drag_release(event):
+            if hasattr(reorder_listbox, 'drag_start_index'):
+                start_index = reorder_listbox.drag_start_index
+                end_index = reorder_listbox.nearest(event.y)
+                
+                if start_index != end_index and 0 <= end_index < len(test_data):
+                    # Move the item
+                    item_to_move = test_data.pop(start_index)
+                    test_data.insert(end_index, item_to_move)
+                    
+                    # Update listbox
+                    reorder_listbox.delete(0, tk.END)
+                    for test_name in test_data:
+                        reorder_listbox.insert(tk.END, f"📝 {test_name}")
+        
+        reorder_listbox.bind('<Button-1>', on_drag_start)
+        reorder_listbox.bind('<B1-Motion>', on_drag_motion)
+        reorder_listbox.bind('<ButtonRelease-1>', on_drag_release)
+        
+        # Control buttons
+        button_frame = ttk.Frame(reorder_window)
+        button_frame.pack(fill='x', padx=20, pady=10)
+        
+        def move_up():
+            selection = reorder_listbox.curselection()
+            if selection and selection[0] > 0:
+                idx = selection[0]
+                # Swap in data
+                test_data[idx], test_data[idx-1] = test_data[idx-1], test_data[idx]
+                # Update display
+                reorder_listbox.delete(0, tk.END)
+                for test_name in test_data:
+                    reorder_listbox.insert(tk.END, f"📝 {test_name}")
+                reorder_listbox.selection_set(idx-1)
+        
+        def move_down():
+            selection = reorder_listbox.curselection()
+            if selection and selection[0] < len(test_data) - 1:
+                idx = selection[0]
+                # Swap in data
+                test_data[idx], test_data[idx+1] = test_data[idx+1], test_data[idx]
+                # Update display
+                reorder_listbox.delete(0, tk.END)
+                for test_name in test_data:
+                    reorder_listbox.insert(tk.END, f"📝 {test_name}")
+                reorder_listbox.selection_set(idx+1)
+        
+        def apply_order():
+            # Update the order in the main data
+            self.reorder_selected_tests(test_data)
+            self.show_reorder_status(f"Order applied! {len(test_data)} tests reordered.")
+            reorder_window.destroy()
+        
+        ttk.Button(button_frame, text="⬆️ Move Up", command=move_up).pack(side='left', padx=(0, 5))
+        ttk.Button(button_frame, text="⬇️ Move Down", command=move_down).pack(side='left', padx=(0, 10))
+        ttk.Button(button_frame, text="✅ Apply Order", command=apply_order).pack(side='right', padx=(5, 0))
+        ttk.Button(button_frame, text="❌ Cancel", command=reorder_window.destroy).pack(side='right')
+    
+    def reorder_selected_tests(self, new_order):
+        """Reorder the selected tests in the main data according to new_order"""
+        # Create a mapping of test names to their data
+        selected_items = {}
+        unselected_items = []
+        
+        for item_data in self.all_mtpl_items:
+            if 'checked' in item_data['tags']:
+                test_name = item_data['values'][2] if len(item_data['values']) > 2 else ""
+                selected_items[test_name] = item_data
+            else:
+                unselected_items.append(item_data)
+        
+        # Rebuild the list with new order
+        reordered_items = []
+        
+        # Add selected items in the new order
+        for test_name in new_order:
+            if test_name in selected_items:
+                reordered_items.append(selected_items[test_name])
+        
+        # Add unselected items at the end
+        reordered_items.extend(unselected_items)
+        
+        # Update the main data
+        self.all_mtpl_items = reordered_items
+        
+        # Refresh the display
+        self.apply_all_filters()
+    
+    def show_reorder_status(self, message):
+        """Show reorder status message"""
+        if hasattr(self, 'order_info_frame'):
+            self.order_info_frame.pack(fill='x', padx=10, pady=5)
+            self.order_info_label.configure(text=message)
+            # Hide message after 3 seconds
+            self.root.after(3000, lambda: self.order_info_frame.pack_forget())
+    
+    def get_column_index(self, column_name):
+        """Get the index of a column by name"""
+        if hasattr(self, 'mtpl_tree') and self.mtpl_tree:
+            columns = self.mtpl_tree['columns']
+            try:
+                return columns.index(column_name) + 1  # +1 because first column is checkbox
+            except ValueError:
+                return None
+        return None
         
     def browse_output_folder(self):
         """Browse for output folder"""
@@ -1680,24 +2431,6 @@ class CTVListGUI:
             self.log_message("Starting data processing...")
             self.progress_var.set(0)
             
-            # Check if required modules are available
-            required_modules = [
-                ('file_functions', fi),
-                ('index_ctv', ind),
-                ('smart_json_parser', sm)
-            ]
-            
-            missing_modules = []
-            for module_name, module_obj in required_modules:
-                if module_obj is None:
-                    missing_modules.append(module_name)
-            
-            if missing_modules:
-                error_msg = f"Required modules not available: {', '.join(missing_modules)}"
-                self.log_message(error_msg, "error")
-                messagebox.showerror("Module Error", f"{error_msg}\n\nPlease ensure all required modules are properly installed and available.")
-                return
-            
             # Default values
             default_values = {
                 'Lot': ['Not Null'],
@@ -1786,7 +2519,8 @@ class CTVListGUI:
                 self.log_message(f"Output directory: {place_in}")
                 intermediary_file_list = []
                 output_files = []
-                
+                tag_header_names = []  # Initialize for stacking functionality
+                tag_header_names_chunks = []
                 # Reset iteration counter for each program
                 current_iteration = 0
                 
@@ -1802,72 +2536,20 @@ class CTVListGUI:
                     self.log_message(f"Processing test: {test} ({current_iteration + 1}/{total_iterations})")
                     self.update_progress(current_iteration, total_iterations, f"Starting test: {test}")
                     
-                    # Find matching row in MTPL dataframe with robust column handling
-                    # Try multiple matching strategies: TestName, TestType, and flexible matching
-                    matching_rows = None
+                    # Find matching row in MTPL dataframe (enhanced from master.py)
+                    matching_rows = self.mtpl_df[self.mtpl_df.iloc[:, 1] == test]  # Assuming test name is in column 1
                     
-                    # Strategy 1: Try TestName column first
-                    test_name_columns = ['TestName', 'Test', 'test', 'testname']
-                    for col_name in test_name_columns:
-                        if col_name in self.mtpl_df.columns:
-                            matching_rows = self.mtpl_df[self.mtpl_df[col_name] == test]
-                            if not matching_rows.empty:
-                                self.log_message(f"Found match for {test} in {col_name} column")
-                                break
-                    
-                    # Strategy 2: If no match found, try TestType column  
-                    if matching_rows is None or matching_rows.empty:
-                        test_type_columns = ['TestType', 'Type', 'testtype', 'type']
-                        for col_name in test_type_columns:
-                            if col_name in self.mtpl_df.columns:
-                                matching_rows = self.mtpl_df[self.mtpl_df[col_name] == test]
-                                if not matching_rows.empty:
-                                    self.log_message(f"Found match for {test} in {col_name} column")
-                                    break
-                    
-                    # Strategy 3: If still no match, try any column containing the test name
-                    if matching_rows is None or matching_rows.empty:
-                        for col_name in self.mtpl_df.columns:
-                            try:
-                                matching_rows = self.mtpl_df[self.mtpl_df[col_name].astype(str).str.contains(test, na=False)]
-                                if not matching_rows.empty:
-                                    self.log_message(f"Found partial match for {test} in {col_name} column")
-                                    break
-                            except:
-                                continue
-                    
-                    if matching_rows is None or matching_rows.empty:
+                    if matching_rows.empty:
                         self.log_message(f"No matching MTPL entry found for test: {test}")
                         current_iteration += 1
                         self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (no MTPL entry)")
                         continue
                         
                     row = matching_rows.iloc[0]
-                    
-                    # Robust column access with fallbacks
-                    def get_column_value(row, possible_names, fallback_index, default_value=""):
-                        """Get column value by name with fallback to index"""
-                        for col_name in possible_names:
-                            if col_name in self.mtpl_df.columns:
-                                return row[col_name]
-                        # Fallback to index if available
-                        if len(self.mtpl_df.columns) > fallback_index:
-                            return row.iloc[fallback_index]
-                        return default_value
-                    
-                    test_type = get_column_value(row, ['TestType', 'Type', 'testtype', 'type'], 0, "")
-                    mode = get_column_value(row, ['Mode', 'mode'], 4, "")
-                    mode = str(mode)
-                    
-                    # Get config path with robust handling
-                    config_path_raw = get_column_value(row, ['ConfigPath', 'Path', 'configpath', 'path'], 2, "")
-                    if config_path_raw and 'Modules' in str(config_path_raw):
-                        config_path = fi.process_file_input(str(config_path_raw)[str(config_path_raw).find('Modules'):].strip('\"'))
-                    else:
-                        self.log_message(f"Invalid config path for test {test}: {config_path_raw}")
-                        current_iteration += 1
-                        self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (invalid config path)")
-                        continue
+                    test_type = row.iloc[0]  # Assuming test type is in column 0
+                    mode = row.iloc[4]  # Assuming mode is in column 4
+                    mode=str(mode)
+                    config_path = fi.process_file_input(row.iloc[2][row.iloc[2].find('Modules'):].strip('\"'))  # Assuming config path is in column 2
                     module_name = fi.get_module_name(config_path).strip('\\')
                     test_file = os.path.join(base_dir, config_path)
                     
@@ -1889,10 +2571,13 @@ class CTVListGUI:
                         if "ctvdecoder" in test_type.lower():  # simple CTV indexing
                             self.log_message(f"Processing CtvDecoderSpm for test: {test}")
                             self.update_progress(current_iteration + 0.4, total_iterations, f"Indexing CTV for: {test}")
-                            indexed_file, csv_identifier, need_suffix, tag_header_names = ind.index_CTV(test_file, test, module_name, place_in)
+                            indexed_file,csv_identifier,tag_header_names = ind.index_CTV(test_file, test,module_name,place_in)
+                            tag_header_names_chunks.append(tag_header_names)
                             intermediary_file_list.append(indexed_file)
                             self.log_message(f"Performing data request for test: {test}")
-                            datainput_file, datacombine_file = py.uber_request(indexed_file, test, test_type, need_suffix, place_in, program, csv_identifier, lot_list, wafer_list, prefetch, databases)
+                            # Set need_suffix to False for regular CTV processing
+                            need_suffix = False
+                            datainput_file,datacombine_file = py.uber_request(indexed_file,test,test_type,need_suffix,place_in,program, csv_identifier,lot_list,wafer_list,prefetch,databases)
                             intermediary_file_list.append(datainput_file)
                             output_files.append(datacombine_file)
 
@@ -1904,37 +2589,42 @@ class CTVListGUI:
                                 self.log_message(f"Config number: {config_number}")
                                 self.update_progress(current_iteration + 0.3, total_iterations, f"Processing SmartCTV for: {test}")
                                 try:
-                                    ctv_files, ITUFF_suffixes = sm.process_SmartCTV(base_dir, test_file, config_number, place_in)
+                                    ctv_files, ITUFF_suffixes, config_numbers = sm.process_SmartCTV(base_dir, test_file, config_number, place_in)
                                     for ctv_file, ITUFF_suffix in zip(ctv_files, ITUFF_suffixes):
                                         intermediary_file_list.append(ctv_file)
                                         test = test + ITUFF_suffix
                                         self.update_progress(current_iteration + 0.6, total_iterations, f"Indexing SmartCTV for: {test}")
-                                        indexed_file, csv_identifier, need_suffix, tag_header_names = ind.index_CTV(ctv_file, test, module_name, place_in, mode)
+                                        indexed_file,csv_identifier,tag_header_names = ind.index_CTV(ctv_file, test,module_name,place_in,mode,config_number)
+                                        tag_header_names_chunks.append(tag_header_names)
                                         intermediary_file_list.append(indexed_file)
                                         self.log_message(f"Performing data request for test: {test}")
-                                        datainput_file, datacombine_file = py.uber_request(indexed_file, test, test_type, need_suffix, place_in, program, csv_identifier, lot_list, wafer_list, prefetch, databases)
+                                        # Set need_suffix to True for SmartCTV processing
+                                        need_suffix = True
+                                        datainput_file,datacombine_file = py.uber_request(indexed_file,test,test_type,place_in,program, csv_identifier,lot_list,wafer_list,prefetch,databases,config_number,mode)
                                         intermediary_file_list.append(datainput_file)
                                         output_files.append(datacombine_file)
                                         test = test.replace(ITUFF_suffix, '')
+
                                 except Exception as e:
                                     self.log_message(f"❌ Error in SmartCTV processing for test {test}: {str(e)}")
                                     current_iteration += 1
                                     self.update_progress(current_iteration, total_iterations, f"Failed test: {test} (SmartCTV error)")
                                     continue
                             else:
-                                try:
-                                    config_number = str(int(row[3]))                    
-                                    ctv_file = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
-                                    intermediary_file_list.append(ctv_file)
-                                    indexed_file,csv_identifier,need_suffix = ind.index_CTV(ctv_file, test,module_name,place_in)
-                                    self.log_message(f"Processing SmartCtvDc for test: {test}")
-                                    current_iteration += 1
-                                    intermediary_file_list.append(indexed_file)
-                                except Exception as e:
-                                    self.log_message(f"❌ Error in SmartCTV processing for test {test}: {str(e)}")
-                                    current_iteration += 1
-                                    self.update_progress(current_iteration, total_iterations, f"Failed test: {test} (SmartCTV error)")
-                                    continue
+                                config_number = str(int(row.iloc[3]))                    
+                                ctv_file = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
+                                # When config_number is provided, process_SmartCTV returns only the ctv_file path
+                                intermediary_file_list.append(ctv_file)
+                                self.update_progress(current_iteration + 0.6, total_iterations, f"Indexing SmartCTV for: {test}")
+                                indexed_file,csv_identifier,tag_header_names = ind.index_CTV(ctv_file, test,module_name,place_in)
+                                tag_header_names_chunks.append(tag_header_names)
+                                intermediary_file_list.append(indexed_file)
+                                self.log_message(f"Performing data request for test: {test}")
+                                # Set need_suffix to True for SmartCTV processing
+                                need_suffix = True
+                                datainput_file,datacombine_file = py.uber_request(indexed_file,test,test_type,place_in,program, csv_identifier,lot_list,wafer_list,prefetch,databases)
+                                intermediary_file_list.append(datainput_file)
+                                output_files.append(datacombine_file)
                         else:
                             self.log_message(f"Unknown test type: {test_type}")
                             current_iteration += 1
@@ -1956,12 +2646,103 @@ class CTVListGUI:
                     import time
                     time.sleep(0.2)  # Slightly longer delay for visibility
                 
+                # Stack output files if requested (from master.py)
+                stacked_files = []
+                if self.stack_files_var.get() and output_files:
+                    self.log_message("Stacking output files for JMP...")
+                    try:
+                        import jmp_python as jmp
+                        for output_file, tag_header_names in zip(output_files, tag_header_names_chunks):
+                            if os.path.exists(output_file):
+                                self.log_message(f"Stacking file: {os.path.basename(output_file)}")
+                                stacked_file = jmp.stack_and_split_file(output_file, tag_header_names)
+                                stacked_files.append(stacked_file)
+                                self.log_message(f"Created stacked file: {os.path.basename(stacked_file)}")
+                        self.log_message(f"Successfully stacked {len(stacked_files)} files")
+                    except ImportError:
+                        self.log_message("Warning: jmp_python module not found - cannot stack files", "warning")
+                    except Exception as e:
+                        self.log_message(f"Error stacking files: {str(e)}", "error")
+                
+                # Run JMP on stacked files if requested (from master.py)
+                if self.run_jmp_var.get() and stacked_files:
+                    self.log_message("Running JMP on combined stacked files...")
+                    try:
+                        import jmp_python as jmp
+                        jmp_executable_path = fi.find_latest_jmp_pro_path()
+                        
+                        if jmp_executable_path:
+                            self.log_message(f"Found JMP executable: {jmp_executable_path}")
+                            
+                            # Verify JMP executable exists and is accessible
+                            if not os.path.exists(jmp_executable_path):
+                                self.log_message(f"Error: JMP executable not found at {jmp_executable_path}", "error")
+                                return
+                            
+                            # Test JMP executable access
+                            try:
+                                import subprocess
+                                test_result = subprocess.run([jmp_executable_path, "-h"], 
+                                                           capture_output=True, timeout=10)
+                                self.log_message("JMP executable access test passed")
+                            except subprocess.TimeoutExpired:
+                                self.log_message("JMP executable test timed out (this may be normal)")
+                            except PermissionError as pe:
+                                self.log_message(f"Permission error accessing JMP: {pe}", "error")
+                                self.log_message("Try running as administrator or check JMP permissions", "warning")
+                                return
+                            except Exception as test_e:
+                                self.log_message(f"JMP access test warning: {test_e}", "warning")
+                            
+                            # Combine all stacked files into one master CSV for JMP
+                            self.log_message(f"Combining {len(stacked_files)} stacked files for comprehensive JMP analysis...")
+                            try:
+                                combined_csv_path = jmp.combine_stacked_files(stacked_files, self.output_folder)
+                                
+                                if combined_csv_path and os.path.exists(combined_csv_path):
+                                    self.log_message(f"Successfully created combined dataset: {os.path.basename(combined_csv_path)}")
+                                    self.log_message("Opening combined data in JMP for comprehensive analysis...")
+                                    
+                                    # Run JMP on the combined file (single window with all data)
+                                    jmp.run_combined_jsl(combined_csv_path, jmp_executable_path)
+                                    self.log_message("JMP analysis launched successfully!")
+                                    self.log_message("JMP will display multiple analysis views of your combined data in organized windows.")
+                                    self.log_message("All your stacked data is now in one comprehensive JMP analysis.")
+                                else:
+                                    self.log_message("Failed to create combined CSV file", "error")
+                                    
+                            except Exception as combine_e:
+                                self.log_message(f"Error combining stacked files: {combine_e}", "error")
+                                # Fallback to individual file processing if combining fails
+                                self.log_message("Falling back to individual file processing...", "warning")
+                                for stacked_file in stacked_files:
+                                    if os.path.exists(stacked_file):
+                                        self.log_message(f"Running JMP on: {os.path.basename(stacked_file)}")
+                                        try:
+                                            jmp.run_jsl(stacked_file, jmp_executable_path)
+                                            self.log_message(f"Successfully ran JMP on {os.path.basename(stacked_file)}")
+                                        except Exception as file_e:
+                                            self.log_message(f"Error running JMP on {os.path.basename(stacked_file)}: {file_e}", "error")
+                            
+                            self.log_message("JMP execution completed")
+                        else:
+                            self.log_message("JMP executable path not found - cannot run JMP", "warning")
+                            self.log_message("Please ensure JMP Pro is installed and accessible", "warning")
+                    except ImportError:
+                        self.log_message("Warning: Required modules not found - cannot run JMP", "warning")
+                    except Exception as e:
+                        self.log_message(f"Error running JMP: {str(e)}", "error")
+                        self.log_message(f"Error type: {type(e).__name__}", "error")
+                elif self.run_jmp_var.get() and not stacked_files:
+                    self.log_message("No stacked files available - cannot run JMP", "warning")
+                
                 # Clean up intermediary files if requested (from master.py)
                 if self.delete_files_var.get():
                     self.log_message("Cleaning up intermediary files...")
                     for intermediary in intermediary_file_list:
                         try:
-                            if os.path.exists(intermediary):
+                            # Do not delete files ending with _decoded.csv or _datastacked.csv
+                            if os.path.exists(intermediary) and not (intermediary.endswith('_decoded.csv') or intermediary.endswith('_datastacked.csv')):
                                 os.remove(intermediary)
                                 self.log_message(f"Deleted: {os.path.basename(intermediary)}")
                         except Exception as e:
@@ -1991,81 +2772,6 @@ class CTVListGUI:
         except Exception as e:
             print(f"Could not update treeview row colors: {e}")
     
-    def diagnostic_column_info(self):
-        """Generate comprehensive diagnostic information about data structure"""
-        self.log_message("=== DIAGNOSTIC INFORMATION ===")
-        
-        # Material DataFrame info
-        if hasattr(self, 'material_df') and self.material_df is not None:
-            self.log_message(f"Material DataFrame columns: {list(self.material_df.columns)}")
-            self.log_message(f"Material DataFrame shape: {self.material_df.shape}")
-            if not self.material_df.empty:
-                self.log_message(f"Material sample data: {self.material_df.iloc[0].to_dict()}")
-        else:
-            self.log_message("No Material DataFrame available")
-            
-        # MTPL DataFrame info  
-        if hasattr(self, 'mtpl_df') and self.mtpl_df is not None:
-            self.log_message(f"MTPL DataFrame columns: {list(self.mtpl_df.columns)}")
-            self.log_message(f"MTPL DataFrame shape: {self.mtpl_df.shape}")
-            if not self.mtpl_df.empty:
-                self.log_message(f"MTPL sample data: {self.mtpl_df.iloc[0].to_dict()}")
-                
-                # Check for common column names
-                common_test_columns = ['Test', 'TestName', 'test', 'testname']
-                common_type_columns = ['TestType', 'Type', 'testtype', 'type']
-                common_mode_columns = ['Mode', 'mode']
-                common_config_columns = ['ConfigPath', 'Path', 'configpath', 'path']
-                
-                found_columns = {
-                    'test_columns': [col for col in common_test_columns if col in self.mtpl_df.columns],
-                    'type_columns': [col for col in common_type_columns if col in self.mtpl_df.columns],
-                    'mode_columns': [col for col in common_mode_columns if col in self.mtpl_df.columns],
-                    'config_columns': [col for col in common_config_columns if col in self.mtpl_df.columns]
-                }
-                
-                for category, cols in found_columns.items():
-                    self.log_message(f"Found {category}: {cols}")
-        else:
-            self.log_message("No MTPL DataFrame available")
-            
-        # Module availability
-        modules_status = {
-            'file_functions': fi is not None,
-            'mtpl_parser': mt is not None,  
-            'index_ctv': ind is not None,
-            'smart_json_parser': sm is not None,
-            'pyuber_query': PYUBER_AVAILABLE
-        }
-        
-        self.log_message(f"Module availability: {modules_status}")
-        
-        # Image file availability diagnostics
-        image_paths = [
-            "images/logo.jpeg",
-            "images/logo.jpg", 
-            "images/logo.png",
-            "images/lightmode-logo.jpg",
-            "images/lightmode-logo.png",
-            "images/light-logo.jpg",
-            "images/light-logo.png",
-            "images/darkmode-logo.png"
-        ]
-        
-        image_status = {}
-        for img_path in image_paths:
-            full_path = os.path.join(os.path.dirname(__file__), img_path)
-            resource_path = get_resource_path(img_path)
-            image_status[img_path] = {
-                'file_exists': os.path.exists(full_path),
-                'resource_exists': os.path.exists(resource_path),
-                'full_path': full_path,
-                'resource_path': resource_path
-            }
-        
-        self.log_message(f"Image availability: {image_status}")
-        self.log_message("=== END DIAGNOSTIC ===")
-
     def log_message(self, message, level="info"):
         """Add message to log with timestamp, formatting, and color coding"""
         import datetime
@@ -2170,7 +2876,7 @@ class CTVListGUI:
             return  # Already in light mode
             
         self.is_dark_mode = False
-        self.theme_label.config(text="Light Mode")
+        self.theme_label.configure(text="Light Mode")
         
         # Enhanced light mode color palette
         style = ttk.Style()
@@ -2384,7 +3090,7 @@ class CTVListGUI:
             return  # Already in dark mode
             
         self.is_dark_mode = True
-        self.theme_label.config(text="Dark Mode")
+        self.theme_label.configure(text="Dark Mode")
         
         # Configure purple/navy dark mode colors
         style = ttk.Style()
@@ -2717,55 +3423,17 @@ class CTVListGUI:
             print(f"Error in force_widget_refresh: {e}")
     
 def main():
-    """Main entry point with comprehensive error handling for CI/Git builds"""
-    try:
-        print("🚀 Starting CTV List GUI Application...")
-        
-        # Initialize Tkinter with error handling
-        try:
-            root = tk.Tk()
-            print("✅ Tkinter initialized successfully")
-        except Exception as e:
-            print(f"❌ Failed to initialize Tkinter: {e}")
-            return 1
-        
-        # Create the application with error handling
-        try:
-            app = CTVListGUI(root)
-            print("✅ Application instance created successfully")
-        except Exception as e:
-            print(f"❌ Failed to create application: {e}")
-            try:
-                # Show error dialog if possible
-                messagebox.showerror("Startup Error", f"Failed to initialize application:\n{str(e)}")
-            except:
-                pass
-            return 1
-        
-        # Start the main loop
-        try:
-            print("🎯 Starting main event loop...")
-            root.mainloop()
-            print("✅ Application closed normally")
-            return 0
-        except KeyboardInterrupt:
-            print("⚠️ Application interrupted by user")
-            return 0
-        except Exception as e:
-            print(f"❌ Error in main loop: {e}")
-            try:
-                # Show error dialog if possible
-                messagebox.showerror("Runtime Error", f"Application error:\n{str(e)}")
-            except:
-                pass
-            return 1
-            
-    except Exception as e:
-        print(f"❌ Critical error in main(): {e}")
-        import traceback
-        traceback.print_exc()
-        return 1
+    if CTK_AVAILABLE:
+        # Use CustomTkinter for modern appearance
+        root = ctk.CTk()
+        # Configure window appearance
+        root.configure(fg_color=("#f0f0f0", "#212121"))  # Light/Dark mode colors
+    else:
+        # Fallback to regular Tkinter
+        root = tk.Tk()
+    
+    app = CTVListGUI(root)
+    root.mainloop()
 
 if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    main()

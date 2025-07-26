@@ -12,11 +12,6 @@ import file_functions as fi
 
 #To do, add functionality for customparameter that is simpler than iterator logic
 
-# Pre-compile regex patterns for better performance
-ITERATOR_PATTERN = re.compile(r"<Iterator(.*?)>")
-QUEUE_PARAMETER_PATTERN = re.compile(r"<QueueParameter(.*?)>")
-PLACEHOLDER_PATTERN = re.compile(r'<(.*?)>')
-
 def fix_json_trailing_commas(json_string):
     """
     Remove trailing commas from JSON string.
@@ -69,25 +64,16 @@ def process_SmartCTV(base_path, JSON_path, config_number='',place_in=''):
     output_paths = []
     suffixes = []
     config_numbers = []
-    
-    # Check if TestConfigurations exists
-    if 'TestConfigurations' not in json_obj:
-        print("❌ No TestConfigurations found in JSON")
-        return [], [], []
-    
-    total_configs = len(json_obj['TestConfigurations'])
-    print(f"📋 Found {total_configs} test configurations to process")
-    
     #Iterates per test in smart json to create CTV decoders for each test
-    for config_index, testconfig in enumerate(json_obj['TestConfigurations'], 1):
+    for testconfig in json_obj['TestConfigurations']:
         # Ensure both values are strings for comparison
         testconfig_str = str(testconfig) if testconfig is not None else ''
         config_number_str = str(config_number) if config_number is not None else ''
         
-        print(f"🔄 Processing config {config_index}/{total_configs}: {testconfig_str}")
+        #print(f"Processing testconfig: '{testconfig_str}', comparing with config_number: '{config_number_str}'")
         
         if testconfig_str != config_number_str and config_number_str != '':#check for ctvtag mode which always has config number as ''
-            print(f"⏩ Skipping config {testconfig_str} (doesn't match '{config_number_str}')")
+            #print(f"Skipping testconfig '{testconfig_str}' (doesn't match '{config_number_str}')")
             continue
 
         config_numbers.append(testconfig)
@@ -173,18 +159,10 @@ def process_SmartCTV(base_path, JSON_path, config_number='',place_in=''):
             out_list[-2]=out_list[-2]+ '_' + testconfig + "_decoded"
 
         output_file_path = '.'.join(out_list)
-
-        #os.chmod(output_file_path, 0o666)#Only do this check if file path known to exist
-        if os.path.exists(output_file_path) and os.path.getsize(output_file_path) > 0:
-            output_paths.append(output_file_path)
-            continue
-
-        print(f"📂 Processing CTV file: {CTV_path_str}" )
         output_file_path = fi.check_write_permission(output_file_path)
         #3
         # Write the completed CSV file
-        
-        
+        #os.chmod(output_file_path, 0o666)#Only do this check if file path known to exist
         with open(output_file_path, 'w', newline='') as csv_file:
             counter = 0
             writer = csv.writer(csv_file)
@@ -205,65 +183,45 @@ def process_SmartCTV(base_path, JSON_path, config_number='',place_in=''):
                     current_chunk.append(row)
             if current_chunk:
                 row_chunks.append(current_chunk)
-            
-            print(f"📊 Processing {len(row_chunks)} row chunks with {len(data_rows)} total rows")
-            
             #if len(row_chunks) <= 1: #this splits the rows back into individual rows if there are no queue parameters with no break lines to reduce number of iterators and duplicates
             #    row_chunks = [row for lsit in row_chunks for row in lsit]#
             #Necessary section for queue params
 
             #for row in data_rows:#replace this with chunks and revise iterator mapping to happen outside of for row iteration
-            for chunk_index, row_chunk in enumerate(row_chunks, 1):
-                if chunk_index % 10 == 0 or chunk_index == len(row_chunks):
-                    print(f"  Processing chunk {chunk_index}/{len(row_chunks)}...")
-                    
+            for row_chunk in row_chunks:
                 iterator_local_nest = iterator_nest.copy()
-                # Use pre-compiled pattern for better performance
-                csv_keys = [key for row in row_chunk for row_element in row for key in ITERATOR_PATTERN.findall(row_element)]
+                pattern = r"<Iterator(.*?)>"
+                csv_keys = [key for row in row_chunk for row_element in row for key in re.findall(pattern, row_element)]
                 iterator_local_nest = {key: value for key, value in iterator_local_nest.items() if key in csv_keys}
                 #queue attempt
                 queue_local_nest = queue_params.copy()
-                # Use pre-compiled pattern for better performance
-                csv_keys = [key for row in row_chunk for row_element in row for key in QUEUE_PARAMETER_PATTERN.findall(row_element)]
+                pattern = r"<QueueParameter(.*?)>"
+                csv_keys = [key for row in row_chunk for row_element in row for key in re.findall(pattern, row_element)]
                 queue_local_nest = {key: value for key, value in queue_local_nest.items() if key in csv_keys}
                 filled_rows_from_less_rows,_ = generate_filled_CTV_rows(row_chunk, iterator_local_nest, map_params, custom_params, queue_local_nest, header)
 
                 writer.writerows(filled_rows_from_less_rows)
                 counter += len(filled_rows_from_less_rows)
         #4
-        # Optimize DataFrame operations for better performance
-        print(f"Processing {counter} rows for post-processing...")
-        
-        df = pd.read_csv(output_file_path, index_col=False, low_memory=False)
-        
-        # Remove duplicates first to reduce data size for subsequent operations
-        initial_rows = len(df)
+
+        # get rid of duplicates
+
+        df = pd.read_csv(output_file_path, index_col=False,low_memory=False)
         df = df.drop_duplicates()
-        final_rows = len(df)
-        if initial_rows != final_rows:
-            print(f"Removed {initial_rows - final_rows} duplicate rows")
-        
-        # Optimize placeholder replacement by processing all columns at once
-        print("Applying placeholder replacements...")
+        #replace fields with actual values (adapt to make for all headers)
+        #df.rename(columns={col: 'Pin' for col in df.columns if 'Pin' in col}, inplace=True)
+        # Apply replace_placeholders to all columns
         for col in df.columns:
-            # Use vectorized string operations where possible
-            df[col] = df[col].astype(str)  # Ensure all values are strings
-            
-        # Apply replace_placeholders more efficiently
-        for idx, row in df.iterrows():
-            for col in df.columns:
-                df.at[idx, col] = replace_placeholders(df.at[idx, col], row)
-        
+            df[col] = df.apply(lambda row: replace_placeholders(row[col], row), axis=1) 
         df.to_csv(output_file_path, index=False)
-        
-        # Remove lines composed of "BREAK"
+        #Remove lines composed of "BREAK"
         clean_up_breaks(output_file_path)
-        print(f"{output_file_path} is decoded! ({final_rows} rows processed)")
+        print(output_file_path+" is decoded!")
         if config_number != '': 
             return output_file_path
         output_paths.append(output_file_path)
 
-    print(f"📤 SmartCTV processing complete - returning {len(output_paths)} files and {len(suffixes)} suffixes")
+
     return output_paths, suffixes, config_numbers
 
 def generate_filled_CTV_rows(rows, iterator_dict, map_dict, custom_dict, queue_dict, header,counter=0):
@@ -326,9 +284,10 @@ def replace_iterators_maps_customs_queues(row, iterator_dict,map_dict, custom_di
     return revised_row
 
 def replace_placeholders(field_value, row):
-    # Find all placeholders bounded by <> using pre-compiled pattern
+    # Find all placeholders bounded by <>
+    # first arg is regex, next is the text we want to search
     # This will create a list of placeholders if there are more than one
-    placeholders = PLACEHOLDER_PATTERN.findall(str(field_value))
+    placeholders = re.findall(r'<(.*?)>', str(field_value))
     # iterate through this list and replace each one
     for ph in placeholders:
         # Replace placeholder with whatever is in the column of the same name
@@ -344,18 +303,9 @@ def clean_up_breaks(output_file_path):
 
     # Define the keyword to filter out
     keyword = 'BREAK'
-    
-    # Get initial row count
-    initial_rows = len(df)
 
-    # More efficient filtering - check if any column contains 'BREAK'
-    # Convert to string and check for keyword presence
-    mask = df.astype(str).apply(lambda x: x.str.contains(keyword, case=False, na=False)).any(axis=1)
-    df_cleaned = df[~mask]
-    
-    final_rows = len(df_cleaned)
-    if initial_rows != final_rows:
-        print(f"Removed {initial_rows - final_rows} rows containing 'BREAK'")
+    # Filter out rows that contain the keyword in any column
+    df_cleaned = df[~df.apply(lambda row: row.astype(str).str.contains(keyword).any(), axis=1)]
 
     # Write the cleaned DataFrame back to the original file
     df_cleaned.to_csv(output_file_path, index=False, encoding='utf-8')

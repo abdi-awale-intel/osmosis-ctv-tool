@@ -3,6 +3,7 @@ import json
 import os
 import sys
 import re
+import winreg
 import pandas as pd
 
 def txt_to_list(file_path):
@@ -90,3 +91,75 @@ def get_module_name(file_path):
     module_name = file_path[first_slash_index:next_slash_index]
     return(module_name)
 
+def delete_files(file_list):
+    for file in file_list:
+        try:
+            os.remove(file)
+            print(f"{file} has been deleted.")
+        except FileNotFoundError:
+            print(f"File {file} not found, skipping deletion.")
+        except Exception as e:
+            print(f"An error occurred while deleting {file}: {e}")
+
+def find_latest_jmp_pro_path():
+    locations = [
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths"
+    ]
+    
+    latest_version = 0
+    latest_install_location = None
+    
+    for location in locations:
+        try:
+            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, location)
+            
+            for i in range(winreg.QueryInfoKey(key)[0]):
+                subkey_name = winreg.EnumKey(key, i)
+                subkey = winreg.OpenKey(key, subkey_name)
+                
+                try:
+                    display_name = winreg.QueryValueEx(subkey, "DisplayName")[0]
+                    for version in range(14, 20):
+                        if f"JMP Pro {version}" in display_name:
+                            install_location = winreg.QueryValueEx(subkey, "InstallLocation")[0]
+                            if version > latest_version:
+                                latest_version = version
+                                latest_install_location = install_location
+                except FileNotFoundError:
+                    pass
+                finally:
+                    winreg.CloseKey(subkey)
+            
+            winreg.CloseKey(key)
+        except FileNotFoundError:
+            pass
+    
+    # Return the full path to the JMP executable, not just the install directory
+    if latest_install_location:
+        jmp_exe_path = os.path.join(latest_install_location, "jmp.exe")
+        if os.path.exists(jmp_exe_path):
+            return jmp_exe_path
+        # Try alternative paths
+        jmp_exe_path = os.path.join(latest_install_location, "bin", "jmp.exe")
+        if os.path.exists(jmp_exe_path):
+            return jmp_exe_path
+    
+    # Fallback: try common installation paths
+    common_paths = [
+        r"C:\Program Files\SAS\JMPPRO\18\jmp.exe",
+        r"C:\Program Files\SAS\JMPPRO\17\jmp.exe",
+        r"C:\Program Files\SAS\JMPPRO\16\jmp.exe",
+        r"C:\Program Files\SAS\JMPPRO\15\jmp.exe",
+        r"C:\Program Files (x86)\SAS\JMPPRO\18\jmp.exe",
+        r"C:\Program Files (x86)\SAS\JMPPRO\17\jmp.exe",
+        r"C:\Program Files (x86)\SAS\JMPPRO\16\jmp.exe",
+        r"C:\Program Files (x86)\SAS\JMPPRO\15\jmp.exe"
+    ]
+    
+    for path in common_paths:
+        if os.path.exists(path):
+            return path
+    
+    return None

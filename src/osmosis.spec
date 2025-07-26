@@ -5,8 +5,8 @@ from pathlib import Path
 
 # Application details
 app_name = 'Osmosis'
-main_script = r'C:\Users\abdiawal\Downloads\Scripts\osmosis-ctv-tool\src\osmosis_main.py'
-deployment_dir = Path(r'C:\Users\abdiawal\Downloads\Scripts\osmosis-ctv-tool\src')
+main_script = r'c:\Users\abdiawal\Downloads\Scripts\osmosis-ctv-tool\src\osmosis_main.py'
+deployment_dir = Path(r'c:\Users\abdiawal\Downloads\Scripts\osmosis-ctv-tool\src')
 
 # Data files to include
 datas = []
@@ -42,11 +42,6 @@ for module in python_modules:
     module_path = deployment_dir / module
     if module_path.exists():
         datas.append((str(module_path), '.'))
-
-# Add images directory
-images_dir = deployment_dir / 'images'
-if images_dir.exists():
-    datas.append((str(images_dir), 'images'))
 
 # Hidden imports (modules that PyInstaller might miss)
 hiddenimports = [
