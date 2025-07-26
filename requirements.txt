@@ -25,6 +25,9 @@ pyinstaller>=6.0.0
 # Additional GUI enhancements (optional)
 tkinter-tooltip>=2.0.0
 
+# Custom theming UI
+customtkinter>=5.2.0
+
 # Note: The following modules are custom/internal and should be bundled:
 # - file_functions
 # - mtpl_parser
