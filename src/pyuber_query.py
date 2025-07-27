@@ -146,7 +146,7 @@ def uber_request(indexed_input, test_name_file, test_type='', output_folder='', 
                 first_ituff_token = str(token).strip().replace(test_name_file,'').split('::')[-1]
                 break
     # Include ItuffToken in output file name if available
-    if mode == 'CtvTag':
+    if mode == 'CtvTag' or first_ituff_token:
         ituff_suffix = f'{first_ituff_token}' if first_ituff_token else '_' + config_number
     else:
         ituff_suffix = ''

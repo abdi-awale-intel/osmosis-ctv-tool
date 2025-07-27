@@ -89,7 +89,7 @@ except ImportError as e:
 class CTVListGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Osmosis CTV List Data Processor")
+        self.root.title("CTV List Data Processor")
         
         # Initialize scaling and window management variables
         self.current_zoom_level = 1.0
@@ -106,19 +106,31 @@ class CTVListGUI:
         
         # Set application icon
         if PIL_AVAILABLE:
-     
-            icon_name ="icon.png"  
             try:
-                icon_path = os.path.join(os.path.dirname(__file__), "images", icon_name)
-                if os.path.exists(icon_path):
-                    icon_image = Image.open(icon_path)
-                    icon_photo = ImageTk.PhotoImage(icon_image)
-                    self.root.iconphoto(False, icon_photo)
-                    print(f"Successfully loaded app icon: {icon_name}")
-                    icon_loaded = True
+                # Try different possible icon files
+                possible_icons = ["logo.jpeg", "logo.jpg", "logo.png", "icon.png", "icon.jpg", "icon.jpeg"]
+                icon_loaded = False
+                
+                for icon_name in possible_icons:
+                    try:
+                        icon_path = os.path.join(os.path.dirname(__file__), "images", icon_name)
+                        if os.path.exists(icon_path):
+                            icon_image = Image.open(icon_path)
+                            icon_photo = ImageTk.PhotoImage(icon_image)
+                            self.root.iconphoto(False, icon_photo)
+                            print(f"Successfully loaded app icon: {icon_name}")
+                            icon_loaded = True
+                            break
+                    except Exception as e:
+                        print(f"Failed to load icon {icon_name}: {e}")
+                        continue
+                
+                if not icon_loaded:
+                    print("No app icon found in images directory")
+                    
             except Exception as e:
                 print(f"Could not load app icon: {e}")
-            
+        
         # Variables
         self.material_df = None
         self.mtpl_df = None
@@ -127,6 +139,7 @@ class CTVListGUI:
         self.test_list = []
         self.output_folder = ""
         self.all_mtpl_items = []  # Store all items for filtering
+        self.last_mtpl_path = "" # Track last MTPL file path
         self.is_dark_mode = False  # Track current theme
         self.processing = False
         
@@ -306,7 +319,7 @@ class CTVListGUI:
             # Normal padding and spacing
             self.root.configure(padx=16, pady=16)
             if hasattr(self, 'compact_mode_label'):
-                self.compact_mode_label.configure(text="Compact Mode: OFF") 
+                self.compact_mode_label.configure(text="Compact Mode: OFF")
                 
     def save_user_preferences(self):
         """Save user preferences like zoom level and window state"""
@@ -315,15 +328,13 @@ class CTVListGUI:
                 'zoom_level': self.current_zoom_level,
                 'compact_mode': self.compact_mode,
                 'window_geometry': self.root.geometry(),
-                'theme_mode': 'dark' if self.is_dark_mode else 'light'
+                'theme_mode': 'dark' if self.is_dark_mode else 'light',
+                'last_mtpl_path': getattr(self, 'last_mtpl_path', "")
             }
-            
-            # Save to a preferences file
             import json
             prefs_file = os.path.join(os.path.dirname(__file__), 'user_preferences.json')
             with open(prefs_file, 'w') as f:
                 json.dump(preferences, f, indent=2)
-                
         except Exception as e:
             print(f"Error saving preferences: {e}")
             
@@ -334,22 +345,31 @@ class CTVListGUI:
             if os.path.exists(prefs_file):
                 with open(prefs_file, 'r') as f:
                     preferences = json.load(f)
-                
                 # Apply saved preferences
                 self.current_zoom_level = preferences.get('zoom_level', 1.0)
                 self.compact_mode = preferences.get('compact_mode', False)
                 self.compact_mode_var.set(self.compact_mode)
-                
-                # Apply zoom after a short delay to ensure widgets are created
+                # Restore last MTPL file path if available
+                last_mtpl_path = preferences.get('last_mtpl_path', "")
+                if last_mtpl_path and os.path.exists(last_mtpl_path):
+                    self.last_mtpl_path = last_mtpl_path
+                    self.mtpl_file_path.set(last_mtpl_path)
+                    # Enable reload button if widget exists
+                    if hasattr(self, 'reload_mtpl_button'):
+                        self.reload_mtpl_button.configure(state='normal')
+                    # Optionally, update info label
+                    if hasattr(self, 'mtpl_info_label'):
+                        file_name = os.path.basename(last_mtpl_path)
+                        self.update_status_indicator(self.mtpl_info_label, f"🔄 Reload available: {file_name}", "info")
+                else:
+                    self.last_mtpl_path = ""
+                    if hasattr(self, 'reload_mtpl_button'):
+                        self.reload_mtpl_button.configure(state='disabled')
                 self.root.after(100, self.apply_zoom)
                 self.root.after(100, self.apply_compact_mode)
-                
-                print(f"Loaded user preferences: Zoom {self.current_zoom_level}, Compact: {self.compact_mode}")
-                
+                print(f"Loaded user preferences: Zoom {self.current_zoom_level}, Compact: {self.compact_mode}, Last MTPL: {self.last_mtpl_path}")
         except Exception as e:
             print(f"Error loading preferences: {e}")
-        
-        # Ensure zoom level is applied and label is updated even if no preferences file exists
         self.root.after(200, self.update_zoom_display)
     
     def update_zoom_display(self):
@@ -563,9 +583,9 @@ class CTVListGUI:
                 
                 if light_image and dark_image:
                     # Resize logos to fit nicely (adjust size as needed)
-                    light_image = light_image.resize((100, 80), Image.Resampling.LANCZOS)
-                    dark_image = dark_image.resize((100, 80), Image.Resampling.LANCZOS)
-
+                    light_image = light_image.resize((80, 60), Image.Resampling.LANCZOS)
+                    dark_image = dark_image.resize((80, 60), Image.Resampling.LANCZOS)
+                    
                     self.light_logo = ImageTk.PhotoImage(light_image)
                     self.dark_logo = ImageTk.PhotoImage(dark_image)
                     
@@ -592,7 +612,7 @@ class CTVListGUI:
                     if CTK_AVAILABLE:
                         title_label.configure(font=ctk.CTkFont(size=16, weight="bold"))
                     else:
-                        title_label.configure(font=('Arial', 16, 'bold'), foreground="#ff6e25")
+                        title_label.configure(font=('Arial', 16, 'bold'), foreground='#0071c5')
                     title_label.pack(pady=(10, 5))
                     
                     # Add zoom controls
@@ -606,19 +626,19 @@ class CTVListGUI:
                     
                     zoom_out_btn = create_button(zoom_frame, text="🔍−", command=self.zoom_out)
                     if not CTK_AVAILABLE:
-                        zoom_out_btn.configure(width=1)
+                        zoom_out_btn.configure(width=4)
                     zoom_out_btn.pack(side='left', padx=2)
                     
                     self.zoom_label = create_label(zoom_frame, text=f"{int(self.current_zoom_level * 100)}%")
                     if CTK_AVAILABLE:
                         self.zoom_label.configure(font=ctk.CTkFont(weight="bold"))
                     else:
-                        self.zoom_label.configure(font=('Arial', 9, 'bold'), foreground='blue', width=2)
+                        self.zoom_label.configure(font=('Arial', 9, 'bold'), foreground='blue', width=5)
                     self.zoom_label.pack(side='left', padx=5)
                     
                     zoom_in_btn = create_button(zoom_frame, text="🔍+", command=self.zoom_in)
                     if not CTK_AVAILABLE:
-                        zoom_in_btn.configure(width=1)
+                        zoom_in_btn.configure(width=4)
                     zoom_in_btn.pack(side='left', padx=2)
                     
                     reset_btn = create_button(zoom_frame, text="Reset", command=self.reset_zoom)
@@ -829,7 +849,14 @@ class CTVListGUI:
         ttk.Label(mtpl_load_frame, text="MTPL File Path:").grid(row=0, column=0, sticky='w', padx=10, pady=5)
         ttk.Entry(mtpl_load_frame, textvariable=self.mtpl_file_path, width=60).grid(row=0, column=1, padx=10, pady=5)
         ttk.Button(mtpl_load_frame, text="Browse", command=self.browse_mtpl_file).grid(row=0, column=2, padx=10, pady=5)
-        ttk.Button(mtpl_load_frame, text="Load MTPL", command=self.load_mtpl_file).grid(row=1, column=1, pady=10)
+        # Place both Load and Reload buttons inside button_frame, and grid button_frame properly
+        button_frame = ttk.Frame(mtpl_load_frame)
+        button_frame.grid(row=1, column=1, columnspan=2, pady=10, sticky='w')
+        load_btn = ttk.Button(button_frame, text="Load MTPL", command=self.load_mtpl_file)
+        load_btn.pack(side='left', padx=(0, 5))
+        self.reload_mtpl_button = ttk.Button(button_frame, text="🔄 Reload Last", command=self.reload_mtpl_file, state='disabled')
+        self.reload_mtpl_button.pack(side='left')
+
         
         # MTPL file info label
         self.mtpl_info_label = ttk.Label(mtpl_load_frame, text="Select an MTPL file for processing", 
@@ -983,7 +1010,7 @@ class CTVListGUI:
         self.delete_files_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(options_frame, text="Delete intermediary files", variable=self.delete_files_var).pack(anchor='w', padx=10, pady=5)
         
-        # Always generate stacked output files for JMP; option removed
+        # Always stack output files for JMP; option removed
         
         self.run_jmp_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(options_frame, text="Run JMP on stacked files", variable=self.run_jmp_var).pack(anchor='w', padx=10, pady=5)
@@ -1537,12 +1564,56 @@ class CTVListGUI:
             self.update_mtpl_display()
             self.log_message(f"MTPL file processed: {self.mtpl_csv_path}", "success")
             
+            # Store the successfully loaded path for reload functionality
+            self.last_mtpl_path = mtpl_path
+            self.reload_mtpl_button.configure(state='normal')  # Enable reload button
+
+            # Update the info label with last loaded info
+            file_name = os.path.basename(mtpl_path)
+            self.update_status_indicator(self.mtpl_info_label, 
+                           f"✅ Loaded: {file_name} (Reload available)", "success")
             # Set default output folder
             self.set_default_output_folder()
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to process MTPL file: {str(e)}")
             self.log_message(f"Error processing MTPL: {str(e)}", "error")
+    def reload_mtpl_file(self):
+        """Reload the last successfully loaded MTPL file"""
+        if not self.last_mtpl_path:
+            messagebox.showwarning("Warning", "No previous MTPL file to reload")
+            return
+            
+        if not os.path.exists(self.last_mtpl_path):
+            messagebox.showerror("Error", f"Last MTPL file no longer exists:\n{self.last_mtpl_path}")
+            # Disable reload button since file is gone
+            self.reload_mtpl_button.configure(state='disabled')
+            self.last_mtpl_path = ""
+            return
+            
+        try:
+            # Set the path and load
+            self.mtpl_file_path.set(self.last_mtpl_path)
+            self.log_message(f"Reloading MTPL file: {os.path.basename(self.last_mtpl_path)}")
+            
+            # Process the file
+            self.mtpl_csv_path = mt.mtpl_to_csv(fi.process_file_input(self.last_mtpl_path))
+            self.mtpl_df = pd.read_csv(self.mtpl_csv_path)
+            
+            self.update_mtpl_display()
+            self.log_message(f"MTPL file reloaded successfully: {self.mtpl_csv_path}", "success")
+            
+            # Update the info label
+            file_name = os.path.basename(self.last_mtpl_path)
+            self.update_status_indicator(self.mtpl_info_label, 
+                                    f"🔄 Reloaded: {file_name}", "success")
+            
+            # Set default output folder
+            self.set_default_output_folder()
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to reload MTPL file: {str(e)}")
+            self.log_message(f"Error reloading MTPL: {str(e)}", "error")
             
     def update_mtpl_display(self):
         """Update the MTPL data display"""
@@ -1738,7 +1809,11 @@ class CTVListGUI:
         """Clear all filters including text search and column filters"""
         # Clear text search
         self.search_var.set("")
-        
+        self.last_mtpl_path = ""  # Clear the last MTPL path
+        # Disable reload button
+        if hasattr(self, 'reload_mtpl_button'):
+            self.reload_mtpl_button.configure(state='disabled')
+                
         # Clear column filters
         for col, filter_var in self.column_filters.items():
             filter_var.set("All")
@@ -2612,7 +2687,12 @@ class CTVListGUI:
                                     continue
                             else:
                                 config_number = str(int(row.iloc[3]))                    
-                                ctv_file = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
+                                ctv_file, ITUFF_suffixes, config_numbers = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
+                                if isinstance(ctv_file,list):
+                                    ctv_file = ctv_file[0]  # Use the first file if multiple are returned
+                                    ITUFF_suffix = ITUFF_suffixes[0] 
+                                    test = test + ITUFF_suffix
+                                    config_numbers = config_numbers[0]
                                 # When config_number is provided, process_SmartCTV returns only the ctv_file path
                                 intermediary_file_list.append(ctv_file)
                                 self.update_progress(current_iteration + 0.6, total_iterations, f"Indexing SmartCTV for: {test}")
@@ -2648,7 +2728,7 @@ class CTVListGUI:
                 
                 # Stack output files if requested (from master.py)
                 stacked_files = []
-                if self.stack_files_var.get() and output_files:
+                if output_files:
                     self.log_message("Stacking output files for JMP...")
                     try:
                         import jmp_python as jmp
@@ -2741,8 +2821,7 @@ class CTVListGUI:
                     self.log_message("Cleaning up intermediary files...")
                     for intermediary in intermediary_file_list:
                         try:
-                            # Do not delete files ending with _decoded.csv or _datastacked.csv
-                            if os.path.exists(intermediary) and not (intermediary.endswith('_decoded.csv') or intermediary.endswith('_datastacked.csv')):
+                            if os.path.exists(intermediary) and not ( 'decoded.csv' in intermediary or "datastack" in intermediary ):
                                 os.remove(intermediary)
                                 self.log_message(f"Deleted: {os.path.basename(intermediary)}")
                         except Exception as e:
@@ -2843,9 +2922,10 @@ class CTVListGUI:
         self.material_df = None
         self.mtpl_df = None
         self.mtpl_csv_path = ""
+        self.mtpl_file_path = tk.StringVar()
+        self.last_mtpl_path = ""  # 🔄 ADD THIS LINE
         self.test_list = []
-        self.output_folder = ""
-        self.all_mtpl_items = []
+
         
         # Clear displays
         for item in self.material_tree.get_children():

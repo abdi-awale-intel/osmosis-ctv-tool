@@ -1,12 +1,31 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import sys
+import os
 from pathlib import Path
+
+# Get paths dynamically - PyInstaller provides SPECPATH variable
+try:
+    # SPECPATH is provided by PyInstaller and points to the directory containing the spec file
+    spec_root = Path(SPECPATH).absolute()
+except NameError:
+    # Fallback to current working directory if SPECPATH is not available
+    spec_root = Path(os.getcwd()).absolute()
+
+print(f"Using spec root directory: {spec_root}")
 
 # Application details
 app_name = 'Osmosis'
-main_script = r'c:\Users\abdiawal\Downloads\Scripts\osmosis-ctv-tool\src\osmosis_main.py'
-deployment_dir = Path(r'c:\Users\abdiawal\Downloads\Scripts\osmosis-ctv-tool\src')
+main_script = spec_root / 'osmosis_main.py'
+deployment_dir = spec_root
+
+# Verify main script exists
+if not main_script.exists():
+    print(f"ERROR: Main script not found at: {main_script}")
+    sys.exit(1)
+
+print(f"Main script: {main_script}")
+print(f"Deployment directory: {deployment_dir}")
 
 # Data files to include
 datas = []
@@ -19,6 +38,14 @@ if config_file.exists():
 resources_dir = deployment_dir / 'resources'
 if resources_dir.exists():
     datas.append((str(resources_dir), 'resources'))
+
+# *** IMPORTANT: Add images directory ***
+images_dir = deployment_dir / 'images'
+if images_dir.exists():
+    datas.append((str(images_dir), 'images'))
+    print(f"Added images directory: {images_dir}")
+else:
+    print(f"Warning: Images directory not found at: {images_dir}")
 
 # Add PyUber and Uber directories
 pyuber_dir = deployment_dir / 'PyUber'
@@ -35,13 +62,17 @@ python_modules = [
     'mtpl_parser.py',
     'index_ctv.py',
     'pyuber_query.py',
-    'smart_json_parser.py'
+    'smart_json_parser.py',
+    'ctvlist_gui.py'
 ]
 
 for module in python_modules:
     module_path = deployment_dir / module
     if module_path.exists():
         datas.append((str(module_path), '.'))
+        print(f"Added module: {module}")
+    else:
+        print(f"Warning: Module not found: {module}")
 
 # Hidden imports (modules that PyInstaller might miss)
 hiddenimports = [
@@ -67,6 +98,8 @@ hiddenimports = [
     'pathlib',
     'dateutil',
     'dateutil.relativedelta',
+    # CustomTkinter support
+    'customtkinter',
     # PyUber database modules
     'PyUber',
     'PyUber.core',
@@ -83,12 +116,18 @@ hiddenimports = [
     'mtpl_parser',
     'index_ctv',
     'pyuber_query',
-    'smart_json_parser'
+    'smart_json_parser',
+    'ctvlist_gui'
 ]
+
+# Print debugging info
+print("Data files being included:")
+for data_item in datas:
+    print(f"  {data_item[0]} -> {data_item[1]}")
 
 # Analysis
 a = Analysis(
-    [main_script],
+    [str(main_script)],
     pathex=[str(deployment_dir)],
     binaries=[],
     datas=datas,
@@ -105,6 +144,19 @@ a = Analysis(
 
 # PYZ
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)
+
+# Find icon file
+icon_file = None
+possible_icons = ['icon.png', 'icon.jpg', 'icon.jpeg', 'logo.png', 'logo.jpg', 'logo.jpeg']
+for icon_name in possible_icons:
+    icon_path = deployment_dir / 'images' / icon_name
+    if icon_path.exists():
+        icon_file = str(icon_path)
+        print(f"Using icon: {icon_file}")
+        break
+
+if not icon_file:
+    print("No icon file found")
 
 # EXE
 exe = EXE(
@@ -126,5 +178,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,  # Add icon path here if you have one
+    icon=icon_file,
 )

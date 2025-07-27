@@ -23,9 +23,11 @@ if sys.platform == "win32":
 
 class OsmosisAppBuilder:
     def __init__(self):
-        self.deployment_dir = Path(__file__).parent.absolute()
+        self.deployment_dir = Path(__file__).parent.absolute()  # src/ directory
+        self.project_root = self.deployment_dir.parent.absolute()  # osmosis-ctv-tool/ directory
         self.build_dir = self.deployment_dir / "build"
         self.dist_dir = self.deployment_dir / "dist"
+        self.image_dir = self.deployment_dir / "images"
         self.app_name = "Osmosis"
         
     def print_status(self, message, status="INFO"):
@@ -75,6 +77,47 @@ class OsmosisAppBuilder:
         except Exception as e:
             self.print_status(f"Error installing PyInstaller: {e}", "ERROR")
             return False
+    
+    def setup_images_directory(self):
+        """Setup and verify the images directory"""
+        self.print_status("Setting up images directory...")
+        
+        # Create images directory if it doesn't exist
+        if not self.image_dir.exists():
+            try:
+                self.image_dir.mkdir(exist_ok=True)
+                self.print_status(f"Created images directory: {self.image_dir}")
+            except Exception as e:
+                self.print_status(f"Could not create images directory: {e}", "WARNING")
+                return False
+        
+        # Check for expected image files
+        expected_files = {
+            "App Icon": ["icon.png", "icon.jpg", "icon.jpeg", "logo.png", "logo.jpg", "logo.jpeg"],
+            "Light Mode Logo": ["lightmode-logo.jpg", "lightmode-logo.png", "light-logo.jpg", "light-logo.png"],
+            "Dark Mode Logo": ["darkmode-logo.jpg", "darkmode-logo.png", "dark-logo.jpg", "dark-logo.png"]
+        }
+        
+        found_files = {}
+        missing_categories = []
+        
+        for category, files in expected_files.items():
+            found = False
+            for filename in files:
+                if (self.image_dir / filename).exists():
+                    found_files[category] = filename
+                    found = True
+                    self.print_status(f"Found {category}: {filename}", "SUCCESS")
+                    break
+            if not found:
+                missing_categories.append(category)
+                self.print_status(f"Missing {category} (expected: {', '.join(files)})", "WARNING")
+        
+        if missing_categories:
+            self.print_status(f"Missing image categories: {', '.join(missing_categories)}", "WARNING")
+            self.print_status("The application will use text-based fallbacks for missing images.", "INFO")
+        
+        return True
             
     def create_main_script(self):
         """Create the main application script"""
@@ -155,18 +198,80 @@ except Exception as e:
         return main_script_path
         
     def create_spec_file(self, main_script_path):
-        """Create PyInstaller spec file"""
+        """Create PyInstaller spec file with proper images support"""
         self.print_status("Creating PyInstaller spec file...")
+        
+        spec_file_path = self.deployment_dir / f"{self.app_name.lower()}.spec"
+        
+        # Check if spec file already exists
+        if spec_file_path.exists():
+            self.print_status(f"Spec file already exists: {spec_file_path}", "WARNING")
+            
+            # In interactive mode, ask user what to do
+            if sys.stdin.isatty():
+                while True:
+                    choice = "o"
+                    if choice in ['o', 'overwrite']:
+                        self.print_status("Overwriting existing spec file...", "INFO")
+                        break
+                    elif choice in ['u', 'use', 'existing']:
+                        self.print_status("Using existing spec file", "SUCCESS")
+                        return spec_file_path
+                    elif choice in ['b', 'backup']:
+                        # Create backup
+                        import datetime
+                        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                        backup_path = self.deployment_dir / f"{self.app_name.lower()}_backup_{timestamp}.spec"
+                        shutil.copy2(spec_file_path, backup_path)
+                        self.print_status(f"Backed up existing spec to: {backup_path}", "SUCCESS")
+                        break
+                    else:
+                        print("Please enter 'o' for overwrite, 'u' for use existing, or 'b' for backup")
+            else:
+                # Non-interactive mode (CI/CD) - create backup automatically
+                import datetime
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_path = self.deployment_dir / f"{self.app_name.lower()}_backup_{timestamp}.spec"
+                shutil.copy2(spec_file_path, backup_path)
+                self.print_status(f"Automatically backed up existing spec to: {backup_path}", "INFO")
+        
+        # Find icon file for the executable
+        icon_file = None
+        possible_icons = ["icon.png", "icon.jpg", "icon.jpeg", "logo.png", "logo.jpg", "logo.jpeg"]
+        for icon_name in possible_icons:
+            icon_path = self.image_dir / icon_name
+            if icon_path.exists():
+                icon_file = str(icon_path)
+                break
         
         spec_content = f'''# -*- mode: python ; coding: utf-8 -*-
 
 import sys
+import os
 from pathlib import Path
+
+# Get paths dynamically - PyInstaller provides SPECPATH variable
+try:
+    # SPECPATH is provided by PyInstaller and points to the directory containing the spec file
+    spec_root = Path(SPECPATH).absolute()
+except NameError:
+    # Fallback to current working directory if SPECPATH is not available
+    spec_root = Path(os.getcwd()).absolute()
+
+print(f"Using spec root directory: {{spec_root}}")
 
 # Application details
 app_name = '{self.app_name}'
-main_script = r'{main_script_path}'
-deployment_dir = Path(r'{self.deployment_dir}')
+main_script = spec_root / 'osmosis_main.py'
+deployment_dir = spec_root
+
+# Verify main script exists
+if not main_script.exists():
+    print(f"ERROR: Main script not found at: {{main_script}}")
+    sys.exit(1)
+
+print(f"Main script: {{main_script}}")
+print(f"Deployment directory: {{deployment_dir}}")
 
 # Data files to include
 datas = []
@@ -179,6 +284,14 @@ if config_file.exists():
 resources_dir = deployment_dir / 'resources'
 if resources_dir.exists():
     datas.append((str(resources_dir), 'resources'))
+
+# *** IMPORTANT: Add images directory ***
+images_dir = deployment_dir / 'images'
+if images_dir.exists():
+    datas.append((str(images_dir), 'images'))
+    print(f"Added images directory: {{images_dir}}")
+else:
+    print(f"Warning: Images directory not found at: {{images_dir}}")
 
 # Add PyUber and Uber directories
 pyuber_dir = deployment_dir / 'PyUber'
@@ -195,13 +308,17 @@ python_modules = [
     'mtpl_parser.py',
     'index_ctv.py',
     'pyuber_query.py',
-    'smart_json_parser.py'
+    'smart_json_parser.py',
+    'ctvlist_gui.py'
 ]
 
 for module in python_modules:
     module_path = deployment_dir / module
     if module_path.exists():
         datas.append((str(module_path), '.'))
+        print(f"Added module: {{module}}")
+    else:
+        print(f"Warning: Module not found: {{module}}")
 
 # Hidden imports (modules that PyInstaller might miss)
 hiddenimports = [
@@ -227,6 +344,8 @@ hiddenimports = [
     'pathlib',
     'dateutil',
     'dateutil.relativedelta',
+    # CustomTkinter support
+    'customtkinter',
     # PyUber database modules
     'PyUber',
     'PyUber.core',
@@ -243,12 +362,18 @@ hiddenimports = [
     'mtpl_parser',
     'index_ctv',
     'pyuber_query',
-    'smart_json_parser'
+    'smart_json_parser',
+    'ctvlist_gui'
 ]
+
+# Print debugging info
+print("Data files being included:")
+for data_item in datas:
+    print(f"  {{data_item[0]}} -> {{data_item[1]}}")
 
 # Analysis
 a = Analysis(
-    [main_script],
+    [str(main_script)],
     pathex=[str(deployment_dir)],
     binaries=[],
     datas=datas,
@@ -265,6 +390,19 @@ a = Analysis(
 
 # PYZ
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)
+
+# Find icon file
+icon_file = None
+possible_icons = ['icon.png', 'icon.jpg', 'icon.jpeg', 'logo.png', 'logo.jpg', 'logo.jpeg']
+for icon_name in possible_icons:
+    icon_path = deployment_dir / 'images' / icon_name
+    if icon_path.exists():
+        icon_file = str(icon_path)
+        print(f"Using icon: {{icon_file}}")
+        break
+
+if not icon_file:
+    print("No icon file found")
 
 # EXE
 exe = EXE(
@@ -286,7 +424,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,  # Add icon path here if you have one
+    icon=icon_file,
 )
 '''
         
@@ -295,6 +433,10 @@ exe = EXE(
             f.write(spec_content)
             
         self.print_status(f"Spec file created: {spec_file_path}", "SUCCESS")
+        if icon_file:
+            self.print_status(f"Using icon: {icon_file}", "SUCCESS")
+        else:
+            self.print_status("No icon file found", "WARNING")
         return spec_file_path
         
     def clean_build_dirs(self):
@@ -378,6 +520,7 @@ echo Copying application files...
 copy "{self.app_name}.exe" "%INSTALL_DIR%\\" >nul
 if exist "config.json" copy "config.json" "%INSTALL_DIR%\\" >nul
 if exist "resources" xcopy "resources" "%INSTALL_DIR%\\resources\\" /E /I /Q >nul
+if exist "images" xcopy "images" "%INSTALL_DIR%\\images\\" /E /I /Q >nul
 
 echo Creating desktop shortcut...
 powershell -command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%USERPROFILE%\\Desktop\\{self.app_name}.lnk'); $Shortcut.TargetPath = '%INSTALL_DIR%\\{self.app_name}.exe'; $Shortcut.WorkingDirectory = '%INSTALL_DIR%'; $Shortcut.Description = '{self.app_name} Data Processor'; $Shortcut.Save()"
@@ -409,25 +552,29 @@ pause
         self.print_status("Packaging distribution...")
         
         # Copy additional files to dist directory
+        # These files are in the project root (parent directory)
         files_to_copy = [
-            ("config.json", "config.json"),
-            ("resources", "resources"),
-            ("README.md", "README.md"),
-            ("PyUber", "PyUber"),
-            ("Uber", "Uber")
+            # (source_path, dest_name, description)
+            (self.project_root / "config.json", "config.json", "Configuration file"),
+            (self.project_root / "resources", "resources", "Resources directory"),
+            (self.project_root / "README.md", "README.md", "Documentation"),
+            (self.project_root / "PyUber", "PyUber", "PyUber directory"),
+            (self.project_root / "Uber", "Uber", "Uber directory"),
+            (self.deployment_dir / "images", "images", "Images directory")  # Images are in src/
         ]
         
-        for source_name, dest_name in files_to_copy:
-            source = self.deployment_dir / source_name
+        for source_path, dest_name, description in files_to_copy:
             dest = self.dist_dir / dest_name
             
-            if source.exists():
-                if source.is_file():
-                    shutil.copy2(source, dest)
-                    self.print_status(f"Copied {source_name}")
+            if source_path.exists():
+                if source_path.is_file():
+                    shutil.copy2(source_path, dest)
+                    self.print_status(f"Copied {description}: {source_path.name}")
                 else:
-                    shutil.copytree(source, dest, dirs_exist_ok=True)
-                    self.print_status(f"Copied {source_name} directory")
+                    shutil.copytree(source_path, dest, dirs_exist_ok=True)
+                    self.print_status(f"Copied {description}: {source_path.name}/")
+            else:
+                self.print_status(f"Source not found: {source_path}", "WARNING")
                     
         self.print_status("Distribution packaging completed", "SUCCESS")
         
@@ -435,9 +582,17 @@ pause
         """Main build function"""
         self.print_status(f"Starting {self.app_name} application build...")
         
+        # Check for command line arguments
+        use_existing_spec = '--use-existing-spec' in sys.argv or '--use-spec' in sys.argv
+        force_spec_creation = '--force-spec' in sys.argv or '--force' in sys.argv
+        
         # Check requirements
         if not self.check_requirements():
             return False
+        
+        # Setup images directory
+        if not self.setup_images_directory():
+            self.print_status("Continuing without complete image setup...", "WARNING")
             
         # Clean previous builds
         self.clean_build_dirs()
@@ -445,8 +600,30 @@ pause
         # Create main script
         main_script_path = self.create_main_script()
         
-        # Create spec file
-        spec_file_path = self.create_spec_file(main_script_path)
+        # Handle spec file creation
+        spec_file_path = self.deployment_dir / f"{self.app_name.lower()}.spec"
+        
+        if use_existing_spec and spec_file_path.exists():
+            self.print_status(f"Using existing spec file: {spec_file_path}", "INFO")
+        elif spec_file_path.exists() and not force_spec_creation:
+            self.print_status(f"Spec file exists: {spec_file_path}", "WARNING")
+            if sys.stdin.isatty():
+                choice = 'N'
+                if choice in ['y', 'yes']:
+                    self.print_status("Using existing spec file", "INFO")
+                else:
+                    # Create spec file (will handle overwrite prompts internally)
+                    spec_file_path = self.create_spec_file(main_script_path)
+            else:
+                # Non-interactive mode - use existing
+                self.print_status("Using existing spec file (non-interactive mode)", "INFO")
+        else:
+            # Create spec file
+            spec_file_path = self.create_spec_file(main_script_path)
+            
+        if not spec_file_path or not spec_file_path.exists():
+            self.print_status("No valid spec file available", "ERROR")
+            return False
         
         # Build executable
         if not self.build_executable(spec_file_path):
@@ -470,6 +647,25 @@ pause
             return False
 
 if __name__ == "__main__":
+    print("🔧 Osmosis Application Builder")
+    print("=" * 50)
+    
+    # Show usage information if help requested
+    if '--help' in sys.argv or '-h' in sys.argv:
+        print("Usage: python build_app.py [options]")
+        print()
+        print("Options:")
+        print("  --use-existing-spec    Use existing spec file without prompting")
+        print("  --force-spec          Force creation of new spec file")
+        print("  --force               Same as --force-spec")
+        print("  --help, -h            Show this help message")
+        print()
+        print("Examples:")
+        print("  python build_app.py                    # Interactive mode")
+        print("  python build_app.py --use-existing-spec  # Use existing spec")
+        print("  python build_app.py --force-spec        # Always create new spec")
+        sys.exit(0)
+    
     builder = OsmosisAppBuilder()
     success = builder.build_app()
     
@@ -485,6 +681,7 @@ if __name__ == "__main__":
             print("- Install_Osmosis.bat  (Installer script)")
             print("- README.md            (Documentation)")
             print("- config.json          (Configuration)")
+            print("- images/              (Application images and icons)")
             print()
             print("To distribute:")
             print("1. Zip the entire 'dist' folder")
