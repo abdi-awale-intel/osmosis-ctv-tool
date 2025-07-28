@@ -34,3 +34,7 @@ customtkinter>=5.2.0
 # - index_ctv 
 # - smart_json_parser
 # - pyuber_query
+
+# Git-based dependency for Intel yield analysis tool
+git+https://github.com/intel-innersource/applications.manufacturing.intel.yield.pyuber
+
