@@ -143,9 +143,11 @@ def index_CTV(input_file,test_name,module_name='',place_in='',mode='',config_num
             (combined_df[col].astype(str).str.upper() == 'NAN')         # 'NaN' strings
         )
    
-        # Replace matching cells with &
-        combined_df.loc[mask, col] = '&'    
-  
+        # Convert column to object type to allow mixed data types, then replace matching cells with &
+        if mask.any():  # Only convert if there are values to replace
+            combined_df[col] = combined_df[col].astype('object')
+            combined_df.loc[mask, col] = '&' 
+
     #Instead, loop through columns
     #print(combined_df)
     for col in combined_df.columns:

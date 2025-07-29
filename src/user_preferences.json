@@ -1,7 +1,7 @@
 {
-  "zoom_level": 1.0,
+  "zoom_level": 0.5,
   "compact_mode": true,
-  "window_geometry": "1216x680+32+60",
+  "window_geometry": "1216x612+32+54",
   "theme_mode": "light",
-  "last_mtpl_path": "I:/program/1276/eng/hdmtprogs/dmr_dai_sds/testprogram/DAIEBJX30A5304XPO8/Modules/MIO_DDR/MIO_DDR.mtpl"
+  "last_mtpl_path": "H:\\program\\1276\\eng\\hdmtprogs\\dmr_dai_sds\\testprogram\\DAIEBJX30A5304XPO8\\Modules\\MIO_DDR\\MIO_DDR.mtpl"
 }
