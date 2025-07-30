@@ -331,7 +331,7 @@ def run_combined_jsl(combined_csv_path, jmp_executable_path):
 def stack_file(unstacked_input_file):
     stacked_data_out_file = str(unstacked_input_file).replace("dataoutput", "datastacked")
     df = pd.read_csv(unstacked_input_file)
-    df_stacked = df.melt(id_vars=['Lot_WafXY','LOT','WAFER_ID','SORT_X','SORT_Y'], var_name='Label',value_name='Data')
+    df_stacked = df.melt(id_vars=['Lot_WafXY','LOT','WAFER_ID','SORT_X','SORT_Y','INTERFACE_BIN','FUNCTIONAL_BIN'], var_name='Label',value_name='Data')
     label_split = df_stacked['Label'].str.split('---', expand=True)
     label_split.columns = ["Label" + str(i + 1) for i in range(label_split.shape[1])]
     #cols_to_keep = [col for col in label_split.columns if label_split[col].nunique() >= 2] 
@@ -350,7 +350,7 @@ def stack_and_split_file(unstacked_input_file, label_column_names=None):
     df = pd.read_csv(unstacked_input_file)
     
     # Melt the dataframe to stack it
-    df_stacked = df.melt(id_vars=['Lot_WafXY','LOT','WAFER_ID','SORT_X','SORT_Y'], 
+    df_stacked = df.melt(id_vars=['Lot_WafXY','LOT','WAFER_ID','SORT_X','SORT_Y','INTERFACE_BIN','FUNCTIONAL_BIN'], 
                         var_name='Label', value_name='Data')
     
     # Split the Label column by '---'

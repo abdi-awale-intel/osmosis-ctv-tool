@@ -2610,7 +2610,7 @@ class CTVListGUI:
                         
                     self.log_message(f"Processing test: {test} ({current_iteration + 1}/{total_iterations})")
                     self.update_progress(current_iteration, total_iterations, f"Starting test: {test}")
-                    
+                    print('TEST:',test)
                     # Find matching row in MTPL dataframe (enhanced from master.py)
                     matching_rows = self.mtpl_df[self.mtpl_df.iloc[:, 1] == test]  # Assuming test name is in column 1
                     
@@ -2688,14 +2688,16 @@ class CTVListGUI:
                             else:
                                 config_number = str(int(row.iloc[3]))                    
                                 try:
-                                    ctv_file = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
-                                except:
                                     ctv_file, ITUFF_suffixes, config_numbers = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
                                     if isinstance(ctv_file,list):
                                         ctv_file = ctv_file[0]  # Use the first file if multiple are returned
                                         ITUFF_suffix = ITUFF_suffixes[0] 
                                         test = test + ITUFF_suffix
                                         config_numbers = config_numbers[0]
+                                except:
+                                    ctv_file = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
+                                    if isinstance(ctv_file,tuple):
+                                        ctv_file = ctv_file[0][0]
                                 # When config_number is provided, process_SmartCTV returns only the ctv_file path
                                 intermediary_file_list.append(ctv_file)
                                 self.update_progress(current_iteration + 0.6, total_iterations, f"Indexing SmartCTV for: {test}")

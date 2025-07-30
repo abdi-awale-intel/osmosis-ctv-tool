@@ -36,6 +36,7 @@ def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_c
                     ,dt.sort_x AS sort_x
                     ,dt.sort_y AS sort_y
                     ,dt.interface_bin AS interface_bin
+                    ,dt.functional_bin AS functional_bin
                     ,t0.test_name AS test_name
                     ,Replace(Replace(Replace(Replace(Replace(Replace(str.string_result,',',';'),chr(9),' '),chr(10),' '),chr(13),' '),chr(34),''''),chr(7),' ') AS string_result
             FROM 
@@ -91,7 +92,7 @@ def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_c
                     intermediary_file = fi.check_write_permission(intermediary_file)
                     with open(intermediary_file,'w', newline='') as outfile:
                         writer = csv.writer(outfile)
-                        writer.writerow(['LOT','WAFER_ID','SORT_X','SORT_Y'])#,'INTERFACE_BIN','FUNCTIONAL_BIN'])
+                        writer.writerow(['LOT','WAFER_ID','SORT_X','SORT_Y','INTERFACE_BIN','FUNCTIONAL_BIN'])
                 if missing_counter >= 5:
                     break
             if token_chunk == token_chunks[-1] and data_found:
@@ -109,7 +110,7 @@ def pivot_data(intermediary_file):
     # Concatenate the columns 'LOT', 'WAFER_ID', 'SORT_X', and 'SORT_Y' with underscores
     df1['Lot_WafXY'] = df1['LOT'].astype(str) + "_" + df1['WAFER_ID'].astype(str) + "_" + df1['SORT_X'].astype(str) + "_" + df1['SORT_Y'].astype(str)
 
-    id_cols = ['Lot_WafXY', 'LOT', 'WAFER_ID', 'SORT_X', 'SORT_Y']
+    id_cols = ['Lot_WafXY', 'LOT', 'WAFER_ID', 'SORT_X', 'SORT_Y','INTERFACE_BIN','FUNCTIONAL_BIN']
     # Pivot the DataFrame - "split" or unstack in JMP, pivoting string results to their own columns by test name for each unit
     try:
         df_pivot = df1.pivot_table(
@@ -387,7 +388,7 @@ def uber_request(indexed_input, test_name_file, test_type='', output_folder='', 
     #print(df.columns.tolist())
     '''BEGIN Combined suffix columns'''
     # Get all data columns (excluding first 5 ID columns)
-    data_columns = df.columns[5:]
+    data_columns = df.columns[7:]
 
     # Find columns with numeric suffixes using regex
     suffix_pattern = r'^(.+)_(\d+)$'  # Matches base_name_number
@@ -430,7 +431,7 @@ def uber_request(indexed_input, test_name_file, test_type='', output_folder='', 
     #df.to_csv(intermediary_file, index=False)
     '''BEGIN Combine partially empty columns'''
     # Merge basename_ columns with existing basename columns
-    data_columns_updated = df.columns[5:]  # Get updated column list after suffix processing
+    data_columns_updated = df.columns[7:]  # Get updated column list after suffix processing
 
     merge_pairs = []
     for col in data_columns_updated:
@@ -462,7 +463,7 @@ def uber_request(indexed_input, test_name_file, test_type='', output_folder='', 
     '''END OF TRIAL SECTION FOR SUFFIXES'''
 #below is for depiping the data
     if test_type == 'ClkUtils':
-            cols_to_drop = df.columns[5:]
+            cols_to_drop = df.columns[7:]
             # Process each column that needs to be split
             new_columns = []
             for col_name in cols_to_drop:
@@ -535,8 +536,8 @@ def uber_request(indexed_input, test_name_file, test_type='', output_folder='', 
                 df.drop(columns=col, inplace=True)
 
     # Exclude the first two columns from sorting
-    excluded_columns = df.columns[:5]
-    columns_to_sort = df.columns[5:]
+    excluded_columns = df.columns[:7]
+    columns_to_sort = df.columns[7:]
 
     # Sort the remaining columns using the custom sorting key
     sorted_columns = sorted(columns_to_sort, key=sorting_key)
@@ -563,7 +564,7 @@ def uber_request(indexed_input, test_name_file, test_type='', output_folder='', 
     filtered_df = decoder_df[decoder_df['Name'].str.lower().isin(df_columns_set_lower)]
     print(filtered_df)
     try:#passes if no data or all data mapped
-        df.columns = df.columns[:5].tolist() + filtered_df['combined_string'].tolist()
+        df.columns = df.columns[:7].tolist() + filtered_df['combined_string'].tolist()
         print('Mapping!')
         #print(df.columns.tolist())
     except:
