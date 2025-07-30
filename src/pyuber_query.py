@@ -22,6 +22,7 @@ def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_c
     
     for database in databases:
         first_iteration = True
+        missing_counter = 0 #remove this if data gets too big #yet another flaw with the quick hardcoded route
         for token_chunk in token_chunks:
             # place tokens into SQL query
             print('Running Query')
@@ -53,7 +54,7 @@ def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_c
             AND      {program_condition}
             /*END SQL*/
             """
-
+                    #,dt.functional_bin AS functional_bin
             #AND      t0.test_name LIKE '{test_name}'
             query_out = fi.check_write_permission("query.txt")
             with open(query_out,'w') as queryfile:
@@ -72,7 +73,7 @@ def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_c
             results = cursor.fetchall()
             if results:
                 columns = [col[0] for col in cursor.description]
-
+                missing_counter = 0
                 # Open the file in write mode if it's the first iteration, otherwise append mode
                 mode = 'w' if first_iteration else 'a'
                 with open(intermediary_file, mode, newline='') as outfile:
@@ -85,12 +86,14 @@ def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_c
                     data_found = True
             else:
                 print('Problem with query! Likely no data.')
+                missing_counter += 1
                 if first_iteration:  # Only create empty file on first iteration
                     intermediary_file = fi.check_write_permission(intermediary_file)
                     with open(intermediary_file,'w', newline='') as outfile:
                         writer = csv.writer(outfile)
-                        writer.writerow(['LOT','WAFER_ID','SORT_X','SORT_Y'])
-                break
+                        writer.writerow(['LOT','WAFER_ID','SORT_X','SORT_Y'])#,'INTERFACE_BIN','FUNCTIONAL_BIN'])
+                if missing_counter >= 5:
+                    break
             if token_chunk == token_chunks[-1] and data_found:
                 finish_loops = True
                 break
@@ -167,7 +170,7 @@ def uber_request(indexed_input, test_name_file, test_type='', output_folder='', 
     #print(token_names)
     token_set = set(token_names)
     token_names = list(token_set)
-    max_bytes = 31000 #Estimated max number of bytes for a smaller SQL query system
+    max_bytes = 63000 #Estimated max number of bytes for a smaller SQL query system
     
     #print(token_names)
     if test_type == 'ClkUtils':

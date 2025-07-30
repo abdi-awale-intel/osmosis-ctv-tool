@@ -2687,12 +2687,15 @@ class CTVListGUI:
                                     continue
                             else:
                                 config_number = str(int(row.iloc[3]))                    
-                                ctv_file, ITUFF_suffixes, config_numbers = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
-                                if isinstance(ctv_file,list):
-                                    ctv_file = ctv_file[0]  # Use the first file if multiple are returned
-                                    ITUFF_suffix = ITUFF_suffixes[0] 
-                                    test = test + ITUFF_suffix
-                                    config_numbers = config_numbers[0]
+                                try:
+                                    ctv_file = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
+                                except:
+                                    ctv_file, ITUFF_suffixes, config_numbers = sm.process_SmartCTV(base_dir, test_file,config_number,place_in)
+                                    if isinstance(ctv_file,list):
+                                        ctv_file = ctv_file[0]  # Use the first file if multiple are returned
+                                        ITUFF_suffix = ITUFF_suffixes[0] 
+                                        test = test + ITUFF_suffix
+                                        config_numbers = config_numbers[0]
                                 # When config_number is provided, process_SmartCTV returns only the ctv_file path
                                 intermediary_file_list.append(ctv_file)
                                 self.update_progress(current_iteration + 0.6, total_iterations, f"Indexing SmartCTV for: {test}")
