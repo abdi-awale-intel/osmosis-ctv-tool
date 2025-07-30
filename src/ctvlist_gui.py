@@ -221,7 +221,6 @@ class CTVListGUI:
         self.root.bind('<Control-plus>', lambda e: self.zoom_in())
         self.root.bind('<Control-equal>', lambda e: self.zoom_in())  # For keyboards where + requires shift
         self.root.bind('<Control-minus>', lambda e: self.zoom_out())
-        self.root.bind('<Control-0>', lambda e: self.reset_zoom())
         
         # Focus the root window to ensure shortcuts work
         self.root.focus_set()
@@ -244,6 +243,75 @@ class CTVListGUI:
         """Reset zoom to 100%"""
         self.current_zoom_level = 1.0
         self.apply_zoom()
+        
+    def clear_all_values(self):
+        """Clear all user input values to default/empty state"""
+        try:
+            # Clear material input fields
+            if hasattr(self, 'lot_var'):
+                self.lot_var.set("")
+            if hasattr(self, 'wafer_var'):
+                self.wafer_var.set("")
+            if hasattr(self, 'program_var'):
+                self.program_var.set("")
+            if hasattr(self, 'prefetch_var'):
+                self.prefetch_var.set("3")  # Keep default value for prefetch
+            if hasattr(self, 'database_var'):
+                self.database_var.set("F24_PROD_XEUS")  # Keep default database
+            
+            # Clear output settings
+            if hasattr(self, 'output_path_var'):
+                self.output_path_var.set("")
+            if hasattr(self, 'delete_files_var'):
+                self.delete_files_var.set(True)  # Reset to default
+            if hasattr(self, 'run_jmp_var'):
+                self.run_jmp_var.set(False)  # Reset to default
+            
+            # Clear MTPL settings
+            if hasattr(self, 'mtpl_file_path'):
+                self.mtpl_file_path.set("")
+            if hasattr(self, 'search_var'):
+                self.search_var.set("")
+            
+            # Clear data
+            self.material_df = None
+            self.mtpl_df = None
+            self.test_list = []
+            self.all_mtpl_items = []
+            self.last_mtpl_path = ""
+            
+            # Clear displays
+            if hasattr(self, 'material_tree'):
+                for item in self.material_tree.get_children():
+                    self.material_tree.delete(item)
+            
+            if hasattr(self, 'mtpl_tree'):
+                for item in self.mtpl_tree.get_children():
+                    self.mtpl_tree.delete(item)
+            
+            # Clear log
+            if hasattr(self, 'log_text'):
+                self.log_text.delete(1.0, tk.END)
+            
+            # Reset progress
+            if hasattr(self, 'progress_var'):
+                self.progress_var.set(0)
+            
+            # Update status indicators
+            if hasattr(self, 'mtpl_info_label'):
+                self.mtpl_info_label.configure(text="Select an MTPL file for processing", foreground='gray')
+            if hasattr(self, 'selected_tests_label'):
+                self.selected_tests_label.configure(text="0")
+            if hasattr(self, 'reload_mtpl_button'):
+                self.reload_mtpl_button.configure(state='disabled')
+            
+            self.log_message("All values cleared successfully", "success")
+            print("All user input values have been cleared")
+            
+        except Exception as e:
+            print(f"Error clearing values: {e}")
+            if hasattr(self, 'log_text'):
+                self.log_message(f"Error clearing values: {e}", "error")
         
     def set_zoom(self, level):
         """Set specific zoom level"""
@@ -329,7 +397,20 @@ class CTVListGUI:
                 'compact_mode': self.compact_mode,
                 'window_geometry': self.root.geometry(),
                 'theme_mode': 'dark' if self.is_dark_mode else 'light',
-                'last_mtpl_path': getattr(self, 'last_mtpl_path', "")
+                'last_mtpl_path': getattr(self, 'last_mtpl_path', ""),
+                # Save all user input fields
+                'material_inputs': {
+                    'lot': getattr(self, 'lot_var', tk.StringVar()).get(),
+                    'wafer': getattr(self, 'wafer_var', tk.StringVar()).get(),
+                    'program': getattr(self, 'program_var', tk.StringVar()).get(),
+                    'prefetch': getattr(self, 'prefetch_var', tk.StringVar()).get(),
+                    'database': getattr(self, 'database_var', tk.StringVar()).get()
+                },
+                'output_settings': {
+                    'output_path': getattr(self, 'output_path_var', tk.StringVar()).get(),
+                    'delete_files': getattr(self, 'delete_files_var', tk.BooleanVar()).get(),
+                    'run_jmp': getattr(self, 'run_jmp_var', tk.BooleanVar()).get()
+                }
             }
             import json
             prefs_file = os.path.join(os.path.dirname(__file__), 'user_preferences.json')
@@ -349,6 +430,29 @@ class CTVListGUI:
                 self.current_zoom_level = preferences.get('zoom_level', 1.0)
                 self.compact_mode = preferences.get('compact_mode', False)
                 self.compact_mode_var.set(self.compact_mode)
+                
+                # Restore material input fields
+                material_inputs = preferences.get('material_inputs', {})
+                if hasattr(self, 'lot_var'):
+                    self.lot_var.set(material_inputs.get('lot', 'G5088651'))
+                if hasattr(self, 'wafer_var'):
+                    self.wafer_var.set(material_inputs.get('wafer', '533'))
+                if hasattr(self, 'program_var'):
+                    self.program_var.set(material_inputs.get('program', 'DABHOPCA0H20C022528'))
+                if hasattr(self, 'prefetch_var'):
+                    self.prefetch_var.set(material_inputs.get('prefetch', '3'))
+                if hasattr(self, 'database_var'):
+                    self.database_var.set(material_inputs.get('database', 'F24_PROD_XEUS'))
+                
+                # Restore output settings
+                output_settings = preferences.get('output_settings', {})
+                if hasattr(self, 'output_path_var'):
+                    self.output_path_var.set(output_settings.get('output_path', ''))
+                if hasattr(self, 'delete_files_var'):
+                    self.delete_files_var.set(output_settings.get('delete_files', True))
+                if hasattr(self, 'run_jmp_var'):
+                    self.run_jmp_var.set(output_settings.get('run_jmp', False))
+                
                 # Restore last MTPL file path if available
                 last_mtpl_path = preferences.get('last_mtpl_path', "")
                 if last_mtpl_path and os.path.exists(last_mtpl_path):
@@ -641,10 +745,10 @@ class CTVListGUI:
                         zoom_in_btn.configure(width=4)
                     zoom_in_btn.pack(side='left', padx=2)
                     
-                    reset_btn = create_button(zoom_frame, text="Reset", command=self.reset_zoom)
+                    clear_btn = create_button(zoom_frame, text="Clear", command=self.clear_all_values)
                     if not CTK_AVAILABLE:
-                        reset_btn.configure(width=6)
-                    reset_btn.pack(side='left', padx=(10, 0))
+                        clear_btn.configure(width=6)
+                    clear_btn.pack(side='left', padx=(10, 0))
                     
                     # Add theme indicator
                     self.theme_label = create_label(logo_frame, text="Light Mode")
@@ -734,10 +838,10 @@ class CTVListGUI:
             zoom_in_btn.configure(width=4)
         zoom_in_btn.pack(side='left', padx=2)
         
-        reset_btn = create_button(zoom_frame, text="Reset", command=self.reset_zoom)
+        clear_btn = create_button(zoom_frame, text="Clear", command=self.clear_all_values)
         if not CTK_AVAILABLE:
-            reset_btn.configure(width=6)
-        reset_btn.pack(side='left', padx=(10, 0))
+            clear_btn.configure(width=6)
+        clear_btn.pack(side='left', padx=(10, 0))
         
         # Add theme indicator
         self.theme_label = create_label(title_frame, text="Light Mode")
