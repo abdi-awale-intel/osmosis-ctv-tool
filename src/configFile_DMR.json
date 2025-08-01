@@ -714,6 +714,43 @@
 					]
 				}
 			]
+		},
+		{
+			"test_config_name": "LJPLL_IMH_PLL_DCATRIM",
+			"output_multiple_files": false,
+			"regular_expression": [
+				"^CLK_PLL_IMH::LJPLL_IMH_CLKUTILS_K_(SDTBEGIN|BEGIN)_TAP_INF_(?:MIN|MAX|NOM)_X_X_PLL_DCATRIM(?:_WFR)?$"
+			],
+			"setup": [ "dfdi", "hsf0", "hsf1", "hcai", "mio0i", "mio1i", "mio2i", "meshmemi", "meshioi", "fivri" ],
+			"ratios": "8",
+			"ctv_sequence": [
+				{
+					"stage": "result",
+					"Loop_num": "1",
+					"fields": [
+						{ "name": "PREVIOUS_DFF", "default": "", "output_enable": true },
+						{ "name": "CURRENT_DFF", "default": "", "output_enable": true },
+						{ "name": "PLL_ENABLE", "default": "1", "output_enable": false },
+						{ "name": "CAL_DONE", "default": "1", "output_enable": false },
+						{ "name": "LOOP_CLOSED", "default": "1", "output_enable": false },
+						{ "name": "RAW_LOCK", "default": "1", "output_enable": false },
+						{ "name": "STICKY_LOCK", "default": "1", "output_enable": false },
+						{ "name": "UNLOCK_FLAG", "default": "0", "output_enable": false },
+						{ "name": "PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "LOCK_TIMEOUT", "default": "0", "output_enable": false },
+						{ "name": "ERROR_FLAG", "default": "0", "output_enable": false },
+						{ "name": "LOCK_TIME", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_RAW_LOCK", "default": "1", "output_enable": false },
+						{ "name": "PLL_TAP_STATUS_FINAL_LOCK", "default": "1", "output_enable": false },
+						{ "name": "PLL_TAP_STATUS_PLL_RATIO", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_LOCK_TIME", "default": "", "output_enable": true },
+						{ "name": "PLL_TAP_STATUS_UNLOCK_COUNT", "default": "0", "output_enable": false },
+						{ "name": "PLL_TAP_STATUS_PLL_ENABLE", "default": "1", "output_enable": false },
+						{ "name": "TAP_STATUS_DCS_STAT_STARTED", "default": "1", "output_enable": false },
+						{ "name": "TAP_STATUS_DCS_STAT_DCA_CODE", "default": "", "output_enable": true }
+					]
+				}
+			]
 		}
 	],
 

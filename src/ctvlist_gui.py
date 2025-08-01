@@ -66,6 +66,7 @@ import file_functions as fi
 import mtpl_parser as mt
 import index_ctv as ind
 import smart_json_parser as sm
+import clkutils_config_json_to_csv as clk
 
 # Import pyuber_query with fallback handling
 PYUBER_AVAILABLE = True
@@ -143,6 +144,12 @@ class CTVListGUI:
         self.is_dark_mode = False  # Track current theme
         self.processing = False
         
+        # CLKUtils tab variables
+        self.clkutils_tests = []  # Store CLKUtils test names
+        self.all_clkutils_items = []  # Store all CLKUtils items for filtering
+        self.clkutils_file_path = tk.StringVar()
+        self.run_clkutils_var = tk.BooleanVar(value=False)  # Initialize here for early access
+        
         # Initialize theme components as None for fallback handling
         self.light_logo = None
         self.dark_logo = None
@@ -152,6 +159,9 @@ class CTVListGUI:
         
         # Setup window management first
         self.setup_window_management()
+        
+        # Ensure proper working directory for config files
+        self.setup_working_directory()
         
         self.create_widgets()
         
@@ -544,6 +554,33 @@ class CTVListGUI:
         self.window_state = "normal"
         self.last_geometry = None
         
+    def setup_working_directory(self):
+        """Setup proper working directory for config files"""
+        try:
+            # Get the directory where the script is located
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            current_dir = os.getcwd()
+            
+            # Check if configFile_DMR.json exists in current directory
+            config_file = 'configFile_DMR.json'
+            
+            # Log current working directory
+            print(f"Current working directory: {current_dir}")
+            print(f"Script directory: {script_dir}")
+            
+            if os.path.exists(config_file):
+                print(f"Found {config_file} in current working directory")
+            elif os.path.exists(os.path.join(script_dir, config_file)):
+                print(f"Found {config_file} in script directory, changing working directory")
+                os.chdir(script_dir)
+                print(f"Changed working directory to: {os.getcwd()}")
+            else:
+                print(f"Warning: {config_file} not found in current directory ({current_dir}) or script directory ({script_dir})")
+                print(f"Please ensure {config_file} is available for CLKUtils processing")
+                
+        except Exception as e:
+            print(f"Error setting up working directory: {e}")
+    
     def on_window_configure(self, event):
         """Handle window resize events"""
         if event.widget == self.root:
@@ -781,7 +818,12 @@ class CTVListGUI:
         notebook.add(self.mtpl_frame, text="🧪 MTPL & Test Selection")  # Added icon
         self.create_mtpl_tab()
         
-        # Tab 3: Output Settings and Processing
+        # Tab 3: CLKUtils Test Input
+        self.clkutils_frame = create_frame(notebook)
+        notebook.add(self.clkutils_frame, text="⏰ CLKUtils Tests")  # Added icon
+        self.create_clkutils_tab()
+        
+        # Tab 4: Output Settings and Processing
         self.output_frame = create_frame(notebook)
         notebook.add(self.output_frame, text="⚙️ Output & Processing")  # Added icon
         self.create_output_tab()
@@ -850,11 +892,43 @@ class CTVListGUI:
         self.theme_label.pack()
         
     def create_material_tab(self):
+        # Create a canvas and scrollbar for scrollable content
+        material_canvas = tk.Canvas(self.material_frame, highlightthickness=0)
+        material_scrollbar = ttk.Scrollbar(self.material_frame, orient="vertical", command=material_canvas.yview)
+        self.material_scrollable_frame = ttk.Frame(material_canvas)
+        
+        # Configure scrolling
+        self.material_scrollable_frame.bind(
+            "<Configure>",
+            lambda e: material_canvas.configure(scrollregion=material_canvas.bbox("all"))
+        )
+        
+        material_canvas.create_window((0, 0), window=self.material_scrollable_frame, anchor="nw")
+        material_canvas.configure(yscrollcommand=material_scrollbar.set)
+        
+        # Pack the canvas and scrollbar
+        material_canvas.pack(side="left", fill="both", expand=True)
+        material_scrollbar.pack(side="right", fill="y")
+        
+        # Bind mouse wheel to canvas for smooth scrolling
+        def _on_material_mousewheel(event):
+            material_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        def _bind_to_material_mousewheel(event):
+            material_canvas.bind_all("<MouseWheel>", _on_material_mousewheel)
+        
+        def _unbind_from_material_mousewheel(event):
+            material_canvas.unbind_all("<MouseWheel>")
+        
+        material_canvas.bind('<Enter>', _bind_to_material_mousewheel)
+        material_canvas.bind('<Leave>', _unbind_from_material_mousewheel)
+        
+        # Now create all the content in the scrollable_frame instead of self.material_frame
         # Material Data Input Section
-        ttk.Label(self.material_frame, text="Material Data Input", font=('Arial', 14, 'bold')).pack(pady=10)
+        ttk.Label(self.material_scrollable_frame, text="Material Data Input", font=('Arial', 14, 'bold')).pack(pady=10)
         
         # Input fields frame
-        input_frame = ttk.LabelFrame(self.material_frame, text="Enter Material Parameters")
+        input_frame = ttk.LabelFrame(self.material_scrollable_frame, text="Enter Material Parameters")
         input_frame.pack(fill='x', padx=20, pady=10)
         
         # Entry variables
@@ -878,14 +952,14 @@ class CTVListGUI:
             ttk.Entry(input_frame, textvariable=var, width=40).grid(row=i, column=1, padx=10, pady=5)
         
         # Buttons frame
-        button_frame = ttk.Frame(self.material_frame)
+        button_frame = ttk.Frame(self.material_scrollable_frame)
         button_frame.pack(pady=20)
         
         ttk.Button(button_frame, text="Load from CSV/Excel", command=self.load_material_file).pack(side='left', padx=10)
         ttk.Button(button_frame, text="Create DataFrame", command=self.create_material_dataframe).pack(side='left', padx=10)
         
-        # Display frame for material data with proper layout management
-        self.material_display_frame = ttk.LabelFrame(self.material_frame, text="Current Material Data")
+        # Display frame for material data
+        self.material_display_frame = ttk.LabelFrame(self.material_scrollable_frame, text="Current Material Data")
         self.material_display_frame.pack(fill='both', expand=True, padx=20, pady=10)
         
         # Configure grid weights for proper resizing
@@ -898,8 +972,8 @@ class CTVListGUI:
         tree_frame.grid_rowconfigure(0, weight=1)
         tree_frame.grid_columnconfigure(0, weight=1)
         
-        # Treeview for displaying material data with proper grid placement
-        self.material_tree = ttk.Treeview(tree_frame)
+        # Treeview for displaying material data
+        self.material_tree = ttk.Treeview(tree_frame, height=10)
         self.material_tree.grid(row=0, column=0, sticky='nsew')
         
         # Scrollbars with proper grid placement
@@ -1028,8 +1102,8 @@ class CTVListGUI:
         mtpl_tree_frame.grid_rowconfigure(0, weight=1)
         mtpl_tree_frame.grid_columnconfigure(0, weight=1)
         
-        # Treeview for MTPL data with proper grid placement
-        self.mtpl_tree = ttk.Treeview(mtpl_tree_frame)
+        # Treeview for MTPL data
+        self.mtpl_tree = ttk.Treeview(mtpl_tree_frame, height=15)
         self.mtpl_tree.grid(row=0, column=0, sticky='nsew')
         
         # Scrollbars with proper grid placement
@@ -1094,11 +1168,591 @@ class CTVListGUI:
         self.order_info_label = ttk.Label(self.order_info_frame, text="", font=('Arial', 8), foreground='green')
         self.order_info_label.pack()
         
+    def create_clkutils_tab(self):
+        """Create the CLKUtils test input tab with scrollable functionality"""
+        # Create a canvas and scrollbar for scrollable content
+        clkutils_canvas = tk.Canvas(self.clkutils_frame, highlightthickness=0)
+        clkutils_scrollbar = ttk.Scrollbar(self.clkutils_frame, orient="vertical", command=clkutils_canvas.yview)
+        self.clkutils_scrollable_frame = ttk.Frame(clkutils_canvas)
+        
+        # Configure scrolling
+        self.clkutils_scrollable_frame.bind(
+            "<Configure>",
+            lambda e: clkutils_canvas.configure(scrollregion=clkutils_canvas.bbox("all"))
+        )
+        
+        clkutils_canvas.create_window((0, 0), window=self.clkutils_scrollable_frame, anchor="nw")
+        clkutils_canvas.configure(yscrollcommand=clkutils_scrollbar.set)
+        
+        # Pack the canvas and scrollbar
+        clkutils_canvas.pack(side="left", fill="both", expand=True)
+        clkutils_scrollbar.pack(side="right", fill="y")
+        
+        # Bind mouse wheel to canvas for smooth scrolling
+        def _on_clkutils_mousewheel(event):
+            clkutils_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        def _bind_to_clkutils_mousewheel(event):
+            clkutils_canvas.bind_all("<MouseWheel>", _on_clkutils_mousewheel)
+        
+        def _unbind_from_clkutils_mousewheel(event):
+            clkutils_canvas.unbind_all("<MouseWheel>")
+        
+        clkutils_canvas.bind('<Enter>', _bind_to_clkutils_mousewheel)
+        clkutils_canvas.bind('<Leave>', _unbind_from_clkutils_mousewheel)
+        
+        # Now create all the content in the scrollable_frame
+        ttk.Label(self.clkutils_scrollable_frame, text="CLKUtils Test Input", font=('Arial', 14, 'bold')).pack(pady=10)
+        
+        # Instructions
+        instruction_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="Instructions")
+        instruction_frame.pack(fill='x', padx=20, pady=10)
+        
+        instruction_text = ("CLKUtils tests do not require MTPL files. You can input test names from:\n"
+                          "• CSV file (select a column containing test names)\n"
+                          "• Text file (comma, whitespace, or newline-separated test names)\n"
+                          "• Manual text input (comma, whitespace, or newline-separated)")
+        ttk.Label(instruction_frame, text=instruction_text, wraplength=600, justify='left').pack(padx=10, pady=10)
+        
+        # Input method selection
+        method_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="Test Input Method")
+        method_frame.pack(fill='x', padx=20, pady=10)
+        
+        self.clkutils_input_method = tk.StringVar(value="csv")
+        ttk.Radiobutton(method_frame, text="📊 From CSV file (select column)", 
+                       variable=self.clkutils_input_method, value="csv").pack(anchor='w', padx=10, pady=5)
+        ttk.Radiobutton(method_frame, text="📄 From text file (comma, whitespace, or newline separated)", 
+                       variable=self.clkutils_input_method, value="txt").pack(anchor='w', padx=10, pady=5)
+        ttk.Radiobutton(method_frame, text="✏️ Manual text input", 
+                       variable=self.clkutils_input_method, value="manual").pack(anchor='w', padx=10, pady=5)
+        
+        # File input section
+        file_input_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="File Input")
+        file_input_frame.pack(fill='x', padx=20, pady=10)
+        
+        ttk.Label(file_input_frame, text="File Path:").grid(row=0, column=0, sticky='w', padx=10, pady=5)
+        ttk.Entry(file_input_frame, textvariable=self.clkutils_file_path, width=60).grid(row=0, column=1, padx=10, pady=5)
+        ttk.Button(file_input_frame, text="Browse", command=self.browse_clkutils_file).grid(row=0, column=2, padx=10, pady=5)
+        
+        # CSV column selection (only shown when CSV is selected)
+        self.csv_column_frame = ttk.Frame(file_input_frame)
+        # Don't grid it initially - let the method change handler manage it
+        
+        ttk.Label(self.csv_column_frame, text="Select Column:").grid(row=0, column=0, sticky='w', padx=(0, 5), pady=5)
+        self.clkutils_column_var = tk.StringVar()
+        self.clkutils_column_combo = ttk.Combobox(self.csv_column_frame, textvariable=self.clkutils_column_var, 
+                                                  state="readonly", width=20)
+        self.clkutils_column_combo.grid(row=0, column=1, padx=(0, 10), pady=5)
+        
+        ttk.Button(file_input_frame, text="Load Tests from File", command=self.load_clkutils_from_file).grid(row=2, column=1, pady=10)
+        
+        # Manual input section
+        manual_input_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="Manual Test Input")
+        manual_input_frame.pack(fill='x', padx=20, pady=10)
+        
+        ttk.Label(manual_input_frame, text="Enter test names (comma, whitespace, or newline separated):").pack(anchor='w', padx=10, pady=(10, 5))
+        
+        # Text area for manual input
+        text_frame = ttk.Frame(manual_input_frame)
+        text_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        
+        self.clkutils_text_input = tk.Text(text_frame, height=6, width=80)
+        self.clkutils_text_input.pack(side='left', fill='both', expand=True)
+        
+        text_scrollbar = ttk.Scrollbar(text_frame, orient='vertical', command=self.clkutils_text_input.yview)
+        text_scrollbar.pack(side='right', fill='y')
+        self.clkutils_text_input.configure(yscrollcommand=text_scrollbar.set)
+        
+        # Buttons for manual input
+        manual_buttons_frame = ttk.Frame(manual_input_frame)
+        manual_buttons_frame.pack(fill='x', padx=10, pady=(0, 10))
+        
+        ttk.Button(manual_buttons_frame, text="Load Tests from Text", command=self.load_clkutils_from_text).pack(side='left', padx=(0, 10))
+        ttk.Button(manual_buttons_frame, text="Clear Text", command=lambda: self.clkutils_text_input.delete('1.0', tk.END)).pack(side='left')
+        
+        # Test display and selection
+        display_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="CLKUtils Tests")
+        display_frame.pack(fill='both', expand=True, padx=20, pady=10)
+        
+        # Search and filter controls
+        search_frame = ttk.Frame(display_frame)
+        search_frame.pack(fill='x', padx=10, pady=5)
+        
+        ttk.Label(search_frame, text="🔍 Search:").pack(side='left', padx=(0, 5))
+        self.clkutils_search_var = tk.StringVar()
+        self.clkutils_search_var.trace('w', self.on_clkutils_search_change)
+        search_entry = ttk.Entry(search_frame, textvariable=self.clkutils_search_var, width=30)
+        search_entry.pack(side='left', padx=(0, 10))
+        
+        # Control buttons
+        control_buttons_frame = ttk.Frame(search_frame)
+        control_buttons_frame.pack(side='right')
+        
+        ttk.Button(control_buttons_frame, text="☑️ Select All", command=self.select_all_clkutils_tests).pack(side='left', padx=(0, 5))
+        ttk.Button(control_buttons_frame, text="☐ Clear All", command=self.clear_all_clkutils_tests).pack(side='left', padx=(0, 5))
+        ttk.Button(control_buttons_frame, text="🗑️ Remove Selected", command=self.remove_selected_clkutils_tests).pack(side='left')
+        
+        # Test list display
+        list_frame = ttk.Frame(display_frame)
+        list_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        list_frame.grid_rowconfigure(0, weight=1)
+        list_frame.grid_columnconfigure(0, weight=1)
+        
+        # Treeview for CLKUtils tests
+        self.clkutils_tree = ttk.Treeview(list_frame, columns=('Test Name',), show='tree headings', height=12)
+        self.clkutils_tree.grid(row=0, column=0, sticky='nsew')
+        
+        # Configure columns
+        self.clkutils_tree.heading('#0', text='☐', anchor='w')
+        self.clkutils_tree.heading('Test Name', text='Test Name', anchor='w')
+        self.clkutils_tree.column('#0', width=50, minwidth=50)
+        self.clkutils_tree.column('Test Name', width=400, minwidth=200)
+        
+        # Scrollbars
+        clkutils_v_scrollbar = ttk.Scrollbar(list_frame, orient='vertical', command=self.clkutils_tree.yview)
+        clkutils_v_scrollbar.grid(row=0, column=1, sticky='ns')
+        self.clkutils_tree.configure(yscrollcommand=clkutils_v_scrollbar.set)
+        
+        clkutils_h_scrollbar = ttk.Scrollbar(list_frame, orient='horizontal', command=self.clkutils_tree.xview)
+        clkutils_h_scrollbar.grid(row=1, column=0, sticky='ew')
+        self.clkutils_tree.configure(xscrollcommand=clkutils_h_scrollbar.set)
+        
+        # Add mouse wheel support for the treeview
+        def _on_clkutils_mousewheel(event):
+            self.clkutils_tree.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        self.clkutils_tree.bind("<MouseWheel>", _on_clkutils_mousewheel)
+        
+        # Bind events
+        self.clkutils_tree.bind('<Button-1>', self.on_clkutils_tree_click)
+        self.clkutils_tree.bind('<Double-1>', self.toggle_clkutils_selection)
+        
+        # Selection status
+        status_frame = ttk.Frame(display_frame)
+        status_frame.pack(fill='x', padx=10, pady=(0, 10))
+        
+        ttk.Label(status_frame, text="Selected CLKUtils Tests:", font=('Arial', 9, 'bold')).pack(side='left')
+        self.clkutils_selected_label = ttk.Label(status_frame, text="0", font=('Arial', 10, 'bold'), foreground='blue')
+        self.clkutils_selected_label.pack(side='left', padx=(5, 0))
+        
+        # Update input method visibility
+        self.clkutils_input_method.trace('w', self.on_clkutils_method_change)
+        self.on_clkutils_method_change()  # Initial setup
+    
+    def browse_clkutils_file(self):
+        """Browse for CLKUtils input file (CSV or TXT)"""
+        filetypes = [
+            ("CSV files", "*.csv"),
+            ("Text files", "*.txt"),
+            ("All files", "*.*")
+        ]
+        file_path = filedialog.askopenfilename(title="Select CLKUtils Test File", filetypes=filetypes)
+        if file_path:
+            self.clkutils_file_path.set(file_path)
+            # If CSV file, load column options
+            if file_path.lower().endswith('.csv'):
+                self.load_csv_columns()
+    
+    def load_csv_columns(self):
+        """Load column names from CSV file for selection"""
+        try:
+            csv_path = self.clkutils_file_path.get()
+            if csv_path and csv_path.lower().endswith('.csv'):
+                df = pd.read_csv(csv_path)
+                columns = list(df.columns)
+                self.clkutils_column_combo['values'] = columns
+                if columns:
+                    self.clkutils_column_combo.set(columns[0])  # Select first column by default
+                self.log_message(f"Loaded {len(columns)} columns from CSV file")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load CSV columns: {str(e)}")
+            self.log_message(f"Error loading CSV columns: {str(e)}")
+    
+    def on_clkutils_method_change(self, *args):
+        """Handle input method change"""
+        method = self.clkutils_input_method.get()
+        # Show/hide CSV column selection based on method
+        if method == "csv":
+            self.csv_column_frame.grid(row=1, column=0, columnspan=3, sticky='ew', padx=10, pady=5)
+        else:
+            self.csv_column_frame.grid_remove()
+    
+    def load_clkutils_from_file(self):
+        """Load CLKUtils tests from selected file"""
+        file_path = self.clkutils_file_path.get()
+        if not file_path:
+            messagebox.showwarning("Warning", "Please select a file first")
+            return
+            
+        if not os.path.exists(file_path):
+            messagebox.showerror("Error", f"File not found: {file_path}")
+            return
+        
+        try:
+            method = self.clkutils_input_method.get()
+            tests = []
+            
+            if method == "csv":
+                # Load from CSV column
+                df = pd.read_csv(file_path)
+                column_name = self.clkutils_column_var.get()
+                if not column_name:
+                    messagebox.showwarning("Warning", "Please select a column")
+                    return
+                if column_name not in df.columns:
+                    messagebox.showerror("Error", f"Column '{column_name}' not found in CSV")
+                    return
+                
+                # Get tests from selected column, filter out NaN/empty values
+                test_series = df[column_name].dropna()
+                tests = [str(test).strip() for test in test_series if str(test).strip() and str(test).lower() != 'nan']
+                
+            elif method == "txt":
+                # Load from text file
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                # Split by comma, whitespace, or newline
+                import re
+                # Split on any combination of commas, spaces, tabs, newlines
+                test_tokens = re.split(r'[,\s]+', content)
+                tests = [test.strip() for test in test_tokens if test.strip() and test.lower() != 'nan']
+            
+            if tests:
+                self.add_clkutils_tests(tests)
+                self.log_message(f"Loaded {len(tests)} CLKUtils tests from {os.path.basename(file_path)}")
+            else:
+                messagebox.showwarning("Warning", "No valid tests found in the selected file")
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load tests from file: {str(e)}")
+            self.log_message(f"Error loading CLKUtils tests: {str(e)}")
+    
+    def load_clkutils_from_text(self):
+        """Load CLKUtils tests from manual text input"""
+        content = self.clkutils_text_input.get('1.0', tk.END).strip()
+        if not content:
+            messagebox.showwarning("Warning", "Please enter some test names")
+            return
+        
+        # Split by comma, whitespace, or newline
+        import re
+        # Split on any combination of commas, spaces, tabs, newlines
+        test_tokens = re.split(r'[,\s]+', content)
+        tests = [test.strip() for test in test_tokens if test.strip() and test.lower() != 'nan']
+        
+        if tests:
+            self.add_clkutils_tests(tests)
+            self.log_message(f"Loaded {len(tests)} CLKUtils tests from manual input")
+        else:
+            messagebox.showwarning("Warning", "No valid tests found in the text input")
+    
+    def add_clkutils_tests(self, test_names):
+        """Add CLKUtils tests to the list"""
+        added_count = 0
+        duplicate_count = 0
+        
+        for test_name in test_names:
+            test_name = test_name.strip()
+            if not test_name:
+                continue
+                
+            # Check for duplicates
+            if test_name in self.clkutils_tests:
+                duplicate_count += 1
+                continue
+            
+            self.clkutils_tests.append(test_name)
+            added_count += 1
+        
+        # Update display
+        self.update_clkutils_display()
+        
+        if duplicate_count > 0:
+            messagebox.showinfo("Info", f"Added {added_count} new tests. {duplicate_count} duplicates were skipped.")
+        else:
+            messagebox.showinfo("Success", f"Added {added_count} CLKUtils tests")
+    
+    def update_clkutils_display(self):
+        """Update the CLKUtils tests display"""
+        # Clear existing items
+        for item in self.clkutils_tree.get_children():
+            self.clkutils_tree.delete(item)
+        
+        # Store all items for filtering
+        self.all_clkutils_items = []
+        
+        for i, test_name in enumerate(self.clkutils_tests):
+            item_data = {
+                'tree_text': '☐',  # This goes in the tree column (#0)
+                'values': (test_name,),  # This goes in the 'Test Name' column
+                'tags': ('unchecked',),
+                'test_name': test_name
+            }
+            self.all_clkutils_items.append(item_data)
+        
+        # Apply current search filter
+        self.apply_clkutils_filter()
+        
+        # Update selection count
+        self.update_clkutils_selection_count()
+        
+        # Configure alternating row colors
+        self.configure_clkutils_tree_colors()
+    
+    def apply_clkutils_filter(self):
+        """Apply search filter to CLKUtils tests"""
+        search_text = self.clkutils_search_var.get().lower().strip()
+        
+        # Clear current display
+        for item in self.clkutils_tree.get_children():
+            self.clkutils_tree.delete(item)
+        
+        # Add filtered items
+        for i, item_data in enumerate(self.all_clkutils_items):
+            test_name = item_data['test_name']
+            
+            # Apply search filter
+            if search_text and search_text not in test_name.lower():
+                continue
+            
+            # Determine checkbox state
+            checkbox = '☑' if 'checked' in item_data['tags'] else '☐'
+            tree_text = checkbox
+            values = (test_name,)  # Test name goes in the column
+            
+            # Insert item
+            item_id = self.clkutils_tree.insert('', 'end', text=tree_text, values=values, tags=item_data['tags'])
+            
+            # Apply alternating row colors
+            if i % 2 == 0:
+                current_tags = list(item_data['tags']) + ['evenrow']
+            else:
+                current_tags = list(item_data['tags']) + ['oddrow']
+            self.clkutils_tree.item(item_id, tags=current_tags)
+    
+    def on_clkutils_search_change(self, *args):
+        """Handle search text change"""
+        self.apply_clkutils_filter()
+    
+    def on_clkutils_tree_click(self, event):
+        """Handle single click on CLKUtils tree"""
+        item = self.clkutils_tree.identify('item', event.x, event.y)
+        column = self.clkutils_tree.identify('column', event.x, event.y)
+        
+        # If clicked on the checkbox column (first column)
+        if item and column == '#0':
+            self.toggle_clkutils_selection_for_item(item)
+    
+    def toggle_clkutils_selection(self, event):
+        """Toggle CLKUtils test selection when double-clicked"""
+        if self.clkutils_tree.selection():
+            item = self.clkutils_tree.selection()[0]
+            self.toggle_clkutils_selection_for_item(item)
+    
+    def toggle_clkutils_selection_for_item(self, item):
+        """Toggle selection for a specific CLKUtils item"""
+        current_text = self.clkutils_tree.item(item, 'text')
+        values = list(self.clkutils_tree.item(item, 'values'))
+        current_tags = self.clkutils_tree.item(item, 'tags')
+        test_name = values[0]  # Test name is in the first (and only) column
+        
+        # Determine current row type for alternating colors
+        item_index = self.clkutils_tree.index(item)
+        row_tag = 'evenrow' if item_index % 2 == 0 else 'oddrow'
+        
+        if 'checked' in current_tags:
+            # Uncheck
+            new_text = '☐'
+            new_tags = ('unchecked', row_tag)
+        else:
+            # Check
+            new_text = '☑'
+            new_tags = ('checked', row_tag)
+        
+        self.clkutils_tree.item(item, text=new_text, tags=new_tags)
+        
+        # Update stored data
+        for item_data in self.all_clkutils_items:
+            if item_data['test_name'] == test_name:
+                item_data['tree_text'] = new_text
+                item_data['tags'] = (new_tags[0],)
+                break
+        
+        self.update_clkutils_selection_count()
+    
+    def select_all_clkutils_tests(self):
+        """Select all CLKUtils tests"""
+        for item_data in self.all_clkutils_items:
+            item_data['tree_text'] = '☑'
+            item_data['tags'] = ('checked',)
+        
+        self.apply_clkutils_filter()
+        self.update_clkutils_selection_count()
+    
+    def clear_all_clkutils_tests(self):
+        """Clear all CLKUtils test selections"""
+        for item_data in self.all_clkutils_items:
+            item_data['tree_text'] = '☐'
+            item_data['tags'] = ('unchecked',)
+        
+        self.apply_clkutils_filter()
+        self.update_clkutils_selection_count()
+    
+    def remove_selected_clkutils_tests(self):
+        """Remove selected CLKUtils tests from the list"""
+        selected_tests = self.get_selected_clkutils_tests()
+        if not selected_tests:
+            messagebox.showwarning("Warning", "No tests selected for removal")
+            return
+        
+        # Confirm removal
+        result = messagebox.askyesno("Confirm Removal", 
+                                   f"Remove {len(selected_tests)} selected tests from the list?")
+        if not result:
+            return
+        
+        # Remove tests
+        for test_name in selected_tests:
+            if test_name in self.clkutils_tests:
+                self.clkutils_tests.remove(test_name)
+        
+        # Update display
+        self.update_clkutils_display()
+        self.log_message(f"Removed {len(selected_tests)} CLKUtils tests")
+    
+    def get_selected_clkutils_tests(self):
+        """Get list of selected CLKUtils test names"""
+        selected_tests = []
+        for item_data in self.all_clkutils_items:
+            if 'checked' in item_data['tags']:
+                selected_tests.append(item_data['test_name'])
+        return selected_tests
+    
+    def update_clkutils_selection_count(self):
+        """Update the count of selected CLKUtils tests"""
+        count = len(self.get_selected_clkutils_tests())
+        self.clkutils_selected_label.configure(text=str(count))
+    
+    def configure_clkutils_tree_colors(self):
+        """Configure alternating row colors for CLKUtils tree"""
+        try:
+            if self.is_dark_mode:
+                self.clkutils_tree.tag_configure('oddrow', background='#2d2d48', foreground='#e8e9f0')
+                self.clkutils_tree.tag_configure('evenrow', background='#353553', foreground='#e8e9f0')
+                self.clkutils_tree.tag_configure('checked', background='#4a6fa5', foreground='white')
+                self.clkutils_tree.tag_configure('unchecked', background='#2d2d48', foreground='#e8e9f0')
+            else:
+                self.clkutils_tree.tag_configure('oddrow', background='#ffffff', foreground='#24292e')
+                self.clkutils_tree.tag_configure('evenrow', background='#f6f8fa', foreground='#24292e')
+                self.clkutils_tree.tag_configure('checked', background='#e6f3ff', foreground='#24292e')
+                self.clkutils_tree.tag_configure('unchecked', background='#ffffff', foreground='#24292e')
+        except Exception as e:
+            print(f"Error configuring CLKUtils tree colors: {e}")
+
+    def create_mode_toggle(self, parent):
+        """Create a visual toggle switch for MTPL/CLKUtils mode selection"""
+        # Main container for the toggle
+        toggle_container = ttk.Frame(parent)
+        toggle_container.pack(fill='x', pady=5)
+        
+        # Left side - MTPL mode info
+        mtpl_frame = ttk.Frame(toggle_container)
+        mtpl_frame.pack(side='left', fill='x', expand=True)
+        
+        ttk.Label(mtpl_frame, text="🧪 MTPL Mode", font=('Arial', 10, 'bold')).pack(anchor='w')
+        ttk.Label(mtpl_frame, text="Use tests from MTPL tab\nRequires MTPL file loading", 
+                 font=('Arial', 8), foreground='gray').pack(anchor='w')
+        
+        # Center - Toggle switch
+        toggle_frame = ttk.Frame(toggle_container)
+        toggle_frame.pack(side='left', padx=20)
+        
+        # Create toggle button that looks like a switch
+        self.mode_toggle_button = ttk.Button(toggle_frame, text="MTPL", 
+                                           command=self.toggle_processing_mode, width=15)
+        self.mode_toggle_button.pack(pady=10)
+        
+        # Mode indicator label
+        self.mode_indicator_label = ttk.Label(toggle_frame, text="📊 Current: MTPL Mode", 
+                                            font=('Arial', 9, 'bold'), foreground='blue')
+        self.mode_indicator_label.pack()
+        
+        # Right side - CLKUtils mode info
+        clkutils_frame = ttk.Frame(toggle_container)
+        clkutils_frame.pack(side='right', fill='x', expand=True)
+        
+        ttk.Label(clkutils_frame, text="⏰ CLKUtils Mode", font=('Arial', 10, 'bold')).pack(anchor='e')
+        ttk.Label(clkutils_frame, text="Use tests from CLKUtils tab\nNo MTPL file required", 
+                 font=('Arial', 8), foreground='gray').pack(anchor='e')
+        
+        # Update initial appearance
+        self.update_mode_toggle_appearance()
+    
+    def toggle_processing_mode(self):
+        """Toggle between MTPL and CLKUtils processing modes"""
+        current_mode = self.run_clkutils_var.get()
+        new_mode = not current_mode
+        self.run_clkutils_var.set(new_mode)
+        self.update_mode_toggle_appearance()
+        
+        # Log the mode change
+        mode_name = "CLKUtils" if new_mode else "MTPL"
+        self.log_message(f"Switched to {mode_name} processing mode")
+    
+    def update_mode_toggle_appearance(self):
+        """Update the toggle button appearance based on current mode"""
+        is_clkutils = self.run_clkutils_var.get()
+        
+        if is_clkutils:
+            # CLKUtils mode
+            self.mode_toggle_button.configure(text="CLKUtils ⏰")
+            self.mode_indicator_label.configure(text="⏰ Current: CLKUtils Mode", foreground='green')
+            if hasattr(self, 'log_message'):
+                pass  # Don't log during initialization
+        else:
+            # MTPL mode
+            self.mode_toggle_button.configure(text="🧪 MTPL")
+            self.mode_indicator_label.configure(text="🧪 Current: MTPL Mode", foreground='blue')
+            if hasattr(self, 'log_message'):
+                pass  # Don't log during initialization
+
     def create_output_tab(self):
-        ttk.Label(self.output_frame, text="Output Settings and Processing", font=('Arial', 14, 'bold')).pack(pady=10)
+        # Create a canvas and scrollbar for scrollable content
+        output_canvas = tk.Canvas(self.output_frame, highlightthickness=0)
+        output_scrollbar = ttk.Scrollbar(self.output_frame, orient="vertical", command=output_canvas.yview)
+        self.output_scrollable_frame = ttk.Frame(output_canvas)
+        
+        # Configure scrolling
+        self.output_scrollable_frame.bind(
+            "<Configure>",
+            lambda e: output_canvas.configure(scrollregion=output_canvas.bbox("all"))
+        )
+        
+        output_canvas.create_window((0, 0), window=self.output_scrollable_frame, anchor="nw")
+        output_canvas.configure(yscrollcommand=output_scrollbar.set)
+        
+        # Pack the canvas and scrollbar
+        output_canvas.pack(side="left", fill="both", expand=True)
+        output_scrollbar.pack(side="right", fill="y")
+        
+        # Bind mouse wheel to canvas for smooth scrolling
+        def _on_output_mousewheel(event):
+            output_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        def _bind_to_output_mousewheel(event):
+            output_canvas.bind_all("<MouseWheel>", _on_output_mousewheel)
+        
+        def _unbind_from_output_mousewheel(event):
+            output_canvas.unbind_all("<MouseWheel>")
+        
+        output_canvas.bind('<Enter>', _bind_to_output_mousewheel)
+        output_canvas.bind('<Leave>', _unbind_from_output_mousewheel)
+        
+        # Now create all the content in the scrollable_frame
+        ttk.Label(self.output_scrollable_frame, text="Output Settings and Processing", font=('Arial', 14, 'bold')).pack(pady=10)
         
         # Output folder selection
-        output_folder_frame = ttk.LabelFrame(self.output_frame, text="Output Folder Selection")
+        output_folder_frame = ttk.LabelFrame(self.output_scrollable_frame, text="Output Folder Selection")
         output_folder_frame.pack(fill='x', padx=20, pady=10)
         
         self.output_path_var = tk.StringVar()
@@ -1108,7 +1762,7 @@ class CTVListGUI:
         ttk.Button(output_folder_frame, text="Use Default", command=self.use_default_output).grid(row=1, column=1, pady=10)
         
         # Processing options
-        options_frame = ttk.LabelFrame(self.output_frame, text="Processing Options")
+        options_frame = ttk.LabelFrame(self.output_scrollable_frame, text="Processing Options")
         options_frame.pack(fill='x', padx=20, pady=10)
         
         self.delete_files_var = tk.BooleanVar(value=True)
@@ -1119,8 +1773,22 @@ class CTVListGUI:
         self.run_jmp_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(options_frame, text="Run JMP on stacked files", variable=self.run_jmp_var).pack(anchor='w', padx=10, pady=5)
         
+        # Processing mode selection (MTPL vs CLKUtils)
+        mode_frame = ttk.LabelFrame(options_frame, text="Processing Mode")
+        mode_frame.pack(fill='x', padx=10, pady=10)
+        
+        # Create mode selection frame
+        mode_selector_frame = ttk.Frame(mode_frame)
+        mode_selector_frame.pack(fill='x', padx=10, pady=10)
+        
+        # Initialize the mode variable (False = MTPL, True = CLKUtils)
+        self.run_clkutils_var = tk.BooleanVar(value=False)
+        
+        # Create custom toggle switch appearance
+        self.create_mode_toggle(mode_selector_frame)
+        
         # Processing controls
-        process_frame = ttk.Frame(self.output_frame)
+        process_frame = ttk.Frame(self.output_scrollable_frame)
         process_frame.pack(pady=20)
         
         ttk.Button(process_frame, text="Start Processing", command=self.start_processing, style='Accent.TButton').pack(side='left', padx=10)
@@ -1129,20 +1797,29 @@ class CTVListGUI:
         ttk.Button(process_frame, text="Clear All", command=self.clear_all).pack(side='left', padx=10)
         
         # Progress and log
-        progress_frame = ttk.LabelFrame(self.output_frame, text="Progress")
+        progress_frame = ttk.LabelFrame(self.output_scrollable_frame, text="Progress")
         progress_frame.pack(fill='both', expand=True, padx=20, pady=10)
         
         self.progress_var = tk.DoubleVar()
         self.progress_bar = ttk.Progressbar(progress_frame, variable=self.progress_var, maximum=100)
         self.progress_bar.pack(fill='x', padx=10, pady=10)
         
-        # Log text area
-        self.log_text = tk.Text(progress_frame, height=10, width=80)
-        self.log_text.pack(fill='both', expand=True, padx=10, pady=10)
+        # Log text area with scrollbars
+        log_container = ttk.Frame(progress_frame)
+        log_container.pack(fill='both', expand=True, padx=10, pady=10)
         
-        log_scrollbar = ttk.Scrollbar(progress_frame, orient='vertical', command=self.log_text.yview)
+        self.log_text = tk.Text(log_container, height=10, width=80)
+        self.log_text.pack(side='left', fill='both', expand=True)
+        
+        log_scrollbar = ttk.Scrollbar(log_container, orient='vertical', command=self.log_text.yview)
         log_scrollbar.pack(side='right', fill='y')
         self.log_text.configure(yscrollcommand=log_scrollbar.set)
+        
+        # Add mouse wheel support for the log text area
+        def _on_log_mousewheel(event):
+            self.log_text.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        self.log_text.bind("<MouseWheel>", _on_log_mousewheel)
         
     def load_csv_filtered(self, file_path):
         """Load CSV file with column filtering to remove unnamed and empty columns"""
@@ -2198,20 +2875,34 @@ class CTVListGUI:
         self.selected_tests_label.configure(text=str(count))
         
     def get_selected_tests(self):
-        """Get list of selected test names"""
+        """Get list of selected test names from both MTPL and CLKUtils tabs"""
         selected_tests = []
-        # Get from stored data, not just visible items
-        for item_data in self.all_mtpl_items:
-            if 'checked' in item_data['tags']:
-                values = item_data['values']
-                # Debug: Print the values to understand the structure
-                print(f"Debug - Selected item values: {values}")
-                # The first column is checkbox, so test name should be in index 2 (third column)
-                # Based on the processing logic where row[2] is the test name
-                if len(values) > 2:  
-                    test_name = values[2]  # This should be the test name column
-                    selected_tests.append(test_name)
-                    print(f"Debug - Added test: {test_name}")
+        
+        # Check if CLKUtils mode is enabled
+        if hasattr(self, 'run_clkutils_var') and self.run_clkutils_var.get():
+            # Only get CLKUtils tests
+            if hasattr(self, 'all_clkutils_items'):
+                for item_data in self.all_clkutils_items:
+                    if 'checked' in item_data['tags']:
+                        test_name = item_data['test_name']
+                        selected_tests.append(test_name)
+                        print(f"Debug - Added CLKUtils test: {test_name}")
+            print(f"Debug - CLKUtils mode: {len(selected_tests)} tests selected")
+        else:
+            # Only get MTPL tests (original behavior)
+            for item_data in self.all_mtpl_items:
+                if 'checked' in item_data['tags']:
+                    values = item_data['values']
+                    # Debug: Print the values to understand the structure
+                    print(f"Debug - Selected MTPL item values: {values}")
+                    # The first column is checkbox, so test name should be in index 2 (third column)
+                    # Based on the processing logic where row[2] is the test name
+                    if len(values) > 2:  
+                        test_name = values[2]  # This should be the test name column
+                        selected_tests.append(test_name)
+                        print(f"Debug - Added MTPL test: {test_name}")
+            print(f"Debug - MTPL mode: {len(selected_tests)} tests selected")
+        
         print(f"Debug - Total selected tests: {selected_tests}")
         return selected_tests
     
@@ -2532,17 +3223,29 @@ class CTVListGUI:
         if not hasattr(self, 'material_data') or not self.material_data:
             messagebox.showerror("Error", "Please create or load material data first")
             return
-            
-        if self.mtpl_df is None:
-            messagebox.showerror("Error", "Please load MTPL file first")
-            return
+        
+        # Check if CLKUtils mode is enabled
+        clkutils_mode = hasattr(self, 'run_clkutils_var') and self.run_clkutils_var.get()
+        
+        if clkutils_mode:
+            # In CLKUtils mode, we don't need MTPL file
+            if not hasattr(self, 'all_clkutils_items') or not self.all_clkutils_items:
+                messagebox.showerror("Error", "Please load CLKUtils tests first")
+                return
+        else:
+            # In MTPL mode, we need MTPL file
+            if self.mtpl_df is None:
+                messagebox.showerror("Error", "Please load MTPL file first")
+                return
             
         selected_tests = self.get_selected_tests()
         print(f"Debug - Selected tests from start_processing: {selected_tests}")
         self.log_message(f"Selected tests: {selected_tests}")
+        self.log_message(f"Processing mode: {'CLKUtils' if clkutils_mode else 'MTPL'}")
         
         if not selected_tests:
-            messagebox.showerror("Error", "Please select at least one test")
+            test_source = "CLKUtils tests" if clkutils_mode else "MTPL tests"
+            messagebox.showerror("Error", f"Please select at least one test from {test_source}")
             return
             
         output_folder = self.output_path_var.get()
@@ -2714,7 +3417,41 @@ class CTVListGUI:
                         
                     self.log_message(f"Processing test: {test} ({current_iteration + 1}/{total_iterations})")
                     self.update_progress(current_iteration, total_iterations, f"Starting test: {test}")
-                    print('TEST:',test)
+
+                    # Check if CLKUtils processing is enabled and test contains CLKUTILS
+                    if (hasattr(self, 'run_clkutils_var') and self.run_clkutils_var.get()):
+                        if 'CLKUTILS' in test.upper():
+                            # ClkUtils do not require mtpl parsing
+                            self.log_message(f"Processing ClkUtils for test: {test}")
+                            
+                            # Ensure configFile_DMR.json exists in current working directory
+                            config_file = 'configFile_DMR.json'
+                            if not os.path.exists(config_file):
+                                # Try looking in the script directory as backup
+                                script_dir_config = os.path.join(os.path.dirname(__file__), config_file)
+                                if os.path.exists(script_dir_config):
+                                    config_file = script_dir_config
+                                    self.log_message(f"Using config file from script directory: {script_dir_config}")
+                                else:
+                                    error_msg = (f"Error: {config_file} not found!\n"
+                                               f"Current working directory: {os.getcwd()}\n"
+                                               f"Please ensure {config_file} is in the current working directory.")
+                                    self.log_message(error_msg, "error")
+                                    continue
+                            else:
+                                self.log_message(f"Using config file from current directory: {os.path.abspath(config_file)}")
+                            
+                            indexed_file,tag_header_names = clk.process_json_to_csv(config_file,test,place_in,True)
+                            tag_header_names_chunks.append(tag_header_names)
+                            intermediary_file_list.append(indexed_file)
+                            self.log_message(f"Performing data request for test: {test}")
+                            datainput_file,datacombine_file=py.uber_request(indexed_file,test,'ClkUtils',place_in,program, '', lot_list, wafer_list, prefetch, databases)
+                            intermediary_file_list.append(datainput_file)
+                            output_files.append(datacombine_file)
+                            current_iteration += 1
+                            self.update_progress(current_iteration, total_iterations, f"Completed test: {test}")
+                        continue
+
                     # Find matching row in MTPL dataframe (enhanced from master.py)
                     matching_rows = self.mtpl_df[self.mtpl_df.iloc[:, 1] == test]  # Assuming test name is in column 1
                     
@@ -3034,6 +3771,11 @@ class CTVListGUI:
         self.mtpl_file_path = tk.StringVar()
         self.last_mtpl_path = ""  # 🔄 ADD THIS LINE
         self.test_list = []
+        
+        # Clear CLKUtils data
+        self.clkutils_tests = []
+        self.all_clkutils_items = []
+        self.clkutils_file_path = tk.StringVar()
 
         
         # Clear displays
@@ -3041,11 +3783,22 @@ class CTVListGUI:
             self.material_tree.delete(item)
         for item in self.mtpl_tree.get_children():
             self.mtpl_tree.delete(item)
+        
+        # Clear CLKUtils display
+        if hasattr(self, 'clkutils_tree'):
+            for item in self.clkutils_tree.get_children():
+                self.clkutils_tree.delete(item)
             
         # Clear entry fields
         self.mtpl_file_path.set("")
         self.output_path_var.set("")
         self.search_var.set("")
+        
+        # Clear CLKUtils fields
+        if hasattr(self, 'clkutils_search_var'):
+            self.clkutils_search_var.set("")
+        if hasattr(self, 'clkutils_text_input'):
+            self.clkutils_text_input.delete('1.0', tk.END)
         
         # Reset progress
         self.progress_var.set(0)
@@ -3266,6 +4019,10 @@ class CTVListGUI:
         
         # Configure alternating row colors
         self.configure_treeview_alternating_colors()
+        
+        # Update mode toggle appearance if it exists
+        if hasattr(self, 'update_mode_toggle_appearance'):
+            self.update_mode_toggle_appearance()
         
         # Refresh material display if data exists
         if hasattr(self, 'material_df') and self.material_df is not None:
@@ -3490,6 +4247,10 @@ class CTVListGUI:
         # Configure alternating row colors
         self.configure_treeview_alternating_colors()
         
+        # Update mode toggle appearance if it exists
+        if hasattr(self, 'update_mode_toggle_appearance'):
+            self.update_mode_toggle_appearance()
+        
         # Refresh material display if data exists
         if hasattr(self, 'material_df') and self.material_df is not None:
             self.update_material_display()
@@ -3542,6 +4303,12 @@ class CTVListGUI:
                 if hasattr(self, 'material_tree') and self.material_tree.winfo_exists():
                     self.material_tree.tag_configure('oddrow', background='#2d2d48', foreground='#e8e9f0')
                     self.material_tree.tag_configure('evenrow', background='#353553', foreground='#e8e9f0')
+                
+                if hasattr(self, 'clkutils_tree') and self.clkutils_tree.winfo_exists():
+                    self.clkutils_tree.tag_configure('oddrow', background='#2d2d48', foreground='#e8e9f0')
+                    self.clkutils_tree.tag_configure('evenrow', background='#353553', foreground='#e8e9f0')
+                    self.clkutils_tree.tag_configure('checked', background='#4a6fa5', foreground='white')
+                    self.clkutils_tree.tag_configure('unchecked', background='#2d2d48', foreground='#e8e9f0')
             else:
                 # Light mode alternating colors
                 if hasattr(self, 'mtpl_tree') and self.mtpl_tree.winfo_exists():
@@ -3554,6 +4321,12 @@ class CTVListGUI:
                 if hasattr(self, 'material_tree') and self.material_tree.winfo_exists():
                     self.material_tree.tag_configure('oddrow', background='#ffffff', foreground='#24292e')
                     self.material_tree.tag_configure('evenrow', background='#f6f8fa', foreground='#24292e')
+                
+                if hasattr(self, 'clkutils_tree') and self.clkutils_tree.winfo_exists():
+                    self.clkutils_tree.tag_configure('oddrow', background='#ffffff', foreground='#24292e')
+                    self.clkutils_tree.tag_configure('evenrow', background='#f6f8fa', foreground='#24292e')
+                    self.clkutils_tree.tag_configure('checked', background='#e6f3ff', foreground='#24292e')
+                    self.clkutils_tree.tag_configure('unchecked', background='#ffffff', foreground='#24292e')
                     
         except Exception as e:
             print(f"Error configuring treeview colors: {e}")

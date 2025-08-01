@@ -6,7 +6,11 @@ import re
 import pprint
 import file_functions as fi
 
-def process_json_to_csv(json_file_path,filter_name=r"(.*)",place_in='',ITUFF_limit=1433,filter_choice='NOM'):
+'''NEED TO ADD IN NEW FEATURES FOR STACKED AND IMH, FILTER CHOICE NEEDS TO BE REVISED IN gui,  AND REMOVE ITUFF TOKEN MODIFIER SINCE IT IS BIT BASED'''
+
+
+
+def process_json_to_csv(json_file_path,filter_name=r"(.*)",place_in='',BITBASED=False,filter_choice='NOM',  ITUFF_limit=1433):
     json_file_path = fi.process_file_input(json_file_path)
     with open(json_file_path, 'r') as json_file:
         # load() converts json to nested dictionary
@@ -29,10 +33,12 @@ def process_json_to_csv(json_file_path,filter_name=r"(.*)",place_in='',ITUFF_lim
         die_type = ['cbb']
     elif 'BEGIN' in filter_name and 'TOP' in filter_name:
         die_type = ['top']
-    elif 'BASE' in filter_name:
+    elif 'BASE' in filter_name or 'IMH' in filter_name:
         die_type = ['base']
+    elif 'IMH' in filter_name:
+        die_type = ['imh']
     else:
-        die_type = ['top', 'base', 'cbb']
+        die_type = ['top', 'base', 'cbb', 'imh']
 
     cbb_values = extract_setups(config["setups"]["setup"]["cbb"])
     top_values = extract_setups(config["setups"]["setup"]["top"])
@@ -42,15 +48,16 @@ def process_json_to_csv(json_file_path,filter_name=r"(.*)",place_in='',ITUFF_lim
         indexed_file = f'{place_in}\\clkutils_{word_tb}{filter_tb}_indexed.csv'
         indexed_file = fi.check_write_permission(indexed_file)
         with open(indexed_file, mode='w', newline='') as file:
-            fieldnames = ['Index','DCM','Ratio','Test','Stage','Field','Name','Name_Index','combined_string']
+            fieldnames = ['Index','DCM','Ratio','Test','Stage','Field','Name','Name_Index','combined_string','output_enable','default']
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()  
 
 
-            # deal with regex test names in Marco's json  
+            # deal with regex test names in Marco's json
             #for i in [i for i, item in enumerate(config['ClkUtils_test_case_config']) if word_tb in item["regular_expression"][0].lower() and re.match(config["ClkUtils_test_case_config"][i]["regular_expression"],filter_name)]:
             for i in [i for i, item in enumerate(config['ClkUtils_test_case_config']) if re.match(config["ClkUtils_test_case_config"][i]["regular_expression"][0],filter_name)]:
                 test_config = config['ClkUtils_test_case_config'][i]['test_config_name']
+                print(test_config)
 
                 # ITUFF should just be the name of the test
                 if filter_name != r"(.*)":
@@ -96,7 +103,7 @@ def process_json_to_csv(json_file_path,filter_name=r"(.*)",place_in='',ITUFF_lim
                                 big_num += len(ratio_list) * current_setup_count * len(config["ClkUtils_test_case_config"][i]['ctv_sequence'][k]["fields"])
                         
                         # Reset counters for each CBB key
-                        if big_num > ITUFF_limit:
+                        if big_num > ITUFF_limit and not BITBASED:
                             mod = 1
                             ITUFF_MOD = f"_{mod}"
                         else:
@@ -108,7 +115,7 @@ def process_json_to_csv(json_file_path,filter_name=r"(.*)",place_in='',ITUFF_lim
                         # Process only setups for this CBB key
                         for setup_num in setup_nums:
                             setup_name = config['setups']['setup_map'][setup_num]
-                            test_modifier = cbb_key
+                            test_modifier = '_' + cbb_key
                             
                             for ratio_num in ratio_list:
                                 ratio = f'r_{ratio_num}'
@@ -117,12 +124,15 @@ def process_json_to_csv(json_file_path,filter_name=r"(.*)",place_in='',ITUFF_lim
                                     if config["ClkUtils_test_case_config"][i]['ctv_sequence'][k].get('fields') is not None:
                                         for l in range(len(config["ClkUtils_test_case_config"][i]['ctv_sequence'][k]["fields"])):
                                             field_name = config["ClkUtils_test_case_config"][i]['ctv_sequence'][k]["fields"][l]["name"]
-                                            NAME = ITUFF + '_'+test_modifier + ITUFF_MOD
+                                            output_enable = config["ClkUtils_test_case_config"][i]['ctv_sequence'][k]["fields"][l]["output_enable"]
+                                            default = config["ClkUtils_test_case_config"][i]['ctv_sequence'][k]["fields"][l]["default"]
+                                            NAME = ITUFF +test_modifier + ITUFF_MOD
                                             combined_string = setup_name+'---'+ratio+'---'+test_config+'---'+stage_name+'---'+field_name
-                                            row_dict = {'Index': counter, 'DCM': setup_name ,'Ratio': ratio, 'Test': test_config, 'Stage': stage_name ,'Field': field_name,'Name': NAME, 'Name_Index': NAME+"_"+str(counter), 'combined_string':combined_string}
+                                            row_dict = {'Index': counter, 'DCM': setup_name ,'Ratio': ratio, 'Test': test_config, 'Stage': stage_name ,'Field': field_name,
+                                                        'Name': NAME, 'Name_Index': NAME+"_"+str(counter), 'combined_string':combined_string, 'output_enable': output_enable, 'default': default}
                                             writer.writerow(row_dict) 
                                             counter += 1
-                                            if counter > ITUFF_limit-1:
+                                            if counter > ITUFF_limit-1 and not BITBASED:
                                                 counter = 0
                                                 mod += 1
                                                 ITUFF_MOD = f"_{mod}"
@@ -133,7 +143,7 @@ def process_json_to_csv(json_file_path,filter_name=r"(.*)",place_in='',ITUFF_lim
                     for k in range(len(config["ClkUtils_test_case_config"][i]['ctv_sequence'])):
                         if config["ClkUtils_test_case_config"][i]['ctv_sequence'][k].get('fields') is not None:
                             big_num += len(ratio_list)*len(setup_list)*len(config["ClkUtils_test_case_config"][i]['ctv_sequence'][k]["fields"])
-                    if big_num > ITUFF_limit:
+                    if big_num > ITUFF_limit and not BITBASED:
                         mod = 1
                         ITUFF_MOD = f"_{mod}"
                     else:
@@ -153,13 +163,16 @@ def process_json_to_csv(json_file_path,filter_name=r"(.*)",place_in='',ITUFF_lim
                                 if config["ClkUtils_test_case_config"][i]['ctv_sequence'][k].get('fields') is not None:
                                     for l in range(len(config["ClkUtils_test_case_config"][i]['ctv_sequence'][k]["fields"])):
                                         field_name = config["ClkUtils_test_case_config"][i]['ctv_sequence'][k]["fields"][l]["name"]
+                                        output_enable = config["ClkUtils_test_case_config"][i]['ctv_sequence'][k]["fields"][l]["output_enable"]
+                                        default = config["ClkUtils_test_case_config"][i]['ctv_sequence'][k]["fields"][l]["default"]
                                         #IP = setup_name+'_'+ratio
                                         NAME = ITUFF + test_modifier+ITUFF_MOD
                                         combined_string = setup_name+'---'+ratio+'---'+test_config+'---'+stage_name+'---'+field_name
-                                        row_dict = {'Index': counter, 'DCM': setup_name ,'Ratio': ratio, 'Test': test_config, 'Stage': stage_name ,'Field': field_name,'Name': NAME, 'Name_Index': NAME+"_"+str(counter), 'combined_string':combined_string}
+                                        row_dict = {'Index': counter, 'DCM': setup_name ,'Ratio': ratio, 'Test': test_config, 'Stage': stage_name ,'Field': field_name,
+                                                    'Name': NAME, 'Name_Index': NAME+"_"+str(counter), 'combined_string':combined_string, 'output_enable': output_enable, 'default': default}
                                         writer.writerow(row_dict) 
                                         counter += 1
-                                        if counter > ITUFF_limit-1:
+                                        if counter > ITUFF_limit-1 and not BITBASED:
                                             counter = 0
                                             mod += 1
                                             ITUFF_MOD = f"_{mod}"         

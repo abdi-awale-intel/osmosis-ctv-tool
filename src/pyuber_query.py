@@ -184,7 +184,18 @@ def uber_request(indexed_input, test_name_file, test_type='', output_folder='', 
         token_7 = modify_tokens(token_names, "7")
         token_8 = modify_tokens(token_names, "8")
         token_9 = modify_tokens(token_names, "9")
-        token_names_list = token_names + token_1 + token_2 + token_3 + token_4 + token_5 + token_6 + token_7 + token_8 + token_9
+        token_10 = modify_tokens(token_names, "10")
+        token_11 = modify_tokens(token_names, "11")
+        token_12 = modify_tokens(token_names, "12")
+        token_13 = modify_tokens(token_names, "13")
+        token_14 = modify_tokens(token_names, "14")
+        token_15 = modify_tokens(token_names, "15")
+        token_16 = modify_tokens(token_names, "16")
+        token_17 = modify_tokens(token_names, "17")
+        token_18 = modify_tokens(token_names, "18")
+        token_19 = modify_tokens(token_names, "19")
+        token_20 = modify_tokens(token_names, "20")      
+        token_names_list = token_names + token_1 + token_2 + token_3 + token_4 + token_5 + token_6 + token_7 + token_8 + token_9 + token_10 + token_11 + token_12 + token_13 + token_14 + token_15 + token_16 + token_17 + token_18 + token_19 + token_20
     else:
         token_names_to_modify = [token_name for token_name in token_names if not token_name.upper().endswith('_PASS') and not token_name.upper().endswith('_FAIL')]
         token_names_FAIL = modify_tokens(token_names_to_modify, "FAIL")
@@ -562,10 +573,24 @@ def uber_request(indexed_input, test_name_file, test_type='', output_folder='', 
 
     # Filter decoder_df to include only rows where 'Name' is in the comprehensive set of column names
     filtered_df = decoder_df[decoder_df['Name'].str.lower().isin(df_columns_set_lower)]
-    print(filtered_df)
+    #print(filtered_df)
     try:#passes if no data or all data mapped
         df.columns = df.columns[:7].tolist() + filtered_df['combined_string'].tolist()
         print('Mapping!')
+        
+        # For CLKUTILS tests, fill blank entries with defaults based on output_enable setting
+        if 'CLKUTILS' in test_name_file.upper():
+            for _, row in filtered_df.iterrows():
+                if row['output_enable'] == False:  # If output_enable is False
+                    column_name = row['combined_string']
+                    default_value = row['default']
+                    
+                    # Check if the column exists in the dataframe
+                    if column_name in df.columns:
+                        # Replace blank/empty entries with the default value
+                        mask = (df[column_name].isna()) | (df[column_name].astype(str).str.strip() == '') | (df[column_name].astype(str).str.upper() == 'NAN')
+                        df.loc[mask, column_name] = default_value
+        
         #print(df.columns.tolist())
     except:
         print(set(filtered_df['Name'].tolist()))
