@@ -4574,15 +4574,16 @@ class CTVListGUI:
                 self.log_message(f"Processing program: {program}")
                 
                 # Create output folder if specified (from master.py)
+
                 if place_in:
                     place_in = os.path.normpath(place_in)
                     os.makedirs(place_in, exist_ok=True)
                     place_in = place_in + os.sep
                 else:
-                    place_in = os.path.normpath(os.getcwd() + os.sep + f'{program}_script_output')
+                    place_in = os.path.normpath(os.getcwd() + os.sep + f'{program}_output')
                     os.makedirs(place_in, exist_ok=True)
                     place_in = place_in + os.sep
-                
+                    
                 self.log_message(f"Output directory: {place_in}")
                 intermediary_file_list = []
                 output_files = []
