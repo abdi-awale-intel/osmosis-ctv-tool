@@ -90,7 +90,7 @@ except ImportError as e:
 class CTVListGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("CTV List Data Processor")
+        self.root.title("Osmosis")
         
         # Initialize scaling and window management variables
         self.current_zoom_level = 1.0
@@ -695,6 +695,534 @@ class CTVListGUI:
         except Exception as e:
             print(f"Error refreshing MTPL data: {e}")
     
+    def create_resizable_data_frame(self, parent, title, min_height=200, default_height=400, min_width=400, default_width=800):
+        """Create a 2D resizable frame for data display with drag-to-resize functionality in both dimensions"""
+        # Main container frame
+        container = ttk.LabelFrame(parent, text=title)
+        container.pack(fill='both', expand=True, padx=20, pady=10)
+        
+        # Configure container for 2D resizing
+        container.grid_rowconfigure(2, weight=1)  # Data area expandable
+        container.grid_columnconfigure(1, weight=1)  # Data area expandable
+        
+        # Instructions frame at the top
+        instructions_frame = ttk.Frame(container)
+        instructions_frame.grid(row=0, column=0, columnspan=3, sticky='ew', padx=5, pady=(5, 0))
+        
+        instructions = ttk.Label(instructions_frame, 
+                               text="💡 Drag edges/corner to resize • Double-click handles to auto-fit", 
+                               font=('Arial', 8), foreground='gray')
+        instructions.pack(side='left')
+        
+        # Size controls - only utility buttons
+        size_controls = ttk.Frame(instructions_frame)
+        size_controls.pack(side='right')
+        
+        # Utility controls only
+        utility_frame = ttk.Frame(size_controls)
+        utility_frame.pack(side='left')
+        
+        ttk.Button(utility_frame, text="🔄 Auto-fit", 
+                  command=lambda: self.auto_fit_frame_2d(container, data_frame),
+                  width=10).pack(side='left', padx=2)
+        ttk.Button(utility_frame, text="↩️ Reset", 
+                  command=lambda: self.reset_frame_size_2d(container, default_height, default_width),
+                  width=8).pack(side='left', padx=2)
+        
+        # Left edge handle (for width resizing from left side - optional)
+        left_handle = ttk.Frame(container, width=8)
+        left_handle.grid(row=2, column=0, sticky='ns', padx=(5, 2))
+        left_handle.grid_propagate(False)
+        left_handle.configure(cursor='sb_h_double_arrow', relief='raised', borderwidth=1)
+        
+        # Data display frame
+        data_frame = ttk.Frame(container)
+        data_frame.grid(row=2, column=1, sticky='nsew', padx=2, pady=2)
+        data_frame.grid_rowconfigure(0, weight=1)
+        data_frame.grid_columnconfigure(0, weight=1)
+        
+        # Right edge handle (for width resizing)
+        right_handle = ttk.Frame(container, width=8)
+        right_handle.grid(row=2, column=2, sticky='ns', padx=(2, 5))
+        right_handle.grid_propagate(False)
+        right_handle.configure(cursor='sb_h_double_arrow', relief='raised', borderwidth=1)
+        
+        # Visual indicator for right handle
+        right_label = ttk.Label(right_handle, text="║", 
+                              font=('Arial', 10), foreground='blue', anchor='center')
+        right_label.pack(fill='both', expand=True)
+        
+        # Bottom edge handle (for height resizing)
+        bottom_handle = ttk.Frame(container, height=8)
+        bottom_handle.grid(row=3, column=0, columnspan=3, sticky='ew', padx=5, pady=(2, 5))
+        bottom_handle.grid_propagate(False)
+        bottom_handle.configure(cursor='sb_v_double_arrow', relief='raised', borderwidth=1)
+        
+        # Visual indicator for bottom handle
+        bottom_label = ttk.Label(bottom_handle, text="═══ Drag to Resize Height ═══", 
+                               font=('Arial', 7), foreground='blue', anchor='center')
+        bottom_label.pack(fill='both', expand=True)
+        
+        # Corner handle (for both width and height resizing)
+        corner_handle = ttk.Frame(container, width=8, height=8)
+        corner_handle.grid(row=3, column=2, sticky='se', padx=(2, 5), pady=(2, 5))
+        corner_handle.grid_propagate(False)
+        corner_handle.configure(cursor='sizing', relief='raised', borderwidth=1)
+        
+        # Visual indicator for corner handle
+        corner_label = ttk.Label(corner_handle, text="◢", 
+                               font=('Arial', 8), foreground='purple', anchor='center')
+        corner_label.pack(fill='both', expand=True)
+        
+        # Store initial dimensions and limits
+        setattr(container, '_initial_height', default_height)
+        setattr(container, '_min_height', min_height)
+        setattr(container, '_max_height', min_height * 4)
+        setattr(container, '_initial_width', default_width)
+        setattr(container, '_min_width', min_width)
+        setattr(container, '_max_width', min_width * 3)
+        
+        # Set initial size
+        container.configure(height=default_height, width=default_width)
+        container.grid_propagate(False)
+        
+        # Bind 2D drag events to resize handles
+        self.make_frame_resizable_2d(bottom_handle, right_handle, corner_handle, container)
+        
+        # Add double-click to auto-fit for each handle
+        bottom_handle.bind('<Double-Button-1>', 
+                          lambda e: self.auto_fit_frame_2d(container, data_frame))
+        bottom_label.bind('<Double-Button-1>', 
+                         lambda e: self.auto_fit_frame_2d(container, data_frame))
+        right_handle.bind('<Double-Button-1>', 
+                         lambda e: self.auto_fit_frame_2d(container, data_frame))
+        right_label.bind('<Double-Button-1>', 
+                        lambda e: self.auto_fit_frame_2d(container, data_frame))
+        corner_handle.bind('<Double-Button-1>', 
+                          lambda e: self.auto_fit_frame_2d(container, data_frame))
+        corner_label.bind('<Double-Button-1>', 
+                         lambda e: self.auto_fit_frame_2d(container, data_frame))
+        
+        return data_frame
+    
+    def make_frame_resizable_2d(self, bottom_handle, right_handle, corner_handle, target_frame):
+        """Make a frame resizable in both dimensions with multiple drag handles"""
+        
+        # Shared state variables
+        resize_state = {
+            'start_x': None,
+            'start_y': None,
+            'start_width': None,
+            'start_height': None,
+            'resize_mode': None  # 'horizontal', 'vertical', or 'both'
+        }
+        
+        def start_drag(event, mode):
+            resize_state['start_x'] = event.x_root
+            resize_state['start_y'] = event.y_root
+            resize_state['start_width'] = target_frame.winfo_width()
+            resize_state['start_height'] = target_frame.winfo_height()
+            resize_state['resize_mode'] = mode
+            
+            # Visual feedback
+            if mode == 'horizontal':
+                right_handle.configure(relief='sunken')
+                self.root.configure(cursor='sb_h_double_arrow')
+            elif mode == 'vertical':
+                bottom_handle.configure(relief='sunken')
+                self.root.configure(cursor='sb_v_double_arrow')
+            elif mode == 'both':
+                corner_handle.configure(relief='sunken')
+                self.root.configure(cursor='sizing')
+        
+        def drag_resize(event):
+            if resize_state['resize_mode'] is None:
+                return
+                
+            delta_x = event.x_root - resize_state['start_x']
+            delta_y = event.y_root - resize_state['start_y']
+            
+            # Get constraints
+            min_width = getattr(target_frame, '_min_width', 400)
+            max_width = getattr(target_frame, '_max_width', 1200)
+            min_height = getattr(target_frame, '_min_height', 200)
+            max_height = getattr(target_frame, '_max_height', 800)
+            
+            # Calculate new dimensions
+            new_width = resize_state['start_width']
+            new_height = resize_state['start_height']
+            
+            if resize_state['resize_mode'] in ['horizontal', 'both']:
+                new_width = max(min_width, min(max_width, resize_state['start_width'] + delta_x))
+                
+            if resize_state['resize_mode'] in ['vertical', 'both']:
+                new_height = max(min_height, min(max_height, resize_state['start_height'] + delta_y))
+            
+            # Apply new size
+            if resize_state['resize_mode'] in ['horizontal', 'both']:
+                target_frame.configure(width=new_width)
+            if resize_state['resize_mode'] in ['vertical', 'both']:
+                target_frame.configure(height=new_height)
+                
+            target_frame.grid_propagate(False)
+            
+            # Update visual feedback
+            self.update_resize_feedback_2d(resize_state['resize_mode'], bottom_handle, right_handle, 
+                                         corner_handle, new_width, new_height, min_width, max_width, 
+                                         min_height, max_height)
+        
+        def end_drag(event):
+            resize_state['resize_mode'] = None
+            
+            # Reset visual feedback
+            bottom_handle.configure(relief='raised')
+            right_handle.configure(relief='raised')
+            corner_handle.configure(relief='raised')
+            self.root.configure(cursor='')
+            
+            # Reset handle text
+            self.reset_resize_feedback_2d(bottom_handle, right_handle, corner_handle)
+        
+        # Bind events for bottom handle (vertical resize)
+        bottom_handle.bind('<Button-1>', lambda e: start_drag(e, 'vertical'))
+        bottom_handle.bind('<B1-Motion>', drag_resize)
+        bottom_handle.bind('<ButtonRelease-1>', end_drag)
+        
+        # Bind events for right handle (horizontal resize)
+        right_handle.bind('<Button-1>', lambda e: start_drag(e, 'horizontal'))
+        right_handle.bind('<B1-Motion>', drag_resize)
+        right_handle.bind('<ButtonRelease-1>', end_drag)
+        
+        # Bind events for corner handle (both dimensions)
+        corner_handle.bind('<Button-1>', lambda e: start_drag(e, 'both'))
+        corner_handle.bind('<B1-Motion>', drag_resize)
+        corner_handle.bind('<ButtonRelease-1>', end_drag)
+        
+        # Also bind to labels for better UX
+        for handle in [bottom_handle, right_handle, corner_handle]:
+            if handle.winfo_children():
+                label = handle.winfo_children()[0]
+                if handle == bottom_handle:
+                    label.bind('<Button-1>', lambda e: start_drag(e, 'vertical'))
+                elif handle == right_handle:
+                    label.bind('<Button-1>', lambda e: start_drag(e, 'horizontal'))
+                elif handle == corner_handle:
+                    label.bind('<Button-1>', lambda e: start_drag(e, 'both'))
+                label.bind('<B1-Motion>', drag_resize)
+                label.bind('<ButtonRelease-1>', end_drag)
+        
+        # Add hover effects
+        self.add_hover_effects_2d(bottom_handle, right_handle, corner_handle)
+    
+    def update_resize_feedback_2d(self, mode, bottom_handle, right_handle, corner_handle, 
+                                 width, height, min_w, max_w, min_h, max_h):
+        """Update visual feedback during 2D resize"""
+        try:
+            if mode in ['vertical', 'both']:
+                bottom_label = bottom_handle.winfo_children()[0] if bottom_handle.winfo_children() else None
+                if bottom_label:
+                    if height <= min_h:
+                        color = 'red'
+                        status = "MIN HEIGHT"
+                    elif height >= max_h:
+                        color = 'orange'
+                        status = "MAX HEIGHT"
+                    else:
+                        color = 'green'
+                        status = "HEIGHT"
+                    bottom_label.configure(text=f"═══ {status}: {height}px ═══", foreground=color)
+            
+            if mode in ['horizontal', 'both']:
+                right_label = right_handle.winfo_children()[0] if right_handle.winfo_children() else None
+                if right_label:
+                    if width <= min_w:
+                        color = 'red'
+                        status = "MIN"
+                    elif width >= max_w:
+                        color = 'orange'
+                        status = "MAX"
+                    else:
+                        color = 'green'
+                        status = "W"
+                    right_label.configure(text=f"║\n{status}\n{width}px\n║", foreground=color)
+            
+            if mode == 'both':
+                corner_label = corner_handle.winfo_children()[0] if corner_handle.winfo_children() else None
+                if corner_label:
+                    w_status = "MIN" if width <= min_w else "MAX" if width >= max_w else "OK"
+                    h_status = "MIN" if height <= min_h else "MAX" if height >= max_h else "OK"
+                    color = 'red' if 'MIN' in [w_status, h_status] else 'orange' if 'MAX' in [w_status, h_status] else 'green'
+                    corner_label.configure(text=f"◢\n{width}×{height}", foreground=color)
+        except:
+            pass
+    
+    def reset_resize_feedback_2d(self, bottom_handle, right_handle, corner_handle):
+        """Reset visual feedback after resize"""
+        try:
+            bottom_label = bottom_handle.winfo_children()[0] if bottom_handle.winfo_children() else None
+            if bottom_label:
+                bottom_label.configure(text="═══ Drag to Resize Height ═══", foreground='blue')
+                
+            right_label = right_handle.winfo_children()[0] if right_handle.winfo_children() else None
+            if right_label:
+                right_label.configure(text="║", foreground='blue')
+                
+            corner_label = corner_handle.winfo_children()[0] if corner_handle.winfo_children() else None
+            if corner_label:
+                corner_label.configure(text="◢", foreground='purple')
+        except:
+            pass
+    
+    def add_hover_effects_2d(self, bottom_handle, right_handle, corner_handle):
+        """Add hover effects for 2D resize handles"""
+        def create_hover_handlers(handle, hover_color, normal_color):
+            def on_enter(event):
+                handle.configure(relief='ridge')
+                if handle.winfo_children():
+                    label = handle.winfo_children()[0]
+                    label.configure(foreground=hover_color)
+            
+            def on_leave(event):
+                handle.configure(relief='raised')
+                if handle.winfo_children():
+                    label = handle.winfo_children()[0]
+                    label.configure(foreground=normal_color)
+            
+            return on_enter, on_leave
+        
+        # Add hover effects for each handle
+        enter_bottom, leave_bottom = create_hover_handlers(bottom_handle, 'darkblue', 'blue')
+        bottom_handle.bind('<Enter>', enter_bottom)
+        bottom_handle.bind('<Leave>', leave_bottom)
+        
+        enter_right, leave_right = create_hover_handlers(right_handle, 'darkblue', 'blue')
+        right_handle.bind('<Enter>', enter_right)
+        right_handle.bind('<Leave>', leave_right)
+        
+        enter_corner, leave_corner = create_hover_handlers(corner_handle, 'darkmagenta', 'purple')
+        corner_handle.bind('<Enter>', enter_corner)
+        corner_handle.bind('<Leave>', leave_corner)
+    
+    def resize_frame_by_delta_2d(self, frame, height_delta=0, width_delta=0):
+        """Resize frame by specific amounts in both dimensions"""
+        current_height = frame.winfo_height()
+        current_width = frame.winfo_width()
+        
+        min_height = getattr(frame, '_min_height', 200)
+        max_height = getattr(frame, '_max_height', 800)
+        min_width = getattr(frame, '_min_width', 400)
+        max_width = getattr(frame, '_max_width', 1200)
+        
+        new_height = max(min_height, min(max_height, current_height + height_delta))
+        new_width = max(min_width, min(max_width, current_width + width_delta))
+        
+        frame.configure(height=new_height, width=new_width)
+        frame.grid_propagate(False)
+    
+    def auto_fit_frame_2d(self, container, data_frame):
+        """Auto-fit frame to content in both dimensions"""
+        try:
+            data_frame.update_idletasks()
+            
+            # Find content widget
+            content_widget = None
+            for child in data_frame.winfo_children():
+                if isinstance(child, ttk.Frame):
+                    for grandchild in child.winfo_children():
+                        if isinstance(grandchild, (ttk.Treeview, tk.Text)):
+                            content_widget = grandchild
+                            break
+                elif isinstance(child, (ttk.Treeview, tk.Text)):
+                    content_widget = child
+                    break
+            
+            if content_widget:
+                min_height = getattr(container, '_min_height', 200)
+                max_height = getattr(container, '_max_height', 800)
+                min_width = getattr(container, '_min_width', 400)
+                max_width = getattr(container, '_max_width', 1200)
+                
+                if isinstance(content_widget, ttk.Treeview):
+                    # Calculate optimal dimensions for treeview
+                    row_count = len(content_widget.get_children())
+                    row_height = 25
+                    header_height = 30
+                    optimal_height = min(max_height, max(min_height, row_count * row_height + header_height + 80))
+                    
+                    # Calculate width based on column content
+                    total_width = 0
+                    for col in content_widget['columns']:
+                        total_width += content_widget.column(col, 'width')
+                    optimal_width = min(max_width, max(min_width, total_width + 50))
+                else:
+                    # For text widget, use reasonable defaults
+                    optimal_height = min(max_height, max(min_height, 300))
+                    optimal_width = min(max_width, max(min_width, 600))
+                
+                container.configure(height=optimal_height, width=optimal_width)
+                container.grid_propagate(False)
+                
+        except Exception as e:
+            print(f"Error auto-fitting frame: {e}")
+            # Fallback to default sizes
+            default_height = getattr(container, '_initial_height', 400)
+            default_width = getattr(container, '_initial_width', 800)
+            container.configure(height=default_height, width=default_width)
+            container.grid_propagate(False)
+    
+    def reset_frame_size_2d(self, frame, default_height, default_width):
+        """Reset frame to default size in both dimensions"""
+        frame.configure(height=default_height, width=default_width)
+        frame.grid_propagate(False)
+    
+    def resize_frame_by_delta(self, frame, delta):
+        """Resize frame by a specific amount"""
+        current_height = frame.winfo_height()
+        min_height = getattr(frame, '_min_height', 200)
+        max_height = getattr(frame, '_max_height', 800)
+        
+        new_height = max(min_height, min(max_height, current_height + delta))
+        frame.configure(height=new_height)
+        frame.grid_propagate(False)
+    
+    def auto_fit_frame(self, container, data_frame):
+        """Auto-fit frame to content"""
+        try:
+            # Update to get current content size
+            data_frame.update_idletasks()
+            
+            # Find treeview or text widget in data_frame
+            content_widget = None
+            for child in data_frame.winfo_children():
+                if isinstance(child, ttk.Frame):
+                    for grandchild in child.winfo_children():
+                        if isinstance(grandchild, (ttk.Treeview, tk.Text)):
+                            content_widget = grandchild
+                            break
+                elif isinstance(child, (ttk.Treeview, tk.Text)):
+                    content_widget = child
+                    break
+            
+            if content_widget:
+                min_height = getattr(container, '_min_height', 200)
+                max_height = getattr(container, '_max_height', 800)
+                
+                if isinstance(content_widget, ttk.Treeview):
+                    # For treeview, calculate based on visible items
+                    row_count = len(content_widget.get_children())
+                    row_height = 25  # Approximate row height
+                    header_height = 30
+                    optimal_height = min(max_height, max(min_height, row_count * row_height + header_height + 60))
+                else:
+                    # For text widget, use a reasonable size
+                    optimal_height = min(max_height, max(min_height, 300))
+                
+                container.configure(height=optimal_height)
+                container.grid_propagate(False)
+                
+        except Exception as e:
+            print(f"Error auto-fitting frame: {e}")
+            # Fallback to default size
+            default_height = getattr(container, '_initial_height', 400)
+            container.configure(height=default_height)
+            container.grid_propagate(False)
+    
+    def make_frame_resizable(self, handle, target_frame, min_height):
+        """Make a frame resizable by dragging a handle"""
+        start_y = None
+        start_height = None
+        
+        def start_drag(event):
+            nonlocal start_y, start_height
+            start_y = event.y_root
+            start_height = target_frame.winfo_height()
+            handle.configure(relief='sunken')
+            # Change cursor for visual feedback
+            self.root.configure(cursor='sb_v_double_arrow')
+        
+        def drag_resize(event):
+            nonlocal start_y, start_height
+            if start_y is not None:
+                delta_y = event.y_root - start_y
+                max_height = getattr(target_frame, '_max_height', min_height * 4)
+                new_height = max(min_height, min(max_height, start_height + delta_y))
+                
+                # Update frame size
+                target_frame.configure(height=new_height)
+                target_frame.grid_propagate(False)  # Prevent automatic resizing
+                
+                # Visual feedback with color coding
+                handle_label = handle.winfo_children()[0] if handle.winfo_children() else None
+                if handle_label:
+                    if new_height <= min_height:
+                        color = 'red'
+                        status = "MIN"
+                    elif new_height >= max_height:
+                        color = 'orange'
+                        status = "MAX"
+                    else:
+                        color = 'green'
+                        status = "SIZE"
+                    
+                    handle_label.configure(
+                        text=f"═══ {status}: {new_height}px ═══",
+                        foreground=color
+                    )
+        
+        def end_drag(event):
+            nonlocal start_y, start_height
+            start_y = None
+            start_height = None
+            handle.configure(relief='raised')
+            # Reset cursor
+            self.root.configure(cursor='')
+            
+            # Reset handle text and color
+            handle_label = handle.winfo_children()[0] if handle.winfo_children() else None
+            if handle_label:
+                handle_label.configure(text="═══ Drag to Resize ═══", foreground='blue')
+            
+            # Update the UI
+            self.root.update_idletasks()
+        
+        # Bind drag events
+        handle.bind('<Button-1>', start_drag)
+        handle.bind('<B1-Motion>', drag_resize)
+        handle.bind('<ButtonRelease-1>', end_drag)
+        
+        # Also bind to the label for better UX
+        if handle.winfo_children():
+            label = handle.winfo_children()[0]
+            label.bind('<Button-1>', start_drag)
+            label.bind('<B1-Motion>', drag_resize)
+            label.bind('<ButtonRelease-1>', end_drag)
+        
+        # Add hover effects
+        def on_enter(event):
+            handle.configure(relief='ridge')
+            if handle.winfo_children():
+                label = handle.winfo_children()[0]
+                label.configure(foreground='darkblue')
+        
+        def on_leave(event):
+            if start_y is None:  # Only if not dragging
+                handle.configure(relief='raised')
+                if handle.winfo_children():
+                    label = handle.winfo_children()[0]
+                    label.configure(foreground='blue')
+        
+        handle.bind('<Enter>', on_enter)
+        handle.bind('<Leave>', on_leave)
+        if handle.winfo_children():
+            label = handle.winfo_children()[0]
+            label.bind('<Enter>', on_enter)
+            label.bind('<Leave>', on_leave)
+    
+    def reset_frame_size(self, frame, default_height):
+        """Reset frame to default size"""
+        frame.configure(height=default_height)
+        frame.grid_propagate(False)
+    
     def create_widgets(self):
         # Add theme toggle logos at the top center
         if PIL_AVAILABLE:
@@ -753,7 +1281,7 @@ class CTVListGUI:
                     self.dark_mode_btn.bind('<Button-1>', self.switch_to_dark_mode)
                     
                     # Add application title below logos
-                    title_label = create_label(logo_frame, text="CTV List Data Processor")
+                    title_label = create_label(logo_frame, text="Osmosis Data Processor")
                     if CTK_AVAILABLE:
                         title_label.configure(font=ctk.CTkFont(size=16, weight="bold"))
                     else:
@@ -844,7 +1372,7 @@ class CTVListGUI:
         title_frame = create_frame(self.root)
         title_frame.pack(pady=10)
         
-        title_label = create_label(title_frame, text="CTV List Data Processor")
+        title_label = create_label(title_frame, text="Osmosis Data Processor")
         if CTK_AVAILABLE:
             title_label.configure(font=ctk.CTkFont(size=16, weight="bold"))
         else:
@@ -962,17 +1490,17 @@ class CTVListGUI:
         ttk.Button(button_frame, text="Load from CSV/Excel", command=self.load_material_file).pack(side='left', padx=10)
         ttk.Button(button_frame, text="Create DataFrame", command=self.create_material_dataframe).pack(side='left', padx=10)
         
-        # Display frame for material data
-        self.material_display_frame = ttk.LabelFrame(self.material_scrollable_frame, text="Current Material Data")
-        self.material_display_frame.pack(fill='both', expand=True, padx=20, pady=10)
-        
-        # Configure grid weights for proper resizing
-        self.material_display_frame.grid_rowconfigure(0, weight=1)
-        self.material_display_frame.grid_columnconfigure(0, weight=1)
+        # Display frame for material data using resizable frame
+        data_frame = self.create_resizable_data_frame(
+            self.material_scrollable_frame, 
+            "Current Material Data", 
+            min_height=150, 
+            default_height=300
+        )
         
         # Create frame for treeview and scrollbars
-        tree_frame = ttk.Frame(self.material_display_frame)
-        tree_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        tree_frame = ttk.Frame(data_frame)
+        tree_frame.pack(fill='both', expand=True)
         tree_frame.grid_rowconfigure(0, weight=1)
         tree_frame.grid_columnconfigure(0, weight=1)
         
@@ -1045,17 +1573,9 @@ class CTVListGUI:
                                         foreground='gray')
         self.mtpl_info_label.grid(row=2, column=0, columnspan=3, sticky=tk.W, pady=(5, 0))
         
-        # MTPL data display with proper layout management
-        mtpl_display_frame = ttk.LabelFrame(scrollable_frame, text="MTPL Data")
-        mtpl_display_frame.pack(fill='both', expand=True, padx=20, pady=10)
-        
-        # Configure grid weights for proper resizing
-        mtpl_display_frame.grid_rowconfigure(1, weight=1)  # Make treeview area expandable
-        mtpl_display_frame.grid_columnconfigure(0, weight=1)
-        
-        # Enhanced Search and Filter Controls
-        filter_control_frame = ttk.LabelFrame(mtpl_display_frame, text="🔍 Search & Filter Controls")
-        filter_control_frame.pack(fill='x', padx=10, pady=(10, 5))
+        # Enhanced Search and Filter Controls (separate from data display)
+        filter_control_frame = ttk.LabelFrame(scrollable_frame, text="🔍 Search & Filter Controls")
+        filter_control_frame.pack(fill='x', padx=20, pady=10)
         
         # Top row: Search and main controls
         top_filter_row = ttk.Frame(filter_control_frame)
@@ -1093,17 +1613,25 @@ class CTVListGUI:
         self.active_filters_label = ttk.Label(status_row, text="", font=('Arial', 8), foreground='orange')
         self.active_filters_label.pack(side='right')
         
-        # Collapsible Column filters frame
-        self.column_filters_frame = ttk.LabelFrame(mtpl_display_frame, text="📋 Advanced Column Filters")
+        # Collapsible Column filters frame (part of controls)
+        self.column_filters_frame = ttk.LabelFrame(scrollable_frame, text="📋 Advanced Column Filters")
         self.column_filters_visible = False  # Start collapsed
         
         # Initialize column filter variables
         self.column_filters = {}
         self.column_filter_combos = {}
         
+        # MTPL data display using resizable frame
+        mtpl_data_frame = self.create_resizable_data_frame(
+            scrollable_frame, 
+            "MTPL Data", 
+            min_height=200, 
+            default_height=450
+        )
+        
         # Create frame for treeview and scrollbars
-        mtpl_tree_frame = ttk.Frame(mtpl_display_frame)
-        mtpl_tree_frame.pack(fill='both', expand=True, padx=10, pady=(5, 10))
+        mtpl_tree_frame = ttk.Frame(mtpl_data_frame)
+        mtpl_tree_frame.pack(fill='both', expand=True)
         mtpl_tree_frame.grid_rowconfigure(0, weight=1)
         mtpl_tree_frame.grid_columnconfigure(0, weight=1)
         
@@ -1275,12 +1803,12 @@ class CTVListGUI:
         ttk.Button(manual_buttons_frame, text="Load Tests from Text", command=self.load_clkutils_from_text).pack(side='left', padx=(0, 10))
         ttk.Button(manual_buttons_frame, text="Clear Text", command=lambda: self.clkutils_text_input.delete('1.0', tk.END)).pack(side='left')
         
-        # Test display and selection
-        display_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="CLKUtils Tests")
-        display_frame.pack(fill='both', expand=True, padx=20, pady=10)
+        # CLKUtils test controls (separate from data display)
+        control_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="🔍 Search & Controls")
+        control_frame.pack(fill='x', padx=20, pady=10)
         
         # Search and filter controls
-        search_frame = ttk.Frame(display_frame)
+        search_frame = ttk.Frame(control_frame)
         search_frame.pack(fill='x', padx=10, pady=5)
         
         ttk.Label(search_frame, text="🔍 Search:").pack(side='left', padx=(0, 5))
@@ -1297,9 +1825,17 @@ class CTVListGUI:
         ttk.Button(control_buttons_frame, text="☐ Clear All", command=self.clear_all_clkutils_tests).pack(side='left', padx=(0, 5))
         ttk.Button(control_buttons_frame, text="🗑️ Remove Selected", command=self.remove_selected_clkutils_tests).pack(side='left')
         
+        # CLKUtils test display using resizable frame
+        clkutils_data_frame = self.create_resizable_data_frame(
+            self.clkutils_scrollable_frame, 
+            "CLKUtils Tests", 
+            min_height=180, 
+            default_height=350
+        )
+        
         # Test list display
-        list_frame = ttk.Frame(display_frame)
-        list_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        list_frame = ttk.Frame(clkutils_data_frame)
+        list_frame.pack(fill='both', expand=True)
         list_frame.grid_rowconfigure(0, weight=1)
         list_frame.grid_columnconfigure(0, weight=1)
         
@@ -1332,9 +1868,9 @@ class CTVListGUI:
         self.clkutils_tree.bind('<Button-1>', self.on_clkutils_tree_click)
         self.clkutils_tree.bind('<Double-1>', self.toggle_clkutils_selection)
         
-        # Selection status
-        status_frame = ttk.Frame(display_frame)
-        status_frame.pack(fill='x', padx=10, pady=(0, 10))
+        # Selection status (separate frame)
+        status_frame = ttk.Frame(self.clkutils_scrollable_frame)
+        status_frame.pack(fill='x', padx=20, pady=(5, 10))
         
         ttk.Label(status_frame, text="Selected CLKUtils Tests:", font=('Arial', 9, 'bold')).pack(side='left')
         self.clkutils_selected_label = ttk.Label(status_frame, text="0", font=('Arial', 10, 'bold'), foreground='blue')
@@ -1801,17 +2337,25 @@ class CTVListGUI:
         self.stop_button.pack(side='left', padx=10)
         ttk.Button(process_frame, text="Clear All", command=self.clear_all).pack(side='left', padx=10)
         
-        # Progress and log
-        progress_frame = ttk.LabelFrame(self.output_scrollable_frame, text="Progress")
-        progress_frame.pack(fill='both', expand=True, padx=20, pady=10)
+        # Progress bar (separate from log)
+        progress_info_frame = ttk.LabelFrame(self.output_scrollable_frame, text="Processing Progress")
+        progress_info_frame.pack(fill='x', padx=20, pady=(10, 5))
         
         self.progress_var = tk.DoubleVar()
-        self.progress_bar = ttk.Progressbar(progress_frame, variable=self.progress_var, maximum=100)
+        self.progress_bar = ttk.Progressbar(progress_info_frame, variable=self.progress_var, maximum=100)
         self.progress_bar.pack(fill='x', padx=10, pady=10)
         
+        # Log display using resizable frame
+        log_data_frame = self.create_resizable_data_frame(
+            self.output_scrollable_frame, 
+            "Processing Log & Output", 
+            min_height=150, 
+            default_height=300
+        )
+        
         # Log text area with scrollbars
-        log_container = ttk.Frame(progress_frame)
-        log_container.pack(fill='both', expand=True, padx=10, pady=10)
+        log_container = ttk.Frame(log_data_frame)
+        log_container.pack(fill='both', expand=True)
         
         self.log_text = tk.Text(log_container, height=10, width=80)
         self.log_text.pack(side='left', fill='both', expand=True)
