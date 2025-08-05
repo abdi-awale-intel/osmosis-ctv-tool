@@ -96,6 +96,7 @@ hiddenimports = [
     'os',
     'sys',
     'pathlib',
+    'subprocess',
     'dateutil',
     'dateutil.relativedelta',
     # CustomTkinter support
@@ -145,18 +146,31 @@ a = Analysis(
 # PYZ
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)
 
-# Find icon file
+# Find icon file - prioritize ICO files for Windows compatibility
 icon_file = None
-possible_icons = ['icon.png', 'icon.jpg', 'icon.jpeg', 'logo.png', 'logo.jpg', 'logo.jpeg']
+possible_icons = ['icon.ico', 'logo.ico', 'icon.png', 'icon.jpg', 'icon.jpeg', 'logo.png', 'logo.jpg', 'logo.jpeg']
 for icon_name in possible_icons:
     icon_path = deployment_dir / 'images' / icon_name
     if icon_path.exists():
-        icon_file = str(icon_path)
-        print(f"Using icon: {icon_file}")
-        break
+        # Only use ICO files on Windows, skip other formats if PIL not available
+        if icon_name.endswith('.ico'):
+            icon_file = str(icon_path)
+            print(f"Using ICO icon: {icon_file}")
+            break
+        elif icon_name.endswith(('.png', '.jpg', '.jpeg')):
+            # Try to use non-ICO files only if they exist and we can process them
+            try:
+                # Test if PIL is available for conversion
+                from PIL import Image as PILImage
+                icon_file = str(icon_path)
+                print(f"Using icon with PIL conversion: {icon_file}")
+                break
+            except ImportError:
+                print(f"Skipping {icon_name} - PIL not available for conversion")
+                continue
 
 if not icon_file:
-    print("No icon file found")
+    print("No suitable icon file found - building without icon")
 
 # EXE
 exe = EXE(
