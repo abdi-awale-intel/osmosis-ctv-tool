@@ -21,7 +21,16 @@ desktop.ini
  
 # Logs 
 *.log 
- 
+src/log_*.csv
+
+# Data output files (large CSV files)
+src/dataOut/
+*.datastacked.csv
+*.dataoutput.csv
+*.datapulled.csv
+*_decoded.csv
+*_indexed.csv
+
 # Large files (use Git LFS instead) 
 *.zip 
 *.exe 

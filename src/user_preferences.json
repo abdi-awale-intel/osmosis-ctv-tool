@@ -1,18 +1,18 @@
 {
   "zoom_level": 1.0,
   "compact_mode": false,
-  "window_geometry": "1400x900+260+90",
+  "window_geometry": "1216x680+32+60",
   "theme_mode": "light",
-  "last_mtpl_path": "",
+  "last_mtpl_path": "I:/program/1276/eng/hdmtprogs/dmr_dai_sds/testprogram/DAIEBJX30A5312XPOC/Modules/MIO_DDR/MIO_DDR.mtpl",
   "material_inputs": {
-    "lot": "G5088651",
-    "wafer": "533",
-    "program": "DABHOPCA0H20C022528",
-    "prefetch": "3",
-    "database": "F24_PROD_XEUS"
+    "lot": "44E9B7Z00",
+    "wafer": "",
+    "program": "DAIEBJX30A5312XPOC",
+    "prefetch": "10",
+    "database": "D1D_PROD_XEUS"
   },
   "output_settings": {
-    "output_path": "",
+    "output_path": "dataOut",
     "delete_files": true,
     "run_jmp": false
   }

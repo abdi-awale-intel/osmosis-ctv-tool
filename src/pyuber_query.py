@@ -19,9 +19,9 @@ def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_c
     cursor = ''
     data_found = False
     finish_loops = False
-    
+    first_iteration = True
+
     for database in databases:
-        first_iteration = True
         missing_counter = 0 #remove this if data gets too big #yet another flaw with the quick hardcoded route
         for token_chunk in token_chunks:
             # place tokens into SQL query
@@ -70,6 +70,7 @@ def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_c
             end_time = time.time()
             duration = end_time - start_time
             print(f"Query executed in {duration:.2f} seconds.")
+
 
             results = cursor.fetchall()
             if results:
@@ -171,6 +172,10 @@ def uber_request(indexed_input, test_name_file, test_type='', output_folder='', 
     #print(token_names)
     token_set = set(token_names)
     token_names = list(token_set)
+    token_names_upper= [token_name.upper() for token_name in token_names]
+    token_names.extend(token_names_upper)
+    token_names = list(set(token_names))
+
     max_bytes = 63000 #Estimated max number of bytes for a smaller SQL query system
     
     #print(token_names)

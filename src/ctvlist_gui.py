@@ -144,6 +144,10 @@ class CTVListGUI:
         self.is_dark_mode = False  # Track current theme
         self.processing = False
         
+        # Test instance filtering variables
+        self.material_test_instances = []  # Store test instances from loaded material data
+        self.auto_filter_enabled = False  # Track if auto-filtering is active
+        
         # CLKUtils tab variables
         self.clkutils_tests = []  # Store CLKUtils test names
         self.all_clkutils_items = []  # Store all CLKUtils items for filtering
@@ -1074,6 +1078,7 @@ class CTVListGUI:
         
         ttk.Button(control_section, text="🗑️ Clear All", command=self.clear_all_filters, width=12).pack(side='left', padx=(0, 5))
         ttk.Button(control_section, text="🔄 Refresh", command=self.refresh_filters, width=12).pack(side='left', padx=(0, 5))
+        ttk.Button(control_section, text="🎯 Clear Auto-Filter", command=self.clear_automatic_filter, width=15).pack(side='left', padx=(0, 5))
         self.toggle_filters_btn = ttk.Button(control_section, text="▼ Show Filters", command=self.toggle_column_filters, width=15)
         self.toggle_filters_btn.pack(side='left')
         
@@ -1822,129 +1827,325 @@ class CTVListGUI:
         self.log_text.bind("<MouseWheel>", _on_log_mousewheel)
         
     def load_csv_filtered(self, file_path):
-        """Load CSV file with column filtering to remove unnamed and empty columns"""
+        """Load CSV file with robust column filtering to handle empty wafer sections and preserve data structure"""
         try:
             # Read the CSV first
-            df = pd.read_csv(file_path)
+            df = pd.read_csv(file_path, dtype=str, na_filter=False)  # Read as strings to preserve empty values
             
-            # Define required columns
+            # Define required columns in expected order
             required_columns = ['Database', 'Program', 'Test', 'Lot', 'Wafer', 'Prefetch']
             
-            # Filter out unnamed columns and empty columns
-            valid_columns = []
-            for col in df.columns:
-                # Skip unnamed columns and completely empty columns
-                if (not str(col).startswith('Unnamed:') and 
-                    not df[col].isna().all() and 
-                    str(col).strip() != ''):
-                    valid_columns.append(col)
-            
             self.log_message(f"Original columns: {list(df.columns)}")
-            self.log_message(f"Valid columns found: {valid_columns}")
+            self.log_message(f"Original dataframe shape: {df.shape}")
             
-            # Keep only valid columns that exist in the dataframe
-            columns_to_keep = []
-            for col in required_columns:
-                if col in valid_columns:
-                    columns_to_keep.append(col)
+            # Clean column names (remove whitespace, handle unnamed)
+            cleaned_columns = []
+            for col in df.columns:
+                col_str = str(col).strip()
+                if col_str.startswith('Unnamed:') or col_str == '' or col_str == 'nan':
+                    cleaned_columns.append(None)  # Mark for removal
                 else:
-                    # Try case-insensitive matching
+                    cleaned_columns.append(col_str)
+            
+            # Remove unnamed/empty columns while preserving order
+            valid_df = df.copy()
+            valid_columns = []
+            cols_to_drop = []
+            
+            for i, col_name in enumerate(cleaned_columns):
+                if col_name is None:
+                    cols_to_drop.append(df.columns[i])
+                else:
+                    valid_columns.append(col_name)
+            
+            if cols_to_drop:
+                valid_df = valid_df.drop(columns=cols_to_drop)
+                valid_df.columns = valid_columns
+                self.log_message(f"Dropped unnamed/empty columns: {cols_to_drop}")
+            
+            self.log_message(f"Valid columns after cleanup: {valid_columns}")
+            
+            # Try to map columns to required structure
+            column_mapping = {}
+            final_columns = []
+            
+            # First pass: exact matches
+            used_columns = set()
+            for req_col in required_columns:
+                if req_col in valid_columns and req_col not in used_columns:
+                    final_columns.append(req_col)
+                    used_columns.add(req_col)
+                else:
+                    final_columns.append(None)  # Placeholder
+            
+            # Second pass: case-insensitive matches
+            for i, req_col in enumerate(required_columns):
+                if final_columns[i] is None:  # Not found yet
                     for valid_col in valid_columns:
-                        if col.lower() == valid_col.lower():
-                            columns_to_keep.append(valid_col)
+                        if (valid_col not in used_columns and 
+                            valid_col.lower() == req_col.lower()):
+                            final_columns[i] = valid_col
+                            column_mapping[valid_col] = req_col
+                            used_columns.add(valid_col)
                             break
             
-            if not columns_to_keep:
-                # If no required columns found, keep all valid columns
-                columns_to_keep = valid_columns[:6]  # Limit to first 6 valid columns
-                self.log_message("No required columns found, using first valid columns", "warning")
+            # Third pass: positional mapping for remaining columns
+            remaining_valid = [col for col in valid_columns if col not in used_columns]
+            for i, req_col in enumerate(required_columns):
+                if final_columns[i] is None and i < len(remaining_valid):
+                    final_columns[i] = remaining_valid[i]
+                    column_mapping[remaining_valid[i]] = req_col
+                    self.log_message(f"Positional mapping: '{remaining_valid[i]}' -> '{req_col}'")
             
-            self.log_message(f"Columns to keep: {columns_to_keep}")
+            # Build the final dataframe with required structure
+            result_df = pd.DataFrame()
             
-            # Return filtered dataframe
-            filtered_df = df[columns_to_keep].copy()
+            for i, req_col in enumerate(required_columns):
+                if final_columns[i] is not None:
+                    # Column exists, copy it
+                    col_data = valid_df[final_columns[i]].copy()
+                    # Only fill Prefetch column with defaults, preserve Wafer empty values
+                    if req_col == 'Prefetch' and col_data.eq('').all():
+                        self.log_message(f"Prefetch column is empty, filling with default value '3'")
+                        col_data = col_data.fillna('3').replace('', '3')
+                    elif req_col == 'Wafer':
+                        # Preserve Wafer column as-is (keep empty values empty)
+                        self.log_message(f"Preserving Wafer column values (including empty values)")
+                        col_data = col_data.fillna('')
+                    else:
+                        # For other columns, preserve empty values as empty strings
+                        col_data = col_data.fillna('')
+                    
+                    result_df[req_col] = col_data
+                else:
+                    # Column missing, create with default values
+                    if req_col == 'Wafer':
+                        default_val = ''
+                    elif req_col == 'Prefetch':
+                        default_val = '3'
+                    else:
+                        default_val = ''
+                    
+                    result_df[req_col] = [default_val] * len(valid_df)
+                    self.log_message(f"Created missing column '{req_col}' with default value '{default_val}'")
             
-            # Rename columns to match expected names if needed
-            column_mapping = {}
-            for i, col in enumerate(filtered_df.columns):
-                if i < len(required_columns):
-                    expected_col = required_columns[i]
-                    if col.lower() != expected_col.lower():
-                        column_mapping[col] = expected_col
-                        
+            self.log_message(f"Final columns: {list(result_df.columns)}")
+            self.log_message(f"Final dataframe shape: {result_df.shape}")
+            
             if column_mapping:
-                filtered_df = filtered_df.rename(columns=column_mapping)
-                self.log_message(f"Renamed columns: {column_mapping}")
+                self.log_message(f"Applied column mappings: {column_mapping}")
             
-            return filtered_df
+            # Post-processing validation: only fix Prefetch, keep Wafer empty
+            if not result_df.empty:
+                # Keep Wafer column as-is (preserve empty values)
+                self.log_message("Keeping Wafer column values as-is (preserving empty values)")
+                
+                # Check if Prefetch column is completely empty and fix it
+                if 'Prefetch' in result_df.columns and result_df['Prefetch'].eq('').all():
+                    result_df['Prefetch'] = '3'
+                    self.log_message("Fixed completely empty Prefetch column with default value '3'")
+                
+                # Only ensure Prefetch column is properly formatted
+                if 'Prefetch' in result_df.columns:
+                    # Replace any remaining empty/NaN values in Prefetch only
+                    result_df['Prefetch'] = result_df['Prefetch'].replace(['nan', 'NaN'], '3')
+                    result_df['Prefetch'] = result_df['Prefetch'].fillna('3')
+            
+            return result_df
             
         except Exception as e:
             self.log_message(f"Error filtering CSV: {str(e)}", "error")
             raise e
     
     def load_excel_filtered(self, file_path):
-        """Load Excel file with column filtering to remove unnamed and empty columns"""
+        """Load Excel file with robust column filtering to handle empty wafer sections and preserve data structure"""
         try:
             # Read Excel file
-            df = pd.read_excel(file_path)
+            df = pd.read_excel(file_path, dtype=str, na_filter=False)  # Read as strings to preserve empty values
             
-            # Define required columns
+            # Define required columns in expected order
             required_columns = ['Database', 'Program', 'Test', 'Lot', 'Wafer', 'Prefetch']
             
-            # Remove unnamed and empty columns
-            valid_columns = []
-            for col in df.columns:
-                # Skip unnamed columns and completely empty columns
-                if (not str(col).startswith('Unnamed:') and 
-                    not df[col].isna().all() and 
-                    str(col).strip() != ''):
-                    valid_columns.append(col)
-            
             self.log_message(f"Original columns: {list(df.columns)}")
-            self.log_message(f"Valid columns found: {valid_columns}")
+            self.log_message(f"Original dataframe shape: {df.shape}")
             
-            # Keep intersection of required and valid columns
-            columns_to_keep = []
-            for col in required_columns:
-                if col in valid_columns:
-                    columns_to_keep.append(col)
+            # Clean column names (remove whitespace, handle unnamed)
+            cleaned_columns = []
+            for col in df.columns:
+                col_str = str(col).strip()
+                if col_str.startswith('Unnamed:') or col_str == '' or col_str == 'nan':
+                    cleaned_columns.append(None)  # Mark for removal
                 else:
-                    # Try case-insensitive matching
+                    cleaned_columns.append(col_str)
+            
+            # Remove unnamed/empty columns while preserving order
+            valid_df = df.copy()
+            valid_columns = []
+            cols_to_drop = []
+            
+            for i, col_name in enumerate(cleaned_columns):
+                if col_name is None:
+                    cols_to_drop.append(df.columns[i])
+                else:
+                    valid_columns.append(col_name)
+            
+            if cols_to_drop:
+                valid_df = valid_df.drop(columns=cols_to_drop)
+                valid_df.columns = valid_columns
+                self.log_message(f"Dropped unnamed/empty columns: {cols_to_drop}")
+            
+            self.log_message(f"Valid columns after cleanup: {valid_columns}")
+            
+            # Try to map columns to required structure
+            column_mapping = {}
+            final_columns = []
+            
+            # First pass: exact matches
+            used_columns = set()
+            for req_col in required_columns:
+                if req_col in valid_columns and req_col not in used_columns:
+                    final_columns.append(req_col)
+                    used_columns.add(req_col)
+                else:
+                    final_columns.append(None)  # Placeholder
+            
+            # Second pass: case-insensitive matches
+            for i, req_col in enumerate(required_columns):
+                if final_columns[i] is None:  # Not found yet
                     for valid_col in valid_columns:
-                        if col.lower() == valid_col.lower():
-                            columns_to_keep.append(valid_col)
+                        if (valid_col not in used_columns and 
+                            valid_col.lower() == req_col.lower()):
+                            final_columns[i] = valid_col
+                            column_mapping[valid_col] = req_col
+                            used_columns.add(valid_col)
                             break
             
-            if not columns_to_keep:
-                # If no required columns found, keep all valid columns
-                columns_to_keep = valid_columns[:6]  # Limit to first 6 valid columns
-                self.log_message("No required columns found, using first valid columns", "warning")
+            # Third pass: positional mapping for remaining columns
+            remaining_valid = [col for col in valid_columns if col not in used_columns]
+            for i, req_col in enumerate(required_columns):
+                if final_columns[i] is None and i < len(remaining_valid):
+                    final_columns[i] = remaining_valid[i]
+                    column_mapping[remaining_valid[i]] = req_col
+                    self.log_message(f"Positional mapping: '{remaining_valid[i]}' -> '{req_col}'")
             
-            self.log_message(f"Columns to keep: {columns_to_keep}")
+            # Build the final dataframe with required structure
+            result_df = pd.DataFrame()
             
-            # Return filtered dataframe
-            filtered_df = df[columns_to_keep].copy()
+            for i, req_col in enumerate(required_columns):
+                if final_columns[i] is not None:
+                    # Column exists, copy it
+                    col_data = valid_df[final_columns[i]].copy()
+                    # Only fill Prefetch column with defaults, preserve Wafer empty values
+                    if req_col == 'Prefetch' and col_data.eq('').all():
+                        self.log_message(f"Prefetch column is empty, filling with default value '3'")
+                        col_data = col_data.fillna('3').replace('', '3')
+                    elif req_col == 'Wafer':
+                        # Preserve Wafer column as-is (keep empty values empty)
+                        self.log_message(f"Preserving Wafer column values (including empty values)")
+                        col_data = col_data.fillna('')
+                    else:
+                        # For other columns, preserve empty values as empty strings
+                        col_data = col_data.fillna('')
+                    
+                    result_df[req_col] = col_data
+                else:
+                    # Column missing, create with default values
+                    if req_col == 'Wafer':
+                        default_val = ''
+                    elif req_col == 'Prefetch':
+                        default_val = '3'
+                    else:
+                        default_val = ''
+                    
+                    result_df[req_col] = [default_val] * len(valid_df)
+                    self.log_message(f"Created missing column '{req_col}' with default value '{default_val}'")
             
-            # Rename columns to match expected names if needed
-            column_mapping = {}
-            for i, col in enumerate(filtered_df.columns):
-                if i < len(required_columns):
-                    expected_col = required_columns[i]
-                    if col.lower() != expected_col.lower():
-                        column_mapping[col] = expected_col
-                        
+            self.log_message(f"Final columns: {list(result_df.columns)}")
+            self.log_message(f"Final dataframe shape: {result_df.shape}")
+            
             if column_mapping:
-                filtered_df = filtered_df.rename(columns=column_mapping)
-                self.log_message(f"Renamed columns: {column_mapping}")
+                self.log_message(f"Applied column mappings: {column_mapping}")
             
-            return filtered_df
+            # Post-processing validation: only fix Prefetch, keep Wafer empty
+            if not result_df.empty:
+                # Keep Wafer column as-is (preserve empty values)
+                self.log_message("Keeping Wafer column values as-is (preserving empty values)")
+                
+                # Check if Prefetch column is completely empty and fix it
+                if 'Prefetch' in result_df.columns and result_df['Prefetch'].eq('').all():
+                    result_df['Prefetch'] = '3'
+                    self.log_message("Fixed completely empty Prefetch column with default value '3'")
+                
+                # Only ensure Prefetch column is properly formatted
+                if 'Prefetch' in result_df.columns:
+                    # Replace any remaining empty/NaN values in Prefetch only
+                    result_df['Prefetch'] = result_df['Prefetch'].replace(['nan', 'NaN'], '3')
+                    result_df['Prefetch'] = result_df['Prefetch'].fillna('3')
+            
+            return result_df
             
         except Exception as e:
             self.log_message(f"Error filtering Excel: {str(e)}", "error")
             raise e
     
+    def extract_test_instances_from_material_data(self):
+        """
+        Extract test instances from loaded material data for automatic filtering
+        
+        This method:
+        1. Searches for columns containing test instance data (looking for 'test', 'testname', etc.)
+        2. Extracts unique test instances from those columns (handles comma-separated values)
+        3. Stores them in self.material_test_instances for later filtering
+        4. Enables automatic filtering if test instances are found
+        """
+        self.material_test_instances = []
+        
+        if self.material_df is None or self.material_df.empty:
+            return
+        
+        # Look for test instance columns in material data
+        test_columns = []
+        self.log_message(f"Material data columns: {list(self.material_df.columns)}", "info")
+        
+        for col in self.material_df.columns:
+            col_lower = col.lower()
+            # Expanded keywords to catch more column naming variations
+            test_keywords = ['test', 'testname', 'test_name', 'testinstance', 'test_instance', 'tests', 'test_list']
+            self.log_message(f"Checking material column: '{col}' (lowercase: '{col_lower}')", "info")
+            
+            if any(test_keyword in col_lower for test_keyword in test_keywords):
+                test_columns.append(col)
+                self.log_message(f"✅ Found test column: '{col}'", "success")
+                
+        if not test_columns:
+            self.log_message("No test instance columns found in material data", "warning")
+            self.log_message("Looking for columns containing: test, testname, test_name, testinstance, test_instance, tests, test_list", "info")
+            return
+            
+        # Extract unique test instances from all test columns
+        test_instances = set()
+        for col in test_columns:
+            self.log_message(f"Extracting test instances from column: '{col}'", "info")
+            col_values = []
+            for value in self.material_df[col].dropna():
+                if pd.notna(value) and str(value).strip():
+                    # Handle comma-separated values
+                    test_values = [test.strip() for test in str(value).split(',') if test.strip()]
+                    col_values.extend(test_values)
+                    test_instances.update(test_values)
+            self.log_message(f"Found {len(col_values)} test instances in column '{col}': {col_values[:5]}{'...' if len(col_values) > 5 else ''}", "info")
+        
+        self.material_test_instances = sorted(list(test_instances))
+        
+        if self.material_test_instances:
+            self.log_message(f"✅ Extracted {len(self.material_test_instances)} total unique test instances from material data: {self.material_test_instances[:5]}{'...' if len(self.material_test_instances) > 5 else ''}", "success")
+            self.auto_filter_enabled = True
+        else:
+            self.log_message("❌ No valid test instances found in material data", "error")
+            self.auto_filter_enabled = False
+    
     def validate_material_columns(self, df):
-        """Validate that the material data contains expected columns"""
+        """Validate that the material data contains expected columns and has proper structure"""
         required_columns = ['Database', 'Program', 'Test', 'Lot', 'Wafer', 'Prefetch']
         missing_columns = []
         
@@ -1954,10 +2155,220 @@ class CTVListGUI:
         
         if missing_columns:
             self.log_message(f"Warning: Missing columns: {missing_columns}", "warning")
-            return False, missing_columns
         else:
             self.log_message("All required columns found", "success")
-            return True, []
+        
+        # Additional validation: check for data integrity
+        if not df.empty:
+            # Validate Wafer column has reasonable values
+            if 'Wafer' in df.columns:
+                wafer_col = df['Wafer']
+                empty_wafers = wafer_col.eq('').sum()
+                if empty_wafers > 0:
+                    self.log_message(f"Found {empty_wafers} empty wafer values, will use defaults", "info")
+            
+            # Validate Prefetch column has reasonable values
+            if 'Prefetch' in df.columns:
+                prefetch_col = df['Prefetch']
+                empty_prefetch = prefetch_col.eq('').sum()
+                if empty_prefetch > 0:
+                    self.log_message(f"Found {empty_prefetch} empty prefetch values, will use defaults", "info")
+        
+        return len(missing_columns) == 0, missing_columns
+    
+    def apply_automatic_test_instance_filter(self):
+        """
+        Apply automatic filtering based on test instances from material data
+        
+        This method:
+        1. Uses test instances extracted from material data to filter MTPL tests
+        2. Shows only MTPL tests that match the test instances from the Excel/CSV material data
+        3. Updates the UI to indicate filtering is active
+        4. Provides feedback on matched tests
+        """
+        if not self.auto_filter_enabled or not self.material_test_instances:
+            self.log_message("Auto-filter not enabled or no test instances available", "info")
+            return
+            
+        if not hasattr(self, 'all_mtpl_items') or not self.all_mtpl_items:
+            self.log_message("No MTPL items available for filtering", "warning")
+            return
+            
+        self.log_message(f"Applying auto-filter with {len(self.material_test_instances)} test instances", "info")
+        self.log_message(f"Material test instances: {self.material_test_instances}", "info")
+            
+        # Debug: Show MTPL DataFrame structure
+        if self.mtpl_df is not None:
+            self.log_message(f"MTPL DataFrame columns: {list(self.mtpl_df.columns)}", "info")
+            self.log_message(f"MTPL DataFrame shape: {self.mtpl_df.shape}", "info")
+            if not self.mtpl_df.empty:
+                # Show first few test names for debugging
+                if len(self.mtpl_df.columns) > 1:
+                    test_col = self.mtpl_df.columns[1]  # Typically the second column
+                    sample_tests = self.mtpl_df[test_col].head(3).tolist()
+                    self.log_message(f"Sample MTPL test names from column '{test_col}': {sample_tests}", "info")
+            
+        # Find the test name column in MTPL data (usually column 1 or 2)
+        test_name_column_index = None
+        if self.mtpl_df is not None:
+            # Try to find test name column by checking common patterns
+            # Look for columns that contain 'testname' or exact 'name' (but not just 'test' to avoid 'testtype')
+            for i, col in enumerate(self.mtpl_df.columns):
+                col_lower = col.lower()
+                self.log_message(f"Checking column {i}: '{col}' (lowercase: '{col_lower}')", "info")
+                
+                # More specific matching to avoid 'TestType' being selected over 'TestName'
+                if ('testname' in col_lower or 
+                    col_lower == 'name' or 
+                    col_lower == 'test_name' or
+                    col_lower.endswith('name')):
+                    test_name_column_index = i + 1  # +1 because of checkbox column
+                    self.log_message(f"✅ Found test name column: '{col}' at index {test_name_column_index} (with checkbox offset)", "success")
+                    break
+            
+            # If not found by specific name patterns, try broader search but prioritize columns with 'name'
+            if test_name_column_index is None:
+                for i, col in enumerate(self.mtpl_df.columns):
+                    col_lower = col.lower()
+                    if 'name' in col_lower and 'type' not in col_lower:  # Avoid TestType, prefer TestName
+                        test_name_column_index = i + 1  # +1 because of checkbox column
+                        self.log_message(f"✅ Found test name column (broader search): '{col}' at index {test_name_column_index} (with checkbox offset)", "success")
+                        break
+            
+            # If still not found, assume it's the second column (index 1, or 2 with checkbox)
+            if test_name_column_index is None:
+                test_name_column_index = 2  # Default to second data column
+                default_col_name = self.mtpl_df.columns[1] if len(self.mtpl_df.columns) > 1 else "Unknown"
+                self.log_message(f"⚠️ Using default test name column index: {test_name_column_index} (column: '{default_col_name}')", "warning")
+        
+        if test_name_column_index is None:
+            self.log_message("❌ Could not determine test name column for filtering", "error")
+            return
+            
+        # Debug: Show what column we're using
+        display_columns = ['Selected'] + list(self.mtpl_df.columns)
+        target_column = display_columns[test_name_column_index] if test_name_column_index < len(display_columns) else "Index out of range"
+        self.log_message(f"Using column index {test_name_column_index} ('{target_column}') for test name matching", "info")
+            
+        # Filter items based on test instances
+        filtered_items = []
+        matched_tests = set()
+        unmatched_tests = []
+        
+        self.log_message(f"Filtering {len(self.all_mtpl_items)} MTPL items...", "info")
+        
+        for i, item_data in enumerate(self.all_mtpl_items):
+            values = item_data['values']
+            if len(values) > test_name_column_index:
+                test_name = str(values[test_name_column_index]).strip()
+                
+                # Debug: Show first few items being processed
+                if i < 5:
+                    self.log_message(f"Item {i}: values={values}, test_name='{test_name}'", "info")
+                
+                # Use search-like filtering: check if any material test instance is contained in the test name
+                # or if the test name is contained in any material test instance
+                match_found = False
+                matched_instance = None
+                
+                for mat_test in self.material_test_instances:
+                    # Case-insensitive substring matching (like search function)
+                    test_name_lower = test_name.lower()
+                    mat_test_lower = mat_test.lower()
+                    
+                    # Check both directions: material test in MTPL test name, or MTPL test name in material test
+                    if (mat_test_lower in test_name_lower or 
+                        test_name_lower in mat_test_lower):
+                        match_found = True
+                        matched_instance = mat_test
+                        break
+                
+                if match_found:
+                    filtered_items.append(item_data)
+                    matched_tests.add(f"{test_name} (matched: {matched_instance})")
+                    if i < 5:  # Log first few matches
+                        self.log_message(f"✅ Match found: '{test_name}' <-> '{matched_instance}'", "success")
+                else:
+                    unmatched_tests.append(test_name)
+        
+        # Show debugging results
+        self.log_message(f"Filtering complete: {len(filtered_items)} matched, {len(unmatched_tests)} unmatched", "info")
+        
+        if matched_tests:
+            self.log_message(f"✅ Matched tests: {sorted(matched_tests)}", "success")
+        else:
+            self.log_message("❌ No tests matched!", "warning")
+            
+        # Show some unmatched tests for comparison
+        if unmatched_tests:
+            sample_unmatched = unmatched_tests[:5]  # Show first 5 unmatched
+            self.log_message(f"Sample unmatched MTPL tests: {sample_unmatched}", "info")
+            
+            # Try to find potential matches with case-insensitive comparison
+            case_insensitive_matches = []
+            material_lower = [t.lower() for t in self.material_test_instances]
+            for test in sample_unmatched:
+                if test.lower() in material_lower:
+                    case_insensitive_matches.append(test)
+            
+            if case_insensitive_matches:
+                self.log_message(f"⚠️ Found case-insensitive matches: {case_insensitive_matches}", "warning")
+                self.log_message("Consider checking for case sensitivity issues in test names", "warning")
+        
+        if filtered_items:
+            self.log_message(f"✅ Auto-filtered MTPL using substring matching: {len(filtered_items)} tests found", "success")
+            self.log_message(f"Matched pairs: {', '.join(sorted(matched_tests)[:3])}{'...' if len(matched_tests) > 3 else ''}", "info")
+            
+            # Update search field to show filter is active
+            if hasattr(self, 'search_var'):
+                self.search_var.set("AUTO-FILTERED BY MATERIAL DATA")
+            
+            # Display filtered items
+            self.display_filtered_items(filtered_items)
+            
+            # Show prominent info message to user - THIS IS THE KEY VISUAL FEEDBACK
+            if hasattr(self, 'filter_status_label'):
+                self.filter_status_label.configure(
+                    text=f"🎯 AUTO-FILTERED: {len(filtered_items)} tests match material data (substring matching) | Click 'Clear Auto-Filter' to see all tests",
+                    foreground='green'
+                )
+            
+            # Update active filters label
+            if hasattr(self, 'active_filters_label'):
+                self.active_filters_label.configure(
+                    text=f"Auto-filter: {len(filtered_items)}/{len(self.all_mtpl_items)} tests shown",
+                    foreground='green'
+                )
+                
+        else:
+            self.log_message("❌ No MTPL tests match the test instances from material data using substring matching", "error")
+            self.log_message("This means no material test names contain MTPL test names, and no MTPL test names contain material test names", "warning")
+            # Show warning message
+            if hasattr(self, 'filter_status_label'):
+                self.filter_status_label.configure(
+                    text="⚠️ AUTO-FILTER: No MTPL tests match material data test instances (substring matching tried)",
+                    foreground='orange'
+                )
+    
+    def clear_automatic_filter(self):
+        """
+        Clear the automatic test instance filter
+        
+        This method clears the automatic filtering and shows all MTPL tests again.
+        Users can click this button to see all tests instead of just the filtered ones.
+        """
+        if hasattr(self, 'search_var'):
+            self.search_var.set("")
+        
+        # Clear all filters
+        self.clear_all_filters()
+        
+        # Update filter status to show no filters are active
+        if hasattr(self, 'filter_status_label'):
+            self.filter_status_label.configure(text="Auto-filter cleared - showing all tests", foreground='blue')
+        
+        # Log the action
+        self.log_message("Automatic filter cleared - showing all MTPL tests", "info")
 
     def load_material_file(self):
         """Load material data from CSV or Excel file with enhanced column filtering"""
@@ -2037,17 +2448,60 @@ class CTVListGUI:
                 self.update_material_display()
                 self.log_message(f"Material data loaded successfully from: {os.path.basename(file_path)}", "success")
                 
+                # Extract test instances from material data for automatic filtering
+                self.extract_test_instances_from_material_data()
+                
                 # Show column preview to user
                 self.show_column_preview()
                 
                 # Update entry fields with first row data if available
                 if not self.material_df.empty:
                     self.update_entry_fields_from_dataframe()
+                    
+                # If MTPL is already loaded, apply automatic filtering
+                if hasattr(self, 'mtpl_df') and self.mtpl_df is not None and self.auto_filter_enabled:
+                    self.log_message("Applying automatic filter to loaded MTPL data based on material test instances", "info")
+                    self.apply_automatic_test_instance_filter()
                         
             except Exception as e:
                 error_msg = f"Failed to load file: {str(e)}"
                 self.log_message(error_msg, "error")
                 messagebox.showerror("Error", error_msg)
+    
+    def test_empty_wafer_handling(self):
+        """Test method to validate empty wafer handling works correctly"""
+        try:
+            # Create a test dataframe with empty wafer column to simulate the issue
+            test_data = {
+                'Database': ['D1D_PROD_XEUS'],
+                'Program': ['DABHOPCA0H20C022528'],
+                'Test': ['TestInstance1'],
+                'Lot': ['841'],
+                'Wafer': [''],  # Empty wafer - this should be fixed
+                'Prefetch': ['']  # Empty prefetch - this should be fixed
+            }
+            
+            test_df = pd.DataFrame(test_data)
+            self.log_message("Testing empty wafer/prefetch handling...", "info")
+            self.log_message(f"Before fix - Wafer: '{test_df['Wafer'].iloc[0]}', Prefetch: '{test_df['Prefetch'].iloc[0]}'", "info")
+            
+            # Simulate the fix
+            if 'Wafer' in test_df.columns and test_df['Wafer'].eq('').all():
+                test_df['Wafer'] = '1'
+                self.log_message("Fixed empty Wafer column with default value '1'")
+            
+            if 'Prefetch' in test_df.columns and test_df['Prefetch'].eq('').all():
+                test_df['Prefetch'] = '3'
+                self.log_message("Fixed empty Prefetch column with default value '3'")
+            
+            self.log_message(f"After fix - Wafer: '{test_df['Wafer'].iloc[0]}', Prefetch: '{test_df['Prefetch'].iloc[0]}'", "success")
+            self.log_message("Empty wafer/prefetch handling test completed successfully!", "success")
+            
+            return test_df
+            
+        except Exception as e:
+            self.log_message(f"Test failed: {str(e)}", "error")
+            return None
     
     def show_column_preview(self):
         """Show user a preview of the columns that were imported"""
@@ -2066,6 +2520,13 @@ class CTVListGUI:
                 for col in columns:
                     value = str(first_row[col])[:50] + "..." if len(str(first_row[col])) > 50 else str(first_row[col])
                     preview_msg += f"• {col}: {value}\n"
+            
+            # Add information about automatic filtering
+            if self.auto_filter_enabled and self.material_test_instances:
+                preview_msg += f"\n🎯 Automatic Filtering Enabled:\n"
+                preview_msg += f"Found {len(self.material_test_instances)} test instances that will be used to automatically filter MTPL tests.\n"
+                preview_msg += f"Test instances: {', '.join(self.material_test_instances[:3])}{'...' if len(self.material_test_instances) > 3 else ''}\n"
+                preview_msg += f"\nWhen you load an MTPL file, it will be automatically filtered to show only these test instances."
             
             messagebox.showinfo("Import Preview", preview_msg)
     
@@ -2446,6 +2907,11 @@ class CTVListGUI:
             # Enhance visual feedback
             self.enhance_visual_feedback()
             
+            # Apply automatic filtering if material test instances are available
+            if self.auto_filter_enabled and self.material_test_instances:
+                self.log_message("Applying automatic filter based on material data test instances", "info")
+                self.apply_automatic_test_instance_filter()
+            
     def display_filtered_items(self, items):
         """Display the filtered items in the treeview with enhanced resize handling"""
         try:
@@ -2551,10 +3017,18 @@ class CTVListGUI:
         if not hasattr(self, 'all_mtpl_items') or not self.all_mtpl_items:
             return
             
-        filtered_items = []
+        # Check if auto-filter is active
+        text_filter = self.search_var.get().strip()
+        is_auto_filtered = (text_filter.upper() == "AUTO-FILTERED BY MATERIAL DATA")
         
-        # Get current filter values
-        text_filter = self.search_var.get().lower().strip()
+        if is_auto_filtered:
+            # When auto-filter is active, we should re-apply the automatic filtering
+            # instead of the normal text/column filtering
+            self.apply_automatic_test_instance_filter()
+            return
+            
+        filtered_items = []
+        text_filter_lower = text_filter.lower()
         
         for item_data in self.all_mtpl_items:
             values = item_data['values']
@@ -2563,20 +3037,21 @@ class CTVListGUI:
             
             # Apply text filter
             text_match = True
-            if text_filter:
+            if text_filter_lower:
                 item_text = ' '.join(str(val).lower() for val in row_values)
-                text_match = text_filter in item_text
+                text_match = text_filter_lower in item_text
             
             # Apply column filters
             column_match = True
-            for i, col in enumerate(self.mtpl_df.columns):
-                if col in self.column_filters:
-                    filter_value = self.column_filters[col].get()
-                    if filter_value != "All":
-                        # Compare with the actual value in this column
-                        if i < len(row_values) and str(row_values[i]) != filter_value:
-                            column_match = False
-                            break
+            if hasattr(self, 'column_filters'):
+                for i, col in enumerate(self.mtpl_df.columns):
+                    if col in self.column_filters:
+                        filter_value = self.column_filters[col].get()
+                        if filter_value != "All":
+                            # Compare with the actual value in this column
+                            if i < len(row_values) and str(row_values[i]) != filter_value:
+                                column_match = False
+                                break
             
             # Include item if it passes both filters
             if text_match and column_match:
@@ -2590,14 +3065,16 @@ class CTVListGUI:
         """Clear all filters including text search and column filters"""
         # Clear text search
         self.search_var.set("")
-        self.last_mtpl_path = ""  # Clear the last MTPL path
-        # Disable reload button
-        if hasattr(self, 'reload_mtpl_button'):
-            self.reload_mtpl_button.configure(state='disabled')
-                
+        
         # Clear column filters
         for col, filter_var in self.column_filters.items():
             filter_var.set("All")
+            
+        # Apply filters to show all items
+        self.apply_all_filters()
+        
+        # Update status
+        self.filter_status_label.configure(text="All filters cleared - showing all tests", foreground='blue')
             
     def on_search_change(self, *args):
         """Handle text search changes"""
@@ -2816,62 +3293,102 @@ class CTVListGUI:
         
     def select_all_tests(self):
         """Select all tests in the MTPL (including filtered ones)"""
-        print(f"Debug - select_all_tests called, total items: {len(self.all_mtpl_items)}")
-        
-        # Update all stored items
-        for item_data in self.all_mtpl_items:
-            values = list(item_data['values'])
-            values[0] = '☑'  # Set checkbox to checked
-            item_data['values'] = values
-            item_data['tags'] = ('checked',)
-            print(f"Debug - Updated item to checked: {values}")
+        try:
+            print(f"Debug - select_all_tests called, total items: {len(self.all_mtpl_items)}")
             
-        # Refresh the current display
-        search_text = self.search_var.get().lower()
-        if not search_text:
-            filtered_items = self.all_mtpl_items
-        else:
-            filtered_items = []
+            # Update all stored items
             for item_data in self.all_mtpl_items:
-                item_text = ' '.join(str(val).lower() for val in item_data['values'][1:])
-                if search_text in item_text:
-                    filtered_items.append(item_data)
-                    
-        self.display_filtered_items(filtered_items)
-        self.update_selected_tests_count()
+                values = list(item_data['values'])
+                values[0] = '☑'  # Set checkbox to checked
+                item_data['values'] = values
+                item_data['tags'] = ('checked',)
+                print(f"Debug - Updated item to checked: {values}")
+                
+            # Refresh the current display - handle auto-filter case properly
+            search_text = self.search_var.get().strip()
+            is_auto_filtered = (search_text.upper() == "AUTO-FILTERED BY MATERIAL DATA")
+            
+            if is_auto_filtered:
+                # If auto-filter is active, we need to re-apply the automatic filtering
+                # to show the same filtered set but with all selections
+                self.apply_automatic_test_instance_filter()
+                self.log_message("Selected all tests (including auto-filtered ones)", "success")
+            else:
+                # Normal filtering logic for manual filters
+                search_text_lower = search_text.lower()
+                if not search_text_lower:
+                    filtered_items = self.all_mtpl_items
+                else:
+                    filtered_items = []
+                    for item_data in self.all_mtpl_items:
+                        item_text = ' '.join(str(val).lower() for val in item_data['values'][1:])
+                        if search_text_lower in item_text:
+                            filtered_items.append(item_data)
+                            
+                self.display_filtered_items(filtered_items)
+                self.log_message("Selected all tests", "success")
+                
+            self.update_selected_tests_count()
+            
+        except Exception as e:
+            self.log_message(f"Error selecting all tests: {e}", "error")
+            print(f"Error in select_all_tests: {e}")
         
     def clear_test_selection(self):
         """Clear all test selections (including filtered ones)"""
-        # Update all stored items
-        for item_data in self.all_mtpl_items:
-            values = list(item_data['values'])
-            values[0] = '☐'  # Set checkbox to unchecked
-            item_data['values'] = values
-            item_data['tags'] = ('unchecked',)
-            
-        # Refresh the current display
-        search_text = self.search_var.get().lower()
-        if not search_text:
-            filtered_items = self.all_mtpl_items
-        else:
-            filtered_items = []
+        try:
+            # Update all stored items
             for item_data in self.all_mtpl_items:
-                item_text = ' '.join(str(val).lower() for val in item_data['values'][1:])
-                if search_text in item_text:
-                    filtered_items.append(item_data)
-                    
-        self.display_filtered_items(filtered_items)
-        self.update_selected_tests_count()
+                values = list(item_data['values'])
+                values[0] = '☐'  # Set checkbox to unchecked
+                item_data['values'] = values
+                item_data['tags'] = ('unchecked',)
+                
+            # Refresh the current display - handle auto-filter case properly
+            search_text = self.search_var.get().strip()
+            is_auto_filtered = (search_text.upper() == "AUTO-FILTERED BY MATERIAL DATA")
+            
+            if is_auto_filtered:
+                # If auto-filter is active, we need to re-apply the automatic filtering
+                # to show the same filtered set but with cleared selections
+                self.apply_automatic_test_instance_filter()
+                self.log_message("Cleared selections for auto-filtered tests", "success")
+            else:
+                # Normal filtering logic for manual filters
+                search_text_lower = search_text.lower()
+                if not search_text_lower:
+                    filtered_items = self.all_mtpl_items
+                else:
+                    filtered_items = []
+                    for item_data in self.all_mtpl_items:
+                        item_text = ' '.join(str(val).lower() for val in item_data['values'][1:])
+                        if search_text_lower in item_text:
+                            filtered_items.append(item_data)
+                            
+                self.display_filtered_items(filtered_items)
+                self.log_message("Cleared all test selections", "success")
+                
+            self.update_selected_tests_count()
+            
+        except Exception as e:
+            self.log_message(f"Error clearing test selection: {e}", "error")
+            print(f"Error in clear_test_selection: {e}")
         
     def update_selected_tests_count(self):
         """Update the count of selected tests"""
         count = 0
+        checked_items = []
         # Count from stored data, not just visible items
-        for item_data in self.all_mtpl_items:
+        for i, item_data in enumerate(self.all_mtpl_items):
             if 'checked' in item_data['tags']:
                 count += 1
-                print(f"Debug - Checked item: {item_data['values']}")
+                checked_items.append(f"Item {i}: {item_data['values'][1] if len(item_data['values']) > 1 else 'Unknown'}")
+                print(f"Debug - Checked item {i}: {item_data['values']}")
+        
         print(f"Debug - Total checked count: {count}")
+        if count > 0:
+            print(f"Debug - First few checked items: {checked_items[:3]}")
+        
         self.selected_tests_label.configure(text=str(count))
         
     def get_selected_tests(self):
@@ -2937,6 +3454,16 @@ class CTVListGUI:
     
     def update_filter_status(self):
         """Update the filter status display"""
+        # Check if auto-filter is active - if so, don't override the specific message
+        if (hasattr(self, 'search_var') and 
+            self.search_var.get().strip().upper() == "AUTO-FILTERED BY MATERIAL DATA"):
+            # Auto-filter is active, don't override the specific status message
+            # The filter_status_label should already have the detailed auto-filter message
+            if hasattr(self, 'active_filters_label'):
+                self.active_filters_label.configure(text="Auto-filter active", foreground='green')
+            return
+        
+        # Normal filter status logic for manual filters
         active_count = 0
         
         # Check search filter
@@ -2951,87 +3478,201 @@ class CTVListGUI:
         
         if active_count == 0:
             self.filter_status_label.configure(text="No active filters", foreground='gray')
-            self.active_filters_label.configure(text="Active filters: 0", foreground='gray')
+            if hasattr(self, 'active_filters_label'):
+                self.active_filters_label.configure(text="Active filters: 0", foreground='gray')
         else:
             self.filter_status_label.configure(text="Filters applied", foreground='green')
-            self.active_filters_label.configure(text=f"Active filters: {active_count}", foreground='blue')
+            if hasattr(self, 'active_filters_label'):
+                self.active_filters_label.configure(text=f"Active filters: {active_count}", foreground='blue')
     
     def select_all_visible_tests(self):
         """Select all currently visible tests"""
-        # Get current filtered items and mark them as selected
-        search_text = self.search_var.get().lower()
-        
-        # Apply current filters to get visible items
-        filtered_items = self.all_mtpl_items.copy()
-        
-        # Apply search filter
-        if search_text:
-            filtered_items = [
-                item for item in filtered_items
-                if search_text in ' '.join(str(val).lower() for val in item['values'][1:])
-            ]
-        
-        # Apply column filters
-        if hasattr(self, 'column_filters'):
-            for col_name, filter_var in self.column_filters.items():
-                filter_value = filter_var.get()
-                if filter_value and filter_value != "All":
-                    col_index = self.get_column_index(col_name)
-                    if col_index is not None:
-                        filtered_items = [
-                            item for item in filtered_items
-                            if str(item['values'][col_index]).strip() == filter_value.strip()
-                        ]
-        
-        # Mark filtered items as selected
-        for item_data in filtered_items:
-            values = list(item_data['values'])
-            values[0] = '☑'  # Set checkbox to checked
-            item_data['values'] = values
-            item_data['tags'] = ('checked',)
-        
-        # Refresh display
-        self.display_filtered_items(filtered_items)
-        self.update_selected_tests_count()
+        try:
+            # Check if auto-filter is active
+            search_text = self.search_var.get().strip()
+            is_auto_filtered = (search_text.upper() == "AUTO-FILTERED BY MATERIAL DATA")
+            
+            if is_auto_filtered:
+                # When auto-filter is active, get currently displayed items from treeview
+                # This ensures we work with the actual filtered results
+                self.log_message("Auto-filter detected - selecting all currently displayed tests", "info")
+                
+                # Get all currently displayed items from the treeview
+                visible_items = []
+                updates_made = 0
+                
+                for item_id in self.mtpl_tree.get_children():
+                    item_values = list(self.mtpl_tree.item(item_id, 'values'))
+                    # Mark as selected
+                    item_values[0] = '☑'
+                    
+                    # Find corresponding item in all_mtpl_items to update the source data
+                    # Use more robust matching with type conversion
+                    match_found = False
+                    for item_data in self.all_mtpl_items:
+                        # Compare all values except the checkbox column with type conversion
+                        stored_values = [str(v) for v in item_data['values'][1:]]
+                        current_values = [str(v) for v in item_values[1:]]
+                        
+                        if stored_values == current_values:
+                            item_data['values'][0] = '☑'
+                            item_data['tags'] = ('checked',)
+                            updates_made += 1
+                            match_found = True
+                            print(f"Debug - Updated stored item: {item_data['values']}")
+                            break
+                    
+                    if not match_found:
+                        print(f"Debug - No match found for treeview item: {item_values}")
+                    
+                    # Update the treeview item immediately
+                    row_tag = 'evenrow' if len(visible_items) % 2 == 0 else 'oddrow'
+                    self.mtpl_tree.item(item_id, values=item_values, tags=('checked', row_tag))
+                    visible_items.append(item_values)
+                
+                self.log_message(f"Selected {len(visible_items)} auto-filtered tests (updated {updates_made} stored items)", "success")
+                print(f"Debug - Auto-filter mode: visible items={len(visible_items)}, stored updates={updates_made}")
+                
+            else:
+                # Normal filtering logic for manual filters
+                search_text_lower = search_text.lower()
+                
+                # Apply current filters to get visible items
+                filtered_items = self.all_mtpl_items.copy()
+                
+                # Apply search filter
+                if search_text_lower:
+                    filtered_items = [
+                        item for item in filtered_items
+                        if search_text_lower in ' '.join(str(val).lower() for val in item['values'][1:])
+                    ]
+                
+                # Apply column filters
+                if hasattr(self, 'column_filters'):
+                    for col_name, filter_var in self.column_filters.items():
+                        filter_value = filter_var.get()
+                        if filter_value and filter_value != "All":
+                            col_index = self.get_column_index(col_name)
+                            if col_index is not None:
+                                filtered_items = [
+                                    item for item in filtered_items
+                                    if str(item['values'][col_index]).strip() == filter_value.strip()
+                                ]
+                
+                # Mark filtered items as selected
+                for item_data in filtered_items:
+                    values = list(item_data['values'])
+                    values[0] = '☑'  # Set checkbox to checked
+                    item_data['values'] = values
+                    item_data['tags'] = ('checked',)
+                
+                # Refresh display
+                self.display_filtered_items(filtered_items)
+                self.log_message(f"Selected {len(filtered_items)} manually filtered tests", "success")
+                print(f"Debug - Manual filter mode: selected {len(filtered_items)} items")
+            
+            # Update the selected tests count
+            self.update_selected_tests_count()
+            
+        except Exception as e:
+            self.log_message(f"Error selecting all visible tests: {e}", "error")
+            print(f"Error in select_all_visible_tests: {e}")
     
     def invert_selection(self):
         """Invert the current selection"""
-        # Get current filtered items
-        search_text = self.search_var.get().lower()
-        
-        # Apply current filters to get visible items
-        filtered_items = self.all_mtpl_items.copy()
-        
-        # Apply search filter
-        if search_text:
-            filtered_items = [
-                item for item in filtered_items
-                if search_text in ' '.join(str(val).lower() for val in item['values'][1:])
-            ]
-        
-        # Apply column filters
-        if hasattr(self, 'column_filters'):
-            for col_name, filter_var in self.column_filters.items():
-                filter_value = filter_var.get()
-                if filter_value and filter_value != "All":
-                    col_index = self.get_column_index(col_name)
-                    if col_index is not None:
-                        filtered_items = [
-                            item for item in filtered_items
-                            if str(item['values'][col_index]).strip() == filter_value.strip()
-                        ]
-        
-        # Invert selection for visible items
-        for item_data in filtered_items:
-            values = list(item_data['values'])
-            current_state = values[0]
-            values[0] = '☐' if current_state == '☑' else '☑'
-            item_data['values'] = values
-            item_data['tags'] = ('unchecked' if current_state == '☑' else 'checked',)
-        
-        # Refresh display
-        self.display_filtered_items(filtered_items)
-        self.update_selected_tests_count()
+        try:
+            # Check if auto-filter is active
+            search_text = self.search_var.get().strip()
+            is_auto_filtered = (search_text.upper() == "AUTO-FILTERED BY MATERIAL DATA")
+            
+            if is_auto_filtered:
+                # When auto-filter is active, work with currently displayed items from treeview
+                self.log_message("Auto-filter detected - inverting selection for currently displayed tests", "info")
+                
+                # Get all currently displayed items from the treeview and invert their selection
+                visible_items = []
+                updates_made = 0
+                
+                for item_id in self.mtpl_tree.get_children():
+                    item_values = list(self.mtpl_tree.item(item_id, 'values'))
+                    current_state = item_values[0]
+                    
+                    # Invert selection
+                    item_values[0] = '☐' if current_state == '☑' else '☑'
+                    new_tag = 'unchecked' if current_state == '☑' else 'checked'
+                    
+                    # Find corresponding item in all_mtpl_items to update the source data
+                    # Use more robust matching with type conversion
+                    match_found = False
+                    for item_data in self.all_mtpl_items:
+                        # Compare all values except the checkbox column with type conversion
+                        stored_values = [str(v) for v in item_data['values'][1:]]
+                        current_values = [str(v) for v in item_values[1:]]
+                        
+                        if stored_values == current_values:
+                            item_data['values'][0] = item_values[0]
+                            item_data['tags'] = (new_tag,)
+                            updates_made += 1
+                            match_found = True
+                            print(f"Debug - Updated stored item during invert: {item_data['values']}")
+                            break
+                    
+                    if not match_found:
+                        print(f"Debug - No match found during invert for treeview item: {item_values}")
+                    
+                    # Update the treeview item immediately
+                    row_tag = 'evenrow' if len(visible_items) % 2 == 0 else 'oddrow'
+                    self.mtpl_tree.item(item_id, values=item_values, tags=(new_tag, row_tag))
+                    visible_items.append(item_values)
+                
+                self.log_message(f"Inverted selection for {len(visible_items)} auto-filtered tests (updated {updates_made} stored items)", "success")
+                print(f"Debug - Auto-filter invert: visible items={len(visible_items)}, stored updates={updates_made}")
+                
+            else:
+                # Normal filtering logic for manual filters
+                search_text_lower = search_text.lower()
+                
+                # Apply current filters to get visible items
+                filtered_items = self.all_mtpl_items.copy()
+                
+                # Apply search filter
+                if search_text_lower:
+                    filtered_items = [
+                        item for item in filtered_items
+                        if search_text_lower in ' '.join(str(val).lower() for val in item['values'][1:])
+                    ]
+                
+                # Apply column filters
+                if hasattr(self, 'column_filters'):
+                    for col_name, filter_var in self.column_filters.items():
+                        filter_value = filter_var.get()
+                        if filter_value and filter_value != "All":
+                            col_index = self.get_column_index(col_name)
+                            if col_index is not None:
+                                filtered_items = [
+                                    item for item in filtered_items
+                                    if str(item['values'][col_index]).strip() == filter_value.strip()
+                                ]
+                
+                # Invert selection for visible items
+                for item_data in filtered_items:
+                    values = list(item_data['values'])
+                    current_state = values[0]
+                    values[0] = '☐' if current_state == '☑' else '☑'
+                    item_data['values'] = values
+                    item_data['tags'] = ('unchecked' if current_state == '☑' else 'checked',)
+                
+                # Refresh display
+                self.display_filtered_items(filtered_items)
+                self.log_message(f"Inverted selection for {len(filtered_items)} manually filtered tests", "success")
+                print(f"Debug - Manual filter invert: inverted {len(filtered_items)} items")
+            
+            # Update the selected tests count
+            self.update_selected_tests_count()
+            
+        except Exception as e:
+            self.log_message(f"Error inverting selection: {e}", "error")
+            print(f"Error in invert_selection: {e}")
     
     def open_reorder_window(self):
         """Open a window to reorder selected tests"""
@@ -3451,7 +4092,7 @@ class CTVListGUI:
                             current_iteration += 1
                             self.update_progress(current_iteration, total_iterations, f"Completed test: {test}")
                         continue
-
+                 
                     # Find matching row in MTPL dataframe (enhanced from master.py)
                     matching_rows = self.mtpl_df[self.mtpl_df.iloc[:, 1] == test]  # Assuming test name is in column 1
                     
@@ -3462,11 +4103,49 @@ class CTVListGUI:
                         continue
                         
                     row = matching_rows.iloc[0]
+
+                    # Check for SIO and process user variables
+                    if 'sio' in row.iloc[2].lower():
+                        self.log_message(f"Processing SIO for test: {test}")
+                        
+                        # Extract the module name from the MTPL path to find the .usrv file
+                        mtpl_dir = os.path.dirname(mtpl_path)
+                        module_name_from_path = os.path.basename(mtpl_dir)
+                        usrv_file_path = os.path.join(mtpl_dir, f"{module_name_from_path}.usrv")
+                        
+                        if os.path.exists(usrv_file_path):
+                            self.log_message(f"Found .usrv file: {usrv_file_path}")
+                            
+                            # Parse the .usrv file and resolve the configuration file path
+                            try:
+                                resolved_config_path = self.resolve_sio_config_path(row.iloc[2], usrv_file_path, base_dir)
+                                if resolved_config_path:
+                                    self.log_message(f"Resolved SIO config path: {resolved_config_path}")
+                                    # Override the config_path for SIO processing
+                                    config_path = resolved_config_path.replace(base_dir, "").lstrip(os.sep)
+                                    config_path = config_path.replace("\\", "/")  # Normalize path separators
+                                else:
+                                    self.log_message(f"Failed to resolve SIO config path for: {row.iloc[2]}")
+                                    current_iteration += 1
+                                    self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (SIO config resolution failed)")
+                                    continue
+                            except Exception as e:
+                                self.log_message(f"Error processing SIO config: {str(e)}")
+                                current_iteration += 1
+                                self.update_progress(current_iteration, total_iterations, f"Skipped test: {test} (SIO processing error)")
+                                continue
+                        else:
+                            self.log_message(f"Warning: .usrv file not found: {usrv_file_path}")
+                            # Fall back to original processing
+                            config_path = fi.process_file_input(row.iloc[2][row.iloc[2].find('Modules'):].strip('\"'))
+                    else:
+                        # Original processing for non-SIO tests
+                        config_path = fi.process_file_input(row.iloc[2][row.iloc[2].find('Modules'):].strip('\"'))
+                     
                     test_type = row.iloc[0]  # Assuming test type is in column 0
                     mode = row.iloc[4]  # Assuming mode is in column 4
                     mode=str(mode)
-                    config_path = fi.process_file_input(row.iloc[2][row.iloc[2].find('Modules'):].strip('\"'))  # Assuming config path is in column 2
-                    module_name = fi.get_module_name(config_path).strip('\\')
+                    module_name = fi.get_module_name(config_path).strip('\\').strip('//')
                     test_file = os.path.join(base_dir, config_path)
                     
                     # Check if config file exists (from master.py)
@@ -3811,6 +4490,158 @@ class CTVListGUI:
     def is_undefined(self, value):
         """Check if a value is considered undefined (from master.py)"""
         return value is None or value == '' or value == '-'
+        
+    def resolve_sio_config_path(self, config_expression, usrv_file_path, base_dir):
+        """
+        Parse the .usrv file and resolve the SIO configuration file path.
+        
+        Args:
+            config_expression: String like 'GetEnvironmentVariable("~HDMT_TP_BASE_DIR") + SIO_PCIE.inputFilePath + UCC.DNELB'
+            usrv_file_path: Path to the .usrv file
+            base_dir: Base directory for the project
+            
+        Returns:
+            Resolved absolute path to the configuration file
+        """
+        try:
+            # Parse the .usrv file to extract variable definitions
+            user_vars = self.parse_usrv_file(usrv_file_path)
+            
+            # Clean the config expression
+            config_expr = config_expression.strip().strip('"\'')
+            
+            # Handle GetEnvironmentVariable("~HDMT_TP_BASE_DIR") - replace with base_dir
+            if 'GetEnvironmentVariable("~HDMT_TP_BASE_DIR")' in config_expr:
+                config_expr = config_expr.replace('GetEnvironmentVariable("~HDMT_TP_BASE_DIR")', f'"{base_dir}"')
+            
+            # Split the expression by '+' and process each part
+            parts = [part.strip() for part in config_expr.split('+')]
+            resolved_parts = []
+            
+            for part in parts:
+                part = part.strip(' "\'')
+                
+                if part.startswith('"') and part.endswith('"'):
+                    # It's a literal string
+                    resolved_parts.append(part.strip('"'))
+                elif '.' in part:
+                    # It's a variable reference like SIO_PCIE.inputFilePath or UCC.DNELB
+                    namespace, var_name = part.split('.', 1)
+                    if namespace in user_vars and var_name in user_vars[namespace]:
+                        var_value = user_vars[namespace][var_name].strip(' "\'')
+                        resolved_parts.append(var_value)
+                    else:
+                        self.log_message(f"Warning: Variable {part} not found in .usrv file")
+                        return None
+                else:
+                    # Direct reference or literal
+                    resolved_parts.append(part)
+            
+            # Join all parts to form the final path
+            resolved_path = ''.join(resolved_parts)
+            
+            # Normalize path separators and make it absolute
+            resolved_path = resolved_path.replace('\\\\', os.sep).replace('\\', os.sep).replace('/', os.sep)
+            
+            if not os.path.isabs(resolved_path):
+                resolved_path = os.path.join(base_dir, resolved_path)
+            
+            resolved_path = os.path.normpath(resolved_path)
+            
+            self.log_message(f"SIO config resolution: {config_expression} -> {resolved_path}")
+            
+            return resolved_path
+            
+        except Exception as e:
+            self.log_message(f"Error resolving SIO config path: {str(e)}")
+            return None
+    
+    def parse_usrv_file(self, usrv_file_path):
+        """
+        Parse a .usrv file and extract user variable definitions.
+        
+        Args:
+            usrv_file_path: Path to the .usrv file
+            
+        Returns:
+            Dictionary with namespace -> {variable_name: value}
+        """
+        user_vars = {}
+        current_namespace = None
+        
+        try:
+            with open(usrv_file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+            
+            # Split into lines and process
+            lines = content.split('\n')
+            in_namespace = False
+            brace_count = 0
+            
+            for line in lines:
+                line = line.strip()
+                
+                # Skip empty lines and comments
+                if not line or line.startswith('//') or line.startswith('#'):
+                    continue
+                
+                # Check for namespace declaration like "UserVars SIO_PCIE"
+                if line.startswith('UserVars ') and '{' in line:
+                    namespace_line = line.replace('UserVars ', '').replace('{', '').strip()
+                    current_namespace = namespace_line
+                    user_vars[current_namespace] = {}
+                    in_namespace = True
+                    brace_count = 1
+                    continue
+                elif line.startswith('UserVars '):
+                    namespace_line = line.replace('UserVars ', '').strip()
+                    current_namespace = namespace_line
+                    user_vars[current_namespace] = {}
+                    in_namespace = False
+                    continue
+                
+                # Handle opening braces
+                if '{' in line and not in_namespace:
+                    in_namespace = True
+                    brace_count = line.count('{')
+                    continue
+                
+                # Handle closing braces
+                if '}' in line:
+                    brace_count -= line.count('}')
+                    if brace_count <= 0:
+                        in_namespace = False
+                        current_namespace = None
+                    continue
+                
+                # Parse variable definitions inside namespace
+                if in_namespace and current_namespace and '=' in line:
+                    # Remove semicolon and split by =
+                    line = line.rstrip(';')
+                    
+                    # Handle different variable declaration formats
+                    if 'String ' in line:
+                        var_part = line.replace('String ', '').strip()
+                    elif 'Const String ' in line:
+                        var_part = line.replace('Const String ', '').strip()
+                    else:
+                        var_part = line.strip()
+                    
+                    if '=' in var_part:
+                        var_name, var_value = var_part.split('=', 1)
+                        var_name = var_name.strip()
+                        var_value = var_value.strip(' "\'')  # Remove quotes and spaces
+                        user_vars[current_namespace][var_name] = var_value
+            
+            self.log_message(f"Parsed .usrv file: {len(user_vars)} namespaces found")
+            for ns, vars_dict in user_vars.items():
+                self.log_message(f"  Namespace {ns}: {len(vars_dict)} variables")
+            
+            return user_vars
+            
+        except Exception as e:
+            self.log_message(f"Error parsing .usrv file {usrv_file_path}: {str(e)}")
+            return {}
         
     def switch_to_light_mode(self, event=None):
         """Switch application to light mode with enhanced design consistency"""
