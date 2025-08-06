@@ -169,6 +169,9 @@ class CTVListGUI:
         
         self.create_widgets()
         
+        # Setup file path normalization callbacks (after widgets are created)
+        self.setup_file_path_traces()
+        
         # Load user preferences for zoom and window state
         self.load_user_preferences()
         
@@ -502,6 +505,32 @@ class CTVListGUI:
             print("User preferences saved successfully")
         except Exception as e:
             print(f"Error saving preferences on close: {e}")
+        
+        # Clean up .mtpl.csv files from src directory
+        try:
+            src_dir = os.path.dirname(__file__)
+            mtpl_csv_files = []
+            
+            # Find all .mtpl.csv files in the src directory
+            for file in os.listdir(src_dir):
+                if file.endswith('.mtpl.csv'):
+                    mtpl_csv_files.append(file)
+            
+            # Remove the files
+            for file in mtpl_csv_files:
+                file_path = os.path.join(src_dir, file)
+                try:
+                    os.remove(file_path)
+                    print(f"Cleaned up temporary file: {file}")
+                except OSError as e:
+                    print(f"Could not remove {file}: {e}")
+            
+            if mtpl_csv_files:
+                print(f"Cleanup completed: removed {len(mtpl_csv_files)} .mtpl.csv file(s)")
+            
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+        
         finally:
             self.root.destroy()
     
@@ -584,6 +613,57 @@ class CTVListGUI:
                 
         except Exception as e:
             print(f"Error setting up working directory: {e}")
+    
+    def setup_file_path_traces(self):
+        """Setup trace callbacks for file path StringVars to auto-normalize paths"""
+        try:
+            # Add trace callbacks for file path normalization
+            self._mtpl_path_trace_id = self.mtpl_file_path.trace_add('write', self.on_file_path_change)
+            self._clkutils_path_trace_id = self.clkutils_file_path.trace_add('write', self.on_file_path_change)
+            self._output_path_trace_id = self.output_path_var.trace_add('write', self.on_output_path_change)
+        except Exception as e:
+            print(f"Error setting up file path traces: {e}")
+
+    def on_file_path_change(self, var_name, index, mode):
+        """Handle file path changes to auto-normalize paths"""
+        try:
+            # Get the StringVar that triggered this callback
+            if var_name == str(self.mtpl_file_path):
+                path_var = self.mtpl_file_path
+            elif var_name == str(self.clkutils_file_path):
+                path_var = self.clkutils_file_path
+            else:
+                return
+            
+            current_path = path_var.get()
+            if current_path:
+                normalized = self.normalize_unc_path(current_path)
+                if normalized != current_path:
+                    # Temporarily remove trace to avoid recursion
+                    if var_name == str(self.mtpl_file_path):
+                        self.mtpl_file_path.trace_remove('write', self._mtpl_path_trace_id)
+                        self.mtpl_file_path.set(normalized)
+                        self._mtpl_path_trace_id = self.mtpl_file_path.trace_add('write', self.on_file_path_change)
+                    elif var_name == str(self.clkutils_file_path):
+                        self.clkutils_file_path.trace_remove('write', self._clkutils_path_trace_id)
+                        self.clkutils_file_path.set(normalized)
+                        self._clkutils_path_trace_id = self.clkutils_file_path.trace_add('write', self.on_file_path_change)
+        except Exception as e:
+            print(f"Error in on_file_path_change: {e}")
+
+    def on_output_path_change(self, var_name, index, mode):
+        """Handle output path changes to auto-normalize paths and strip quotes"""
+        try:
+            current_path = self.output_path_var.get()
+            if current_path:
+                normalized = self.normalize_unc_path(current_path)
+                if normalized != current_path:
+                    # Temporarily remove trace to avoid recursion
+                    self.output_path_var.trace_remove('write', self._output_path_trace_id)
+                    self.output_path_var.set(normalized)
+                    self._output_path_trace_id = self.output_path_var.trace_add('write', self.on_output_path_change)
+        except Exception as e:
+            print(f"Error in on_output_path_change: {e}")
     
     def on_window_configure(self, event):
         """Handle window resize events"""
@@ -697,9 +777,9 @@ class CTVListGUI:
     
     def create_resizable_data_frame(self, parent, title, min_height=200, default_height=400, min_width=400, default_width=800):
         """Create a 2D resizable frame for data display with drag-to-resize functionality in both dimensions"""
-        # Main container frame
+        # Main container frame - stretch with consistent margins
         container = ttk.LabelFrame(parent, text=title)
-        container.pack(fill='both', expand=True, padx=20, pady=10)
+        container.pack(fill='both', expand=True, padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
         
         # Configure container for 2D resizing
         container.grid_rowconfigure(2, weight=1)  # Data area expandable
@@ -1459,9 +1539,12 @@ class CTVListGUI:
         # Material Data Input Section
         ttk.Label(self.material_scrollable_frame, text="Material Data Input", font=('Arial', 14, 'bold')).pack(pady=10)
         
-        # Input fields frame
+        # Input fields frame - stretch with consistent margins
         input_frame = ttk.LabelFrame(self.material_scrollable_frame, text="Enter Material Parameters")
-        input_frame.pack(fill='x', padx=20, pady=10)
+        input_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
+        
+        # Configure input_frame to expand with window
+        input_frame.grid_columnconfigure(1, weight=1)
         
         # Entry variables
         self.lot_var = tk.StringVar(value="G5088651")
@@ -1481,7 +1564,7 @@ class CTVListGUI:
         
         for i, (label, var) in enumerate(fields):
             ttk.Label(input_frame, text=label).grid(row=i, column=0, sticky='w', padx=10, pady=5)
-            ttk.Entry(input_frame, textvariable=var, width=40).grid(row=i, column=1, padx=10, pady=5)
+            ttk.Entry(input_frame, textvariable=var).grid(row=i, column=1, padx=10, pady=5, sticky='ew')  # Remove fixed width, use sticky='ew'
         
         # Buttons frame
         button_frame = ttk.Frame(self.material_scrollable_frame)
@@ -1490,7 +1573,7 @@ class CTVListGUI:
         ttk.Button(button_frame, text="Load from CSV/Excel", command=self.load_material_file).pack(side='left', padx=10)
         ttk.Button(button_frame, text="Create DataFrame", command=self.create_material_dataframe).pack(side='left', padx=10)
         
-        # Display frame for material data using resizable frame
+        # Display frame for material data using resizable frame - stretch with consistent margins
         data_frame = self.create_resizable_data_frame(
             self.material_scrollable_frame, 
             "Current Material Data", 
@@ -1500,7 +1583,7 @@ class CTVListGUI:
         
         # Create frame for treeview and scrollbars
         tree_frame = ttk.Frame(data_frame)
-        tree_frame.pack(fill='both', expand=True)
+        tree_frame.pack(fill='both', expand=True, padx=5, pady=5)  # Add padding inside the data frame
         tree_frame.grid_rowconfigure(0, weight=1)
         tree_frame.grid_columnconfigure(0, weight=1)
         
@@ -1552,12 +1635,15 @@ class CTVListGUI:
         # Now create all the content in the scrollable_frame instead of self.mtpl_frame
         ttk.Label(scrollable_frame, text="MTPL File and Test Selection", font=('Arial', 14, 'bold')).pack(pady=10)
         
-        # MTPL file loading
+        # MTPL file loading - stretch with consistent margins
         mtpl_load_frame = ttk.LabelFrame(scrollable_frame, text="Load MTPL File")
-        mtpl_load_frame.pack(fill='x', padx=20, pady=10)
+        mtpl_load_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
+        
+        # Configure grid weights for responsive design
+        mtpl_load_frame.grid_columnconfigure(1, weight=1)
         
         ttk.Label(mtpl_load_frame, text="MTPL File Path:").grid(row=0, column=0, sticky='w', padx=10, pady=5)
-        ttk.Entry(mtpl_load_frame, textvariable=self.mtpl_file_path, width=60).grid(row=0, column=1, padx=10, pady=5)
+        ttk.Entry(mtpl_load_frame, textvariable=self.mtpl_file_path).grid(row=0, column=1, padx=10, pady=5, sticky='ew')  # Remove fixed width, use sticky='ew'
         ttk.Button(mtpl_load_frame, text="Browse", command=self.browse_mtpl_file).grid(row=0, column=2, padx=10, pady=5)
         # Place both Load and Reload buttons inside button_frame, and grid button_frame properly
         button_frame = ttk.Frame(mtpl_load_frame)
@@ -1573,9 +1659,9 @@ class CTVListGUI:
                                         foreground='gray')
         self.mtpl_info_label.grid(row=2, column=0, columnspan=3, sticky=tk.W, pady=(5, 0))
         
-        # Enhanced Search and Filter Controls (separate from data display)
+        # Enhanced Search and Filter Controls (separate from data display) - stretch with consistent margins
         filter_control_frame = ttk.LabelFrame(scrollable_frame, text="🔍 Search & Filter Controls")
-        filter_control_frame.pack(fill='x', padx=20, pady=10)
+        filter_control_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
         
         # Top row: Search and main controls
         top_filter_row = ttk.Frame(filter_control_frame)
@@ -1658,9 +1744,9 @@ class CTVListGUI:
         self.mtpl_tree.bind('<Double-1>', self.toggle_test_selection)
         self.mtpl_tree.bind('<Button-1>', self.on_treeview_click)
         
-        # Enhanced Test Selection and Management
+        # Enhanced Test Selection and Management - stretch with consistent margins
         test_management_frame = ttk.LabelFrame(scrollable_frame, text="🎯 Test Selection & Management")
-        test_management_frame.pack(fill='x', padx=20, pady=10)
+        test_management_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
         
         # Selection controls row
         selection_row = ttk.Frame(test_management_frame)
@@ -1737,9 +1823,9 @@ class CTVListGUI:
         # Now create all the content in the scrollable_frame
         ttk.Label(self.clkutils_scrollable_frame, text="CLKUtils Test Input", font=('Arial', 14, 'bold')).pack(pady=10)
         
-        # Instructions
+        # Instructions - stretch with consistent margins
         instruction_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="Instructions")
-        instruction_frame.pack(fill='x', padx=20, pady=10)
+        instruction_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
         
         instruction_text = ("CLKUtils tests do not require MTPL files. You can input test names from:\n"
                           "• CSV file (select a column containing test names)\n"
@@ -1747,9 +1833,9 @@ class CTVListGUI:
                           "• Manual text input (comma, whitespace, or newline-separated)")
         ttk.Label(instruction_frame, text=instruction_text, wraplength=600, justify='left').pack(padx=10, pady=10)
         
-        # Input method selection
+        # Input method selection - stretch with consistent margins
         method_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="Test Input Method")
-        method_frame.pack(fill='x', padx=20, pady=10)
+        method_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
         
         self.clkutils_input_method = tk.StringVar(value="csv")
         ttk.Radiobutton(method_frame, text="📊 From CSV file (select column)", 
@@ -1759,12 +1845,15 @@ class CTVListGUI:
         ttk.Radiobutton(method_frame, text="✏️ Manual text input", 
                        variable=self.clkutils_input_method, value="manual").pack(anchor='w', padx=10, pady=5)
         
-        # File input section
+        # File input section - stretch with consistent margins
         file_input_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="File Input")
-        file_input_frame.pack(fill='x', padx=20, pady=10)
+        file_input_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
+        
+        # Configure grid weights for responsive design
+        file_input_frame.grid_columnconfigure(1, weight=1)
         
         ttk.Label(file_input_frame, text="File Path:").grid(row=0, column=0, sticky='w', padx=10, pady=5)
-        ttk.Entry(file_input_frame, textvariable=self.clkutils_file_path, width=60).grid(row=0, column=1, padx=10, pady=5)
+        ttk.Entry(file_input_frame, textvariable=self.clkutils_file_path).grid(row=0, column=1, padx=10, pady=5, sticky='ew')  # Remove fixed width, use sticky='ew'
         ttk.Button(file_input_frame, text="Browse", command=self.browse_clkutils_file).grid(row=0, column=2, padx=10, pady=5)
         
         # CSV column selection (only shown when CSV is selected)
@@ -1779,9 +1868,9 @@ class CTVListGUI:
         
         ttk.Button(file_input_frame, text="Load Tests from File", command=self.load_clkutils_from_file).grid(row=2, column=1, pady=10)
         
-        # Manual input section
+        # Manual input section - stretch with consistent margins
         manual_input_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="Manual Test Input")
-        manual_input_frame.pack(fill='x', padx=20, pady=10)
+        manual_input_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
         
         ttk.Label(manual_input_frame, text="Enter test names (comma, whitespace, or newline separated):").pack(anchor='w', padx=10, pady=(10, 5))
         
@@ -1789,7 +1878,7 @@ class CTVListGUI:
         text_frame = ttk.Frame(manual_input_frame)
         text_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
-        self.clkutils_text_input = tk.Text(text_frame, height=6, width=80)
+        self.clkutils_text_input = tk.Text(text_frame, height=6)  # Remove fixed width
         self.clkutils_text_input.pack(side='left', fill='both', expand=True)
         
         text_scrollbar = ttk.Scrollbar(text_frame, orient='vertical', command=self.clkutils_text_input.yview)
@@ -1803,9 +1892,9 @@ class CTVListGUI:
         ttk.Button(manual_buttons_frame, text="Load Tests from Text", command=self.load_clkutils_from_text).pack(side='left', padx=(0, 10))
         ttk.Button(manual_buttons_frame, text="Clear Text", command=lambda: self.clkutils_text_input.delete('1.0', tk.END)).pack(side='left')
         
-        # CLKUtils test controls (separate from data display)
+        # CLKUtils test controls (separate from data display) - stretch with consistent margins
         control_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="🔍 Search & Controls")
-        control_frame.pack(fill='x', padx=20, pady=10)
+        control_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
         
         # Search and filter controls
         search_frame = ttk.Frame(control_frame)
@@ -1868,9 +1957,9 @@ class CTVListGUI:
         self.clkutils_tree.bind('<Button-1>', self.on_clkutils_tree_click)
         self.clkutils_tree.bind('<Double-1>', self.toggle_clkutils_selection)
         
-        # Selection status (separate frame)
+        # Selection status (separate frame) - stretch with consistent margins
         status_frame = ttk.Frame(self.clkutils_scrollable_frame)
-        status_frame.pack(fill='x', padx=20, pady=(5, 10))
+        status_frame.pack(fill='x', padx=(20, 40), pady=(5, 10))  # Right margin accounts for scrollbar
         
         ttk.Label(status_frame, text="Selected CLKUtils Tests:", font=('Arial', 9, 'bold')).pack(side='left')
         self.clkutils_selected_label = ttk.Label(status_frame, text="0", font=('Arial', 10, 'bold'), foreground='blue')
@@ -1889,9 +1978,11 @@ class CTVListGUI:
         ]
         file_path = filedialog.askopenfilename(title="Select CLKUtils Test File", filetypes=filetypes)
         if file_path:
-            self.clkutils_file_path.set(file_path)
+            # Normalize the file path to handle UNC paths and strip quotes
+            normalized_path = self.normalize_unc_path(file_path)
+            self.clkutils_file_path.set(normalized_path)
             # If CSV file, load column options
-            if file_path.lower().endswith('.csv'):
+            if normalized_path.lower().endswith('.csv'):
                 self.load_csv_columns()
     
     def load_csv_columns(self):
@@ -2292,19 +2383,22 @@ class CTVListGUI:
         # Now create all the content in the scrollable_frame
         ttk.Label(self.output_scrollable_frame, text="Output Settings and Processing", font=('Arial', 14, 'bold')).pack(pady=10)
         
-        # Output folder selection
+        # Output folder selection - stretch with consistent margins
         output_folder_frame = ttk.LabelFrame(self.output_scrollable_frame, text="Output Folder Selection")
-        output_folder_frame.pack(fill='x', padx=20, pady=10)
+        output_folder_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
+        
+        # Configure grid weights for responsive design
+        output_folder_frame.grid_columnconfigure(1, weight=1)
         
         self.output_path_var = tk.StringVar()
         ttk.Label(output_folder_frame, text="Output Folder:").grid(row=0, column=0, sticky='w', padx=10, pady=5)
-        ttk.Entry(output_folder_frame, textvariable=self.output_path_var, width=60).grid(row=0, column=1, padx=10, pady=5)
+        ttk.Entry(output_folder_frame, textvariable=self.output_path_var).grid(row=0, column=1, padx=10, pady=5, sticky='ew')  # Remove fixed width, use sticky='ew'
         ttk.Button(output_folder_frame, text="Browse", command=self.browse_output_folder).grid(row=0, column=2, padx=10, pady=5)
         ttk.Button(output_folder_frame, text="Use Default", command=self.use_default_output).grid(row=1, column=1, pady=10)
         
-        # Processing options
+        # Processing options - stretch with consistent margins
         options_frame = ttk.LabelFrame(self.output_scrollable_frame, text="Processing Options")
-        options_frame.pack(fill='x', padx=20, pady=10)
+        options_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
         
         self.delete_files_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(options_frame, text="Delete intermediary files", variable=self.delete_files_var).pack(anchor='w', padx=10, pady=5)
@@ -2337,9 +2431,9 @@ class CTVListGUI:
         self.stop_button.pack(side='left', padx=10)
         ttk.Button(process_frame, text="Clear All", command=self.clear_all).pack(side='left', padx=10)
         
-        # Progress bar (separate from log)
+        # Progress bar (separate from log) - stretch with consistent margins
         progress_info_frame = ttk.LabelFrame(self.output_scrollable_frame, text="Processing Progress")
-        progress_info_frame.pack(fill='x', padx=20, pady=(10, 5))
+        progress_info_frame.pack(fill='x', padx=(20, 40), pady=(10, 5))  # Right margin accounts for scrollbar
         
         self.progress_var = tk.DoubleVar()
         self.progress_bar = ttk.Progressbar(progress_info_frame, variable=self.progress_var, maximum=100)
@@ -2923,16 +3017,18 @@ class CTVListGUI:
         
         if file_path:
             try:
-                self.log_message(f"Loading material data from: {file_path}")
+                # Normalize the file path to handle UNC paths and strip quotes
+                normalized_path = self.normalize_unc_path(file_path)
+                self.log_message(f"Loading material data from: {normalized_path}")
                 
                 # Load and filter the file based on type
-                if file_path.endswith('.csv'):
-                    self.material_df = self.load_csv_filtered(file_path)
-                elif file_path.endswith(('.xlsx', '.xls')):
-                    self.material_df = self.load_excel_filtered(file_path)
+                if normalized_path.endswith('.csv'):
+                    self.material_df = self.load_csv_filtered(normalized_path)
+                elif normalized_path.endswith(('.xlsx', '.xls')):
+                    self.material_df = self.load_excel_filtered(normalized_path)
                 else:
                     # Try CSV as fallback
-                    self.material_df = self.load_csv_filtered(file_path)
+                    self.material_df = self.load_csv_filtered(normalized_path)
                 
                 # Validate columns
                 is_valid, missing_cols = self.validate_material_columns(self.material_df)
@@ -3287,8 +3383,10 @@ class CTVListGUI:
         )
         
         if file_path:
-            self.mtpl_file_path.set(file_path)
-            self.update_mtpl_info(file_path)
+            # Normalize the file path to handle UNC paths and strip quotes
+            normalized_path = self.normalize_unc_path(file_path)
+            self.mtpl_file_path.set(normalized_path)
+            self.update_mtpl_info(normalized_path)
             
     def update_status_indicator(self, label_widget, message, status_type="info"):
         """Update status indicator with color-coded messages and smooth transitions"""
@@ -3337,7 +3435,19 @@ class CTVListGUI:
             
         try:
             self.log_message("Processing MTPL file...")
-            self.mtpl_csv_path = mt.mtpl_to_csv(fi.process_file_input(mtpl_path))
+            
+            # Normalize path for UNC paths before processing
+            normalized_mtpl_path = self.normalize_unc_path(mtpl_path)
+            self.log_message(f"Original path: {mtpl_path}")
+            self.log_message(f"Normalized path: {normalized_mtpl_path}")
+            
+            # Apply normalization again to the result of fi.process_file_input
+            processed_path = fi.process_file_input(normalized_mtpl_path)
+            final_path = self.normalize_unc_path(processed_path)
+            self.log_message(f"Processed path: {processed_path}")
+            self.log_message(f"Final path: {final_path}")
+            
+            self.mtpl_csv_path = mt.mtpl_to_csv(final_path)
             self.mtpl_df = pd.read_csv(self.mtpl_csv_path)
             
             # Debug: Print MTPL dataframe info
@@ -3382,8 +3492,15 @@ class CTVListGUI:
             self.mtpl_file_path.set(self.last_mtpl_path)
             self.log_message(f"Reloading MTPL file: {os.path.basename(self.last_mtpl_path)}")
             
+            # Normalize path for UNC paths before processing
+            normalized_mtpl_path = self.normalize_unc_path(self.last_mtpl_path)
+            
+            # Apply normalization again to the result of fi.process_file_input
+            processed_path = fi.process_file_input(normalized_mtpl_path)
+            final_path = self.normalize_unc_path(processed_path)
+            
             # Process the file
-            self.mtpl_csv_path = mt.mtpl_to_csv(fi.process_file_input(self.last_mtpl_path))
+            self.mtpl_csv_path = mt.mtpl_to_csv(final_path)
             self.mtpl_df = pd.read_csv(self.mtpl_csv_path)
             
             self.update_mtpl_display()
@@ -4375,7 +4492,9 @@ class CTVListGUI:
         """Browse for output folder"""
         folder_path = filedialog.askdirectory(title="Select Output Folder")
         if folder_path:
-            self.output_path_var.set(folder_path)
+            # Normalize the folder path to handle UNC paths and strip quotes
+            normalized_path = self.normalize_unc_path(folder_path)
+            self.output_path_var.set(normalized_path)
             
     def use_default_output(self):
         """Use default output folder based on MTPL path"""
@@ -4388,13 +4507,13 @@ class CTVListGUI:
         """Set default output folder"""
         if self.mtpl_csv_path:
             # Normalize the path and use proper path operations
-            csv_path = os.path.normpath(self.mtpl_csv_path)
+            csv_path = self.normalize_unc_path(self.mtpl_csv_path)
             if 'Modules' in csv_path:
                 base_path = csv_path.split('Modules')[0].rstrip(os.sep)
                 default_path = os.path.join(base_path, 'dataOut')
             else:
                 default_path = os.path.join(os.path.dirname(csv_path), 'dataOut')
-            self.output_path_var.set(os.path.normpath(default_path))
+            self.output_path_var.set(self.normalize_unc_path(default_path))
             
     def stop_processing(self):
         """Stop the processing"""
@@ -4434,6 +4553,10 @@ class CTVListGUI:
             return
             
         output_folder = self.output_path_var.get()
+        # Normalize the output folder path to handle UNC paths and strip quotes
+        if output_folder:
+            output_folder = self.normalize_unc_path(output_folder)
+            
         if output_folder and not os.path.exists(output_folder):
             try:
                 os.makedirs(output_folder, exist_ok=True)
@@ -4540,8 +4663,8 @@ class CTVListGUI:
             # Use the single loaded MTPL file
             mtpl_path = self.mtpl_file_path.get()
             
-            # Normalize path separators for Windows (from master.py)
-            mtpl_path = os.path.normpath(mtpl_path)
+            # Normalize path separators for Windows, but preserve UNC paths (from master.py)
+            mtpl_path = self.normalize_unc_path(mtpl_path)
             
             # Get base directory from the loaded MTPL path (enhanced from master.py)
             if 'Modules' in mtpl_path:
@@ -4567,6 +4690,7 @@ class CTVListGUI:
             current_iteration = 0
             
             # Process for each program with the single loaded MTPL (enhanced logic from master.py)
+            place_temp = place_in
             for program in program_list:
                 if not self.processing:
                     break
@@ -4574,11 +4698,15 @@ class CTVListGUI:
                 self.log_message(f"Processing program: {program}")
                 
                 # Create output folder if specified (from master.py)
-
+                place_in = place_temp
                 if place_in:
                     place_in = os.path.normpath(place_in)
                     os.makedirs(place_in, exist_ok=True)
                     place_in = place_in + os.sep
+                    if len(program_list) >1:
+                        place_in = os.path.normpath(place_in + f'{program}_output')
+                        os.makedirs(place_in, exist_ok=True)
+                        place_in = place_in + os.sep
                 else:
                     place_in = os.path.normpath(os.getcwd() + os.sep + f'{program}_output')
                     os.makedirs(place_in, exist_ok=True)
@@ -5032,6 +5160,43 @@ class CTVListGUI:
         
         self.log_message("Application reset - all data cleared")
         
+    def normalize_unc_path(self, path):
+        """
+        Properly normalize Windows UNC paths to ensure only 2 backslashes at start,
+        and strip any quotation marks from the path.
+        
+        Args:
+            path: The file path to normalize
+            
+        Returns:
+            str: Normalized path with proper UNC format and no quotation marks
+        """
+        if not path:
+            return path
+        
+        print(f"Debug - normalize_unc_path input: '{path}'")
+        
+        # Strip quotation marks (single and double) from the beginning and end
+        path = path.strip().strip('"\'')
+        print(f"Debug - after stripping quotes: '{path}'")
+        
+        if path.startswith('\\\\'):
+            # UNC path - strip all leading backslashes and add exactly 2
+            stripped_path = path.lstrip('\\')
+            print(f"Debug - stripped all backslashes: '{stripped_path}'")
+            # Add exactly 2 backslashes to the front
+            normalized_path = '\\\\' + stripped_path
+            # Manual normalization to avoid os.path.normpath issues with UNC paths
+            # Replace multiple consecutive backslashes with single ones (except the leading \\)
+            normalized_path = '\\\\' + stripped_path.replace('\\\\', '\\')
+            print(f"Debug - final normalized path: '{normalized_path}'")
+            return normalized_path
+        else:
+            # Regular path - use standard normalization
+            normalized = os.path.normpath(path)
+            print(f"Debug - regular path normalized: '{normalized}'")
+            return normalized
+        
     def is_undefined(self, value):
         """Check if a value is considered undefined (from master.py)"""
         return value is None or value == '' or value == '-'
@@ -5055,43 +5220,59 @@ class CTVListGUI:
             # Clean the config expression
             config_expr = config_expression.strip().strip('"\'')
             
+            self.log_message(f"Resolving SIO config: {config_expr}")
+            self.log_message(f"Base directory: {base_dir}")
+            
             # Handle GetEnvironmentVariable("~HDMT_TP_BASE_DIR") - replace with base_dir
             if 'GetEnvironmentVariable("~HDMT_TP_BASE_DIR")' in config_expr:
-                config_expr = config_expr.replace('GetEnvironmentVariable("~HDMT_TP_BASE_DIR")', f'"{base_dir}"')
+                # Normalize the base_dir for UNC paths
+                normalized_base_dir = self.normalize_unc_path(base_dir)
+                config_expr = config_expr.replace('GetEnvironmentVariable("~HDMT_TP_BASE_DIR")', f'"{normalized_base_dir}"')
+                self.log_message(f"After base_dir replacement: {config_expr}")
             
             # Split the expression by '+' and process each part
             parts = [part.strip() for part in config_expr.split('+')]
             resolved_parts = []
             
+            self.log_message(f"Processing parts: {parts}")
+            
             for part in parts:
                 part = part.strip(' "\'')
+                self.log_message(f"Processing part: '{part}'")
                 
                 if part.startswith('"') and part.endswith('"'):
                     # It's a literal string
-                    resolved_parts.append(part.strip('"'))
-                elif '.' in part:
+                    literal_value = part.strip('"')
+                    resolved_parts.append(literal_value)
+                    self.log_message(f"  -> Literal string: '{literal_value}'")
+                elif '.' in part and not part.startswith('\\\\'):
                     # It's a variable reference like SIO_PCIE.inputFilePath or UCC.DNELB
+                    # But not a UNC path (which starts with \\)
                     namespace, var_name = part.split('.', 1)
                     if namespace in user_vars and var_name in user_vars[namespace]:
                         var_value = user_vars[namespace][var_name].strip(' "\'')
                         resolved_parts.append(var_value)
+                        self.log_message(f"  -> Variable {namespace}.{var_name}: '{var_value}'")
                     else:
                         self.log_message(f"Warning: Variable {part} not found in .usrv file")
                         return None
                 else:
-                    # Direct reference or literal
+                    # Direct reference or literal (including UNC paths that might have been substituted)
                     resolved_parts.append(part)
+                    self.log_message(f"  -> Direct reference: '{part}'")
             
             # Join all parts to form the final path
             resolved_path = ''.join(resolved_parts)
+            self.log_message(f"Joined path: '{resolved_path}'")
             
             # Normalize path separators and make it absolute
-            resolved_path = resolved_path.replace('\\\\', os.sep).replace('\\', os.sep).replace('/', os.sep)
+            resolved_path = resolved_path.replace('/', os.sep)
             
             if not os.path.isabs(resolved_path):
                 resolved_path = os.path.join(base_dir, resolved_path)
             
-            resolved_path = os.path.normpath(resolved_path)
+            # Final normalization for UNC paths
+            resolved_path = self.normalize_unc_path(resolved_path)
             
             self.log_message(f"SIO config resolution: {config_expression} -> {resolved_path}")
             

@@ -56,14 +56,35 @@ def check_write_permission(file_name):
             file_name = '.'.join(temp_list)
 
 def process_file_input(input_string):
-   #Process user input to remove quotes and encode escape sequences as literal characters.
+    """Process user input to remove quotes and normalize paths while preserving UNC paths."""
+    # Remove surrounding quotes
     if input_string.startswith('"') and input_string.endswith('"'):
         input_string = input_string[1:-1]
     elif input_string.startswith("'") and input_string.endswith("'"):
         input_string = input_string[1:-1]
-    # Encode escape sequences as literal characters
-    raw_input = input_string.encode('unicode_escape').decode('utf-8')
-    return os.path.normpath(raw_input)
+    
+    # Check if it's a UNC path before processing
+    is_unc = input_string.startswith('\\\\')
+    
+    # Handle escape sequences but avoid corrupting UNC paths
+    if '\\' in input_string and not is_unc:
+        # Only encode escape sequences for non-UNC paths
+        raw_input = input_string.encode('unicode_escape').decode('utf-8')
+    else:
+        # For UNC paths, just use the input as-is
+        raw_input = input_string
+    
+    # Normalize path while preserving UNC format
+    if is_unc:
+        # For UNC paths, manually normalize to avoid os.path.normpath corruption
+        # Strip all leading backslashes and add exactly 2
+        stripped_path = raw_input.lstrip('\\')
+        # Replace multiple consecutive backslashes with single ones (except the leading \\)
+        normalized_path = '\\\\' + stripped_path.replace('\\\\', '\\')
+        return normalized_path
+    else:
+        # For regular paths, use standard normalization
+        return os.path.normpath(raw_input)
 
 def get_file_extension(file_path):
     """Return the file extension of the given file path."""

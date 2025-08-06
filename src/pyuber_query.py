@@ -568,8 +568,7 @@ def uber_request(indexed_input, test_name_file, test_type='', output_folder='', 
     original_columns_set = set(df_pivot.columns)
 
     # Create a set of column names with '_PASS' and '_FAIL' removed
-    modified_columns_set = set(col.upper().replace('_PASS', '').replace('_FAIL', '').replace('_1', '') for col in df_pivot.columns)
-
+    modified_columns_set = set([col.upper().replace('_PASS', '').replace('_FAIL', '').replace('_1', '') for col in df_pivot.columns]+[col.upper().replace('_PASS', '').replace('_FAIL', '') for col in df_pivot.columns])
     # Combine both sets to create a comprehensive set of column names
     df_columns_set = original_columns_set.union(modified_columns_set)
 
