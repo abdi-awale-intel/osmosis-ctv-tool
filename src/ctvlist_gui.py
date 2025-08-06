@@ -4843,9 +4843,7 @@ class CTVListGUI:
                             tag_header_names_chunks.append(tag_header_names)
                             intermediary_file_list.append(indexed_file)
                             self.log_message(f"Performing data request for test: {test}")
-                            # Set need_suffix to False for regular CTV processing
-                            need_suffix = False
-                            datainput_file,datacombine_file = py.uber_request(indexed_file,test,test_type,need_suffix,place_in,program, csv_identifier,lot_list,wafer_list,prefetch,databases)
+                            datainput_file,datacombine_file = py.uber_request(indexed_file,test,test_type,place_in,program, csv_identifier,lot_list,wafer_list,prefetch,databases)
                             intermediary_file_list.append(datainput_file)
                             output_files.append(datacombine_file)
 

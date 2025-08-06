@@ -1,18 +1,18 @@
 {
   "zoom_level": 0.5,
   "compact_mode": false,
-  "window_geometry": "1216x612+32+54",
+  "window_geometry": "1216x612+37+18",
   "theme_mode": "light",
-  "last_mtpl_path": "\\\\al4file1.ra.intel.com\\sdx\\program\\1276\\eng\\hdmtprogs\\dmr_dai_sds\\testprogram\\DAIEBJX30A5313XPOD\\Modules\\SIO_PCIE\\SIO_PCIE.mtpl",
+  "last_mtpl_path": "H:\\program\\1276\\eng\\hdmtprogs\\dmr_dai_sds\\testprogram\\DAIEBJX30A5313XPOD\\Modules\\CLK_PLL_IMH\\CLK_PLL_IMH.mtpl",
   "material_inputs": {
     "lot": "",
     "wafer": "",
-    "program": "DAIEBJX30A5312XPOC,DAIEBJX30A5313XPOD",
-    "prefetch": "10",
+    "program": "DAIEBJX30A5313XPOD",
+    "prefetch": "15",
     "database": "D1D_PROD_XEUS"
   },
   "output_settings": {
-    "output_path": "C:\\Users\\burtonr\\Downloads\\SIO",
+    "output_path": "C:\\Users\\burtonr\\Downloads\\CLKTESTING",
     "delete_files": false,
     "run_jmp": false
   }
