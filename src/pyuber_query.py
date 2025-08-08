@@ -14,7 +14,7 @@ import re
 from collections import defaultdict
 
 
-def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_condition, prefetch, databases, intermediary_file):
+def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_condition, prefetch, databases, intermediary_file,module_name=''):
     """Execute PyUber query with given parameters and return whether data was found"""
     cursor = ''
     data_found = False
@@ -24,6 +24,10 @@ def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_c
     for database in databases:
         missing_counter = 0 #remove this if data gets too big #yet another flaw with the quick hardcoded route
         for token_chunk in token_chunks:
+            if token_chunk:
+                token_condition = f"t0.test_name IN ('{token_chunk}')"
+            else:
+                token_condition = f"t0.test_name LIKE 'TESTTIME_{module_name}%'"
             # place tokens into SQL query
             print('Running Query')
             query = f"""
@@ -48,9 +52,9 @@ def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_c
             AND      v0.valid_flag = 'Y' 
             AND      {lot_condition}
             AND      {wafer_condition}
-            AND      t0.test_name IN ('{token_chunk}')
-            
-            AND      str.string_result IS NOT NULL  
+            AND      {token_condition}
+
+            AND      str.string_result IS NOT NULL
             AND      v0.test_end_date_time >= TRUNC(SYSDATE) - {str(int(prefetch))}
             AND      {program_condition}
             /*END SQL*/
@@ -689,14 +693,13 @@ def sorting_key(name):
     # Return the name minus the last integer part and the integer itself
     return (parts[0], last_int)
 
-
-def get_testtimes(tests, module_name, lot, wafer_id, programs, prefetch, databases, place_in='',max_bytes=63000):
-    tests = [test.split('::')[1] if '::' in test else test for test in tests]
-    token_Names = ["TESTTIME_"+str(module_name)+"::"+str(test) for test in tests]
-    token_names = ["testtime_"+str(module_name)+"::"+str(test) for test in tests]
-    token_chunks = list(split_by_byte_size(token_Names+token_names, max_bytes))
-
-    testtime_output = f'{place_in}testtime_output_{module_name}.csv'
+def get_testtimes(module_name, lot, wafer_id, programs, prefetch, databases, place_in=''):
+#def get_testtimes(tests, module_name, lot, wafer_id, programs, prefetch, databases, place_in='',max_bytes=63000):
+    #tests = [test.split('::')[1] if '::' in test else test for test in tests]
+    #token_Names = ["TESTTIME_"+str(module_name)+"::"+str(test) for test in tests]
+    #token_names = ["testtime_"+str(module_name)+"::"+str(test) for test in tests]
+    #token_chunks = list(split_by_byte_size(token_Names+token_names, max_bytes))
+    token_chunks = ['']
 
     if lot == ['Not Null'] or not lot or lot == ['']:
         lot_condition = "v0.lot IS NOT NULL"
@@ -722,7 +725,7 @@ def get_testtimes(tests, module_name, lot, wafer_id, programs, prefetch, databas
             program_condition = f"v0.program_name = '{program}'"
         
         testtime_output = f'{place_in}testtime_{program}_{module_name}.csv'
-        execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_condition, prefetch, databases, testtime_output)
+        execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_condition, prefetch, databases, testtime_output,module_name)
         df1 = pivot_data(testtime_output)
 
         for col in df1.columns:
@@ -740,7 +743,171 @@ def get_testtimes(tests, module_name, lot, wafer_id, programs, prefetch, databas
                 # Apply the extraction to all values in this column
                 df1[col] = df1[col].apply(extract_main_value)
 
-        df1.to_csv(testtime_output)
+        # Clean up column names - remove 'testtime_' or 'TESTTIME_' and module name
+        cleaned_columns = {}
+        for col in df1.columns:
+            if col.startswith('TESTTIME_') or col.startswith('testtime_'):
+                # Remove the prefix and module name
+                new_name = col.replace('TESTTIME_', '').replace('testtime_', '')
+                if f'{module_name}::' in new_name:
+                    new_name = new_name.replace(f'{module_name}::', '')
+                cleaned_columns[col] = new_name
+        
+        # Rename columns
+        df1.rename(columns=cleaned_columns, inplace=True)
+
+        # Group columns by test name (everything after '::' and before '_' in 5th position)
+        # Get data columns (skip first 7 ID columns) - use cleaned names
+        data_columns = [col for col in df1.columns[7:] if col in cleaned_columns.values() or any(col.startswith(prefix) for prefix in cleaned_columns.values())]
+        
+        # Group columns by test name pattern
+        test_groups = {}
+        for col in data_columns:
+            if '::' in col:
+                # Extract test name - everything after '::' and before the 5th '_'
+                parts_after_colon = col.split('::')[1]
+                test_name_parts = parts_after_colon.split('_')
+                if len(test_name_parts) >= 5:
+                    test_group_name = test_name_parts[4]  # 5th element (0-indexed as 4)
+                else:
+                    test_group_name = parts_after_colon  # Use full name if less than 5 parts
+            else:
+                # For cleaned column names without '::', try to extract meaningful group name
+                parts = col.split('_')
+                if len(parts) >= 5:
+                    test_group_name = parts[4]
+                else:
+                    test_group_name = col  # Use full name if less than 5 parts
+            
+            if test_group_name not in test_groups:
+                test_groups[test_group_name] = []
+            test_groups[test_group_name].append(col)
+        
+        # Create totals columns
+        all_test_columns = []  # Track all test columns for module total
+        for group_cols in test_groups.values():
+            all_test_columns.extend(group_cols)
+        
+        # Create module total column first
+        module_total_col = f"{module_name}_TOTAL"
+        
+        # Convert all test columns to numeric for module total
+        numeric_test_cols = []
+        for col in all_test_columns:
+            df1[f"{col}_numeric"] = pd.to_numeric(df1[col], errors='coerce')
+            numeric_test_cols.append(f"{col}_numeric")
+        
+        # Sum all test columns for module total
+        df1[module_total_col] = df1[numeric_test_cols].sum(axis=1)
+        
+        # Clean up temporary numeric columns
+        df1.drop(columns=numeric_test_cols, inplace=True)
+        
+        # Create group total columns
+        group_total_cols = []
+        for test_group, group_cols in test_groups.items():
+            # Create group total column
+            group_total_col = f"{module_name}_{test_group}_TOTAL"
+            group_total_cols.append(group_total_col)
+            
+            # Convert columns to numeric, handling non-numeric values
+            numeric_cols = []
+            for col in group_cols:
+                df1[f"{col}_numeric"] = pd.to_numeric(df1[col], errors='coerce')
+                numeric_cols.append(f"{col}_numeric")
+            
+            # Sum the numeric columns
+            df1[group_total_col] = df1[numeric_cols].sum(axis=1)
+            
+            # Clean up temporary numeric columns
+            df1.drop(columns=numeric_cols, inplace=True)
+        
+        # Organize columns: ID columns + module total + group totals + all test columns
+        new_columns_order = list(df1.columns[:7])  # Keep first 7 ID columns
+        new_columns_order.append(module_total_col)  # Add module total
+        new_columns_order.extend(group_total_cols)  # Add all group totals
+        
+        # Add test columns grouped by their groups
+        for test_group, group_cols in test_groups.items():
+            new_columns_order.extend(group_cols)
+        
+        # Add any remaining columns
+        remaining_cols = [col for col in df1.columns if col not in new_columns_order]
+        new_columns_order.extend(remaining_cols)
+        
+        # Reorder columns
+        df1 = df1.reindex(columns=new_columns_order)
+        
+        # Sort by LOT and WAFER_ID
+        df1_sorted = df1.sort_values(['LOT', 'WAFER_ID']).reset_index(drop=True)
+        
+        # Create wafer-level totals and insert between lot-wafer groupings
+        final_df_list = []
+        
+        # Group by LOT and WAFER_ID
+        grouped = df1_sorted.groupby(['LOT', 'WAFER_ID'])
+        
+        for (lot, wafer_id), group in grouped:
+            # Add the group data
+            final_df_list.append(group)
+            
+            # Create wafer total row
+            wafer_total_row = {}
+            wafer_total_row['Lot_WafXY'] = f"{lot}_{wafer_id}_WAFER_TOTAL"
+            wafer_total_row['LOT'] = lot
+            wafer_total_row['WAFER_ID'] = wafer_id
+            wafer_total_row['SORT_X'] = 'WAFER'
+            wafer_total_row['SORT_Y'] = 'TOTAL'
+            wafer_total_row['INTERFACE_BIN'] = ''
+            wafer_total_row['FUNCTIONAL_BIN'] = ''
+            
+            # Calculate totals for test columns and totals for this wafer
+            for col in df1.columns[7:]:  # Skip first 7 ID columns
+                if col in all_test_columns or col.endswith('_TOTAL'):
+                    # Convert to numeric and calculate sum (total)
+                    numeric_vals = pd.to_numeric(group[col], errors='coerce')
+                    wafer_total_row[col] = numeric_vals.sum() if not numeric_vals.isna().all() else ''
+                else:
+                    wafer_total_row[col] = ''
+            
+            # Add wafer total row
+            wafer_total_df = pd.DataFrame([wafer_total_row])
+            final_df_list.append(wafer_total_df)
+        
+        # Combine all dataframes
+        df1 = pd.concat(final_df_list, ignore_index=True)
+        
+        # Create overall average row for interface bins 1,2,3,01,02,03
+        valid_bins = ['1', '2', '3', '01', '02', '03']
+        filtered_df = df1_sorted[df1_sorted['INTERFACE_BIN'].astype(str).isin(valid_bins)]
+        
+        if not filtered_df.empty:
+            # Calculate averages for numeric columns (test data columns)
+            avg_row = {}
+            
+            # Set identifier columns for average row
+            avg_row['Lot_WafXY'] = 'OVERALL_AVERAGE'
+            avg_row['LOT'] = 'OVERALL'
+            avg_row['WAFER_ID'] = 'AVERAGE'
+            avg_row['SORT_X'] = ''
+            avg_row['SORT_Y'] = ''
+            avg_row['INTERFACE_BIN'] = ''
+            avg_row['FUNCTIONAL_BIN'] = 'AVERAGE'
+            
+            # Calculate averages for all test columns (original and totals)
+            for col in df1.columns[7:]:  # Skip first 7 ID columns
+                if col in all_test_columns or col.endswith('_TOTAL'):
+                    # Convert to numeric and calculate mean
+                    numeric_vals = pd.to_numeric(filtered_df[col], errors='coerce')
+                    avg_row[col] = numeric_vals.mean() if not numeric_vals.isna().all() else ''
+                else:
+                    avg_row[col] = ''
+            
+            # Add average row to dataframe
+            avg_df = pd.DataFrame([avg_row])
+            df1 = pd.concat([df1, avg_df], ignore_index=True)
+
+        df1.to_csv(testtime_output, index=False)
 
 
 if __name__ == "__main__":

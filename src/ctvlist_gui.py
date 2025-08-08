@@ -4668,7 +4668,7 @@ class CTVListGUI:
                     # Call the get_testtimes function from pyuber_query
                     self.log_message("Calling get_testtimes function...")
                     
-                    py.get_testtimes(
+                    '''py.get_testtimes(
                         tests=selected_tests,
                         module_name=module_name,
                         lot=lot,
@@ -4677,8 +4677,16 @@ class CTVListGUI:
                         prefetch=prefetch,
                         databases=databases,
                         place_in=place_in
+                    )'''
+                    py.get_testtimes(
+                        module_name=module_name,
+                        lot=lot,
+                        wafer_id=wafer,
+                        programs=programs,
+                        prefetch=prefetch,
+                        databases=databases,
+                        place_in=place_in
                     )
-                    
                     # Log success
                     self.log_message("✅ Test times retrieval completed successfully!")
                     if place_in:
