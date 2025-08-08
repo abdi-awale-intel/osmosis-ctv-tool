@@ -14,7 +14,7 @@ import re
 from collections import defaultdict
 
 
-def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_condition, prefetch, databases, intermediary_file,test_name):
+def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_condition, prefetch, databases, intermediary_file):
     """Execute PyUber query with given parameters and return whether data was found"""
     cursor = ''
     data_found = False
@@ -688,6 +688,60 @@ def sorting_key(name):
         last_int = float('inf')  # Use a large number if no integer is found
     # Return the name minus the last integer part and the integer itself
     return (parts[0], last_int)
+
+
+def get_testtimes(tests, module_name, lot, wafer_id, programs, prefetch, databases, place_in='',max_bytes=63000):
+    tests = [test.split('::')[1] if '::' in test else test for test in tests]
+    token_Names = ["TESTTIME_"+str(module_name)+"::"+str(test) for test in tests]
+    token_names = ["testtime_"+str(module_name)+"::"+str(test) for test in tests]
+    token_chunks = list(split_by_byte_size(token_Names+token_names, max_bytes))
+
+    testtime_output = f'{place_in}testtime_output_{module_name}.csv'
+
+    if lot == ['Not Null'] or not lot or lot == ['']:
+        lot_condition = "v0.lot IS NOT NULL"
+    else:
+        lot_condition = "v0.lot IN ({})".format(','.join("'{}'".format(l) for l in lot))
+    # Determine the condition for wafer_id
+    if wafer_id == ['Not Null'] or not wafer_id or wafer_id == ['']:
+        wafer_condition = "v0.wafer_id IS NOT NULL"
+    else:
+        wafer_condition = "v0.wafer_id IN ({})".format(','.join("'{}'".format(w) for w in wafer_id))
+    # Determine the condition for prefetch and databases
+    if not prefetch or prefetch=='nan':
+        prefetch = 3
+    if not databases:
+        databases = ['D1D_PROD_XEUS','F24_PROD_XEUS']
+
+
+    for program in programs:
+        if '%' in program:
+            program_condition = f"v0.program_name LIKE '{program}'"
+            program = program.replace('%', '')
+        else:
+            program_condition = f"v0.program_name = '{program}'"
+        
+        testtime_output = f'{place_in}testtime_{program}_{module_name}.csv'
+        execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_condition, prefetch, databases, testtime_output)
+        df1 = pivot_data(testtime_output)
+
+        for col in df1.columns:
+            if col.startswith('TESTTIME_') or col.startswith('testtime_'):
+                # Extract number between MAIN_ and the second MS from the data values
+                import re
+                def extract_main_value(value):
+                    if pd.isna(value) or value == '':
+                        return value
+                    match = re.search(r'MAIN_(\d+\.?\d*)MS', str(value))
+                    if match:
+                        return match.group(1)
+                    return value
+                
+                # Apply the extraction to all values in this column
+                df1[col] = df1[col].apply(extract_main_value)
+
+        df1.to_csv(testtime_output)
+
 
 if __name__ == "__main__":
     #indexed_input = "C:\\Users\\burtonr\\DAC_GIT\\Modules\\CLK_PLL_BASE\\InputFiles\\ConfigFiles\\Pre Offline tester 2\\CLK_PLL_BASE_LJPLL_BASE_CTVDEC_K_SDTBEGIN_TAP_INF_NOM_X_FLL_RELOCK_indexed_ctv_decoder.csv"

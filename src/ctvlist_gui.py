@@ -2429,6 +2429,7 @@ class CTVListGUI:
         ttk.Button(process_frame, text="Start Processing", command=self.start_processing, style='Accent.TButton').pack(side='left', padx=10)
         self.stop_button = ttk.Button(process_frame, text="Stop", command=self.stop_processing, state='disabled')
         self.stop_button.pack(side='left', padx=10)
+        ttk.Button(process_frame, text="Get Testtimes", command=self.get_testtimes, style='Accent.TButton').pack(side='left', padx=10)
         ttk.Button(process_frame, text="Clear All", command=self.clear_all).pack(side='left', padx=10)
         
         # Progress bar (separate from log) - stretch with consistent margins
@@ -4573,6 +4574,136 @@ class CTVListGUI:
         import threading
         thread = threading.Thread(target=self.process_data, args=(selected_tests, output_folder), daemon=True)
         thread.start()
+        
+    def get_testtimes(self):
+        """Get test times using the pyuber_query get_testtimes function"""
+        try:
+            # Check if PyUber is available
+            if not PYUBER_AVAILABLE:
+                messagebox.showerror("Error", "PyUber module is not available. Please ensure PyUber is properly installed.")
+                return
+            
+            # Validate that we have material data loaded
+            if not hasattr(self, 'material_data') or not self.material_data:
+                messagebox.showerror("Error", "Please create or load material data first")
+                return
+            
+            # Get selected tests
+            selected_tests = self.get_selected_tests()
+            if not selected_tests:
+                messagebox.showerror("Error", "Please select at least one test")
+                return
+            
+            # Get material data parameters
+            lot_str = self.lot_var.get() if hasattr(self, 'lot_var') and self.lot_var.get() else 'Not Null'
+            lot = [item.strip() for item in lot_str.split(',')] if lot_str else ['Not Null']
+            
+            wafer_str = self.wafer_var.get() if hasattr(self, 'wafer_var') and self.wafer_var.get() else 'Not Null'
+            wafer = [item.strip() for item in wafer_str.split(',')] if wafer_str else ['Not Null']
+            
+            programs_str = self.program_var.get() if hasattr(self, 'program_var') and self.program_var.get() else ''
+            programs = [item.strip() for item in programs_str.split(',') if item.strip()] if programs_str else []
+            
+            prefetch = self.prefetch_var.get() if hasattr(self, 'prefetch_var') and self.prefetch_var.get() else '3'
+            
+            databases_str = self.database_var.get() if hasattr(self, 'database_var') and self.database_var.get() else 'D1D_PROD_XEUS'
+            databases = [item.strip() for item in databases_str.split(',')] if databases_str else ['D1D_PROD_XEUS']
+            
+            # Get output folder
+            output_folder = self.output_path_var.get() if hasattr(self, 'output_path_var') else ''
+            if output_folder:
+                output_folder = self.normalize_unc_path(output_folder)
+                if not os.path.exists(output_folder):
+                    try:
+                        os.makedirs(output_folder, exist_ok=True)
+                        self.log_message(f"Created output directory: {output_folder}")
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Failed to create output directory: {str(e)}")
+                        return
+                place_in = output_folder + os.sep if output_folder else ''
+            else:
+                place_in = ''
+            
+            # Extract module name intelligently based on mode
+            clkutils_mode = hasattr(self, 'run_clkutils_var') and self.run_clkutils_var.get()
+            
+            if clkutils_mode:
+                # In CLKUtils mode, try to extract common prefix from test names
+                if selected_tests:
+                    # Try to find a common pattern in test names
+                    # Look for common prefixes or patterns that could indicate module name
+                    first_test = selected_tests[0]
+                    
+                    if '::' in first_test:
+                        module_name = first_test.split('::')[0]  # Use everything before '::'
+                    else:
+                        module_name = "CLK_PLL_"+ first_test.split('_')[1]
+            else:
+                # In MTPL mode, extract from MTPL file path
+                mtpl_path = self.mtpl_file_path.get() if hasattr(self, 'mtpl_file_path') else ""
+                if mtpl_path:
+                    # Extract filename from path
+                    filename = os.path.basename(mtpl_path)
+                    if filename.endswith('.mtpl'):
+                        # Remove .mtpl extension to get module name
+                        module_name = filename[:-5]  # Remove last 5 characters (.mtpl)
+                    else:
+                        # Fallback to removing any extension
+                        module_name = os.path.splitext(filename)[0]
+                    
+                    # Clean up module name (remove invalid characters for file names)
+                    module_name = ''.join(c for c in module_name if c.isalnum() or c in '_-')
+                    
+                    if not module_name:  # If cleaning resulted in empty string
+                        module_name = "MTPL_Module"
+                else:
+                    # Fallback to program name if available
+                    module_name = programs[0] if programs else "default_module"
+            
+            # Start processing in a separate thread to avoid UI blocking
+            import threading
+            
+            def run_testtimes():
+                try:
+                    # Call the get_testtimes function from pyuber_query
+                    self.log_message("Calling get_testtimes function...")
+                    
+                    py.get_testtimes(
+                        tests=selected_tests,
+                        module_name=module_name,
+                        lot=lot,
+                        wafer_id=wafer,
+                        programs=programs,
+                        prefetch=prefetch,
+                        databases=databases,
+                        place_in=place_in
+                    )
+                    
+                    # Log success
+                    self.log_message("✅ Test times retrieval completed successfully!")
+                    if place_in:
+                        expected_file = f'{place_in}testtime_output_{module_name}.csv'
+                        if os.path.exists(expected_file):
+                            self.log_message(f"📁 Output file created: {expected_file}")
+                        else:
+                            self.log_message("⚠️ Output file not found at expected location")
+                    
+                    # Show success message
+                    self.root.after(0, lambda: messagebox.showinfo("Success", "Test times retrieved successfully!"))
+                    
+                except Exception as e:
+                    error_msg = f"Error getting test times: {str(e)}"
+                    self.log_message(f"❌ {error_msg}")
+                    self.root.after(0, lambda: messagebox.showerror("Error", error_msg))
+            
+            # Start the thread
+            thread = threading.Thread(target=run_testtimes, daemon=True)
+            thread.start()
+            
+        except Exception as e:
+            error_msg = f"Error initiating test times retrieval: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            messagebox.showerror("Error", error_msg)
         
     def update_progress(self, current_test, total_tests, step_description=""):
         """Update progress bar with detailed information and smooth animation"""

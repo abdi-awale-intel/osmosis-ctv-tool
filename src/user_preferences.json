@@ -1,18 +1,18 @@
 {
   "zoom_level": 0.5,
   "compact_mode": false,
-  "window_geometry": "1216x612+37+18",
+  "window_geometry": "1400x900+260+90",
   "theme_mode": "light",
-  "last_mtpl_path": "H:\\program\\1276\\eng\\hdmtprogs\\dmr_dai_sds\\testprogram\\DAIEBJX30A5313XPOD\\Modules\\CLK_PLL_IMH\\CLK_PLL_IMH.mtpl",
+  "last_mtpl_path": "H:\\program\\1276\\eng\\hdmtprogs\\dmr_dai_sds\\testprogram\\DAIEBJX30A5313XPOD\\Modules\\SIO_PCIE\\SIO_PCIE.mtpl",
   "material_inputs": {
     "lot": "",
-    "wafer": "",
+    "wafer": "311",
     "program": "DAIEBJX30A5313XPOD",
-    "prefetch": "15",
+    "prefetch": "30",
     "database": "D1D_PROD_XEUS"
   },
   "output_settings": {
-    "output_path": "C:\\Users\\burtonr\\Downloads\\CLKTESTING",
+    "output_path": "C:\\Users\\burtonr\\Downloads\\SIO",
     "delete_files": false,
     "run_jmp": false
   }

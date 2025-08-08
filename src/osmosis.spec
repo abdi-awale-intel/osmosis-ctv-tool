@@ -81,36 +81,8 @@ hiddenimports = [
     'tkinter.filedialog',
     'tkinter.messagebox',
     'pandas',
-    'pandas.core',
-    'pandas.core.dtypes',
-    'pandas.core.dtypes.common',
-    'pandas.core.dtypes.generic',
-    'pandas.core.dtypes.inference',
-    'pandas.io',
-    'pandas.io.common',
-    'pandas.io.excel',
-    'pandas.io.parsers',
-    'pandas.io.formats',
-    'pandas.io.formats.format',
-    'pandas._libs',
-    'pandas._libs.tslib',
-    'pandas._libs.tslibs',
-    'pandas._libs.tslibs.base',
-    'pandas._libs.tslibs.timestamps',
-    'pandas._libs.tslibs.timedeltas',
-    'pandas._libs.tslibs.nattype',
-    'pandas._libs.tslibs.np_datetime',
-    'pandas._libs.tslibs.parsing',
-    'pandas._libs.tslibs.strptime',
     'numpy',
-    'numpy.core',
-    'numpy.core._multiarray_umath',
-    'numpy.random',
-    'numpy.random._pickle',
     'openpyxl',
-    'openpyxl.workbook',
-    'openpyxl.worksheet',
-    'openpyxl.cell',
     'PIL',
     'PIL.Image',
     'PIL.ImageTk',
@@ -124,11 +96,8 @@ hiddenimports = [
     'os',
     'sys',
     'pathlib',
-    'subprocess',
     'dateutil',
     'dateutil.relativedelta',
-    'dateutil.parser',
-    'pytz',
     # CustomTkinter support
     'customtkinter',
     # PyUber database modules
@@ -163,7 +132,7 @@ a = Analysis(
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
-    hookspath=[str(deployment_dir)],  # Add custom hooks directory
+    hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
@@ -176,31 +145,18 @@ a = Analysis(
 # PYZ
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)
 
-# Find icon file - prioritize ICO files for Windows compatibility
+# Find icon file
 icon_file = None
-possible_icons = ['icon.ico', 'logo.ico', 'icon.png', 'icon.jpg', 'icon.jpeg', 'logo.png', 'logo.jpg', 'logo.jpeg']
+possible_icons = ['icon.png', 'icon.jpg', 'icon.jpeg', 'logo.png', 'logo.jpg', 'logo.jpeg']
 for icon_name in possible_icons:
     icon_path = deployment_dir / 'images' / icon_name
     if icon_path.exists():
-        # Only use ICO files on Windows, skip other formats if PIL not available
-        if icon_name.endswith('.ico'):
-            icon_file = str(icon_path)
-            print(f"Using ICO icon: {icon_file}")
-            break
-        elif icon_name.endswith(('.png', '.jpg', '.jpeg')):
-            # Try to use non-ICO files only if they exist and we can process them
-            try:
-                # Test if PIL is available for conversion
-                from PIL import Image as PILImage
-                icon_file = str(icon_path)
-                print(f"Using icon with PIL conversion: {icon_file}")
-                break
-            except ImportError:
-                print(f"Skipping {icon_name} - PIL not available for conversion")
-                continue
+        icon_file = str(icon_path)
+        print(f"Using icon: {icon_file}")
+        break
 
 if not icon_file:
-    print("No suitable icon file found - building without icon")
+    print("No icon file found")
 
 # EXE
 exe = EXE(
