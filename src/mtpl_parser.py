@@ -72,6 +72,6 @@ def mtpl_to_csv(file_path,place_in=''):
     return output_csv
 
 if __name__ == "__main__":
-    file_path = input("Enter full path to mtpl file: ").strip('\"')
+    file_path = r"\\alpfile4.al.intel.com\hop\program\1276\eng\hdmtprogs\dmr_dab_hop\savirine\WW32\WW32.4_EIO_TP8\Modules\EIO_SHAFT\EIO_SHAFT.mtpl"
     #Example: "C:\\Users\\burtonr\\applications.manufacturing.ate-test.torch.server.dmr.sort.dab\\Modules\\CLK_PLL_BASE\\CLK_PLL_BASE.mtpl"
-    mtpl_to_csv(file_path)
+    mtpl_to_csv(file_path,"C:/Users/burtonr/Downloads/")

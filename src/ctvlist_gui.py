@@ -4894,7 +4894,8 @@ class CTVListGUI:
                             else:
                                 self.log_message(f"Using config file from current directory: {os.path.abspath(config_file)}")
                             
-                            indexed_file,tag_header_names = clk.process_json_to_csv(config_file,test,place_in,True)
+                            bitbased = True
+                            indexed_file,tag_header_names = clk.process_json_to_csv(config_file,test,place_in,bitbased)
                             tag_header_names_chunks.append(tag_header_names)
                             intermediary_file_list.append(indexed_file)
                             self.log_message(f"Performing data request for test: {test}")
@@ -5081,7 +5082,7 @@ class CTVListGUI:
                 
                 # Run JMP on stacked files if requested (from master.py)
                 if self.run_jmp_var.get() and stacked_files:
-                    self.log_message("Running JMP on combined stacked files...")
+                    self.log_message("Creating JSL scripts and launching single JMP workspace...")
                     try:
                         import jmp_python as jmp
                         jmp_executable_path = fi.find_latest_jmp_pro_path()
@@ -5109,37 +5110,37 @@ class CTVListGUI:
                             except Exception as test_e:
                                 self.log_message(f"JMP access test warning: {test_e}", "warning")
                             
-                            # Combine all stacked files into one master CSV for JMP
-                            self.log_message(f"Combining {len(stacked_files)} stacked files for comprehensive JMP analysis...")
-                            try:
-                                combined_csv_path = jmp.combine_stacked_files(stacked_files, self.output_folder)
-                                
-                                if combined_csv_path and os.path.exists(combined_csv_path):
-                                    self.log_message(f"Successfully created combined dataset: {os.path.basename(combined_csv_path)}")
-                                    self.log_message("Opening combined data in JMP for comprehensive analysis...")
-                                    
-                                    # Run JMP on the combined file (single window with all data)
-                                    jmp.run_combined_jsl(combined_csv_path, jmp_executable_path)
-                                    self.log_message("JMP analysis launched successfully!")
-                                    self.log_message("JMP will display multiple analysis views of your combined data in organized windows.")
-                                    self.log_message("All your stacked data is now in one comprehensive JMP analysis.")
-                                else:
-                                    self.log_message("Failed to create combined CSV file", "error")
-                                    
-                            except Exception as combine_e:
-                                self.log_message(f"Error combining stacked files: {combine_e}", "error")
-                                # Fallback to individual file processing if combining fails
-                                self.log_message("Falling back to individual file processing...", "warning")
-                                for stacked_file in stacked_files:
-                                    if os.path.exists(stacked_file):
-                                        self.log_message(f"Running JMP on: {os.path.basename(stacked_file)}")
-                                        try:
-                                            jmp.run_jsl(stacked_file, jmp_executable_path)
-                                            self.log_message(f"Successfully ran JMP on {os.path.basename(stacked_file)}")
-                                        except Exception as file_e:
-                                            self.log_message(f"Error running JMP on {os.path.basename(stacked_file)}: {file_e}", "error")
+                            # Step 1: Create all JSL scripts first (no JMP launching yet)
+                            self.log_message(f"📝 Creating JSL scripts for {len(stacked_files)} stacked files...")
                             
-                            self.log_message("JMP execution completed")
+                            try:
+                                # Get output folder for JSL scripts
+                                output_folder = place_in if place_in else os.getcwd()
+                                
+                                # Create JSL scripts for all stacked files
+                                jsl_scripts = jmp.create_multiple_jsl_scripts(stacked_files, output_folder)
+                                
+                                if jsl_scripts:
+                                    self.log_message(f"✅ Successfully created {len(jsl_scripts)} JSL scripts")
+                                    
+                                    # Step 2: Launch single JMP workspace with all analyses
+                                    self.log_message("🚀 Launching single JMP workspace with all analyses...")
+                                    
+                                    success = jmp.run_master_jsl_workspace(jsl_scripts, jmp_executable_path, output_folder)
+                                    
+                                    if success:
+                                        self.log_message("🎯 JMP Master Workspace launched successfully!")
+                                        self.log_message("💡 All your stacked files are now analyzed in one organized JMP session")
+                                        self.log_message(f"📊 {len(stacked_files)} datasets each have their own analysis window")
+                                        self.log_message("⚡ Resource efficient: Single JMP process instead of multiple instances")
+                                    else:
+                                        self.log_message("❌ Failed to launch JMP Master Workspace", "error")
+                                else:
+                                    self.log_message("❌ No JSL scripts were created successfully", "error")
+                                    
+                            except Exception as jsl_e:
+                                self.log_message(f"Error creating JSL scripts: {jsl_e}", "error")
+                            
                         else:
                             self.log_message("JMP executable path not found - cannot run JMP", "warning")
                             self.log_message("Please ensure JMP Pro is installed and accessible", "warning")

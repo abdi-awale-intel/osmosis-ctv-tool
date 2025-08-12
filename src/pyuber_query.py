@@ -1,3 +1,20 @@
+"""
+PyUber Database Query Module
+
+This module provides comprehensive database connectivity and query functionality for the
+Intel PyUber database system. It handles test data extraction, processing, and analysis
+for CTV (Circuit Test Vehicle) workflows, with specific focus on test timing data and
+statistical analysis.
+
+Key Features:
+- PyUber database connectivity and query execution
+- Test timing data extraction and processing
+- Data pivoting and aggregation operations
+- Multi-database support with failover capabilities
+- Advanced filtering and grouping operations
+- Statistical analysis including wafer-level aggregations
+"""
+
 import pandas as pd
 import PyUber
 import csv
@@ -9,13 +26,51 @@ import time
 import sys
 import os
 import file_functions as fi
-#for suffixes...
+# For regex pattern matching and data processing
 import re
 from collections import defaultdict
 
 
-def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_condition, prefetch, databases, intermediary_file,module_name=''):
-    """Execute PyUber query with given parameters and return whether data was found"""
+def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_condition, prefetch, databases, intermediary_file, module_name=''):
+    """
+    Execute PyUber database query with comprehensive parameter handling and data extraction.
+    
+    This function performs database queries against Intel's PyUber system to extract test data
+    based on specified criteria. It supports multi-database querying with automatic failover
+    and handles large datasets through chunking mechanisms.
+    
+    Args:
+        token_chunks (list): List of test name patterns to query
+        lot_condition (str): SQL condition for lot filtering
+        wafer_condition (str): SQL condition for wafer filtering  
+        program_condition (str): SQL condition for program filtering
+        prefetch (int): Number of records to prefetch in each query
+        databases (list): List of database names to query
+        intermediary_file (str): Path for intermediate CSV output
+        module_name (str, optional): Module name for test filtering
+        
+    Returns:
+        bool: True if data was found and processed, False otherwise
+        
+    Features:
+        - Multi-database support with automatic failover
+        - Chunked data processing for memory efficiency
+        - Comprehensive SQL query construction with multiple joins
+        - Error handling with detailed logging
+        - CSV output generation for downstream processing
+        
+    Database Query Structure:
+        - A_Testing_Session: Main session data
+        - A_Test: Test definitions and metadata
+        - A_Device_Testing: Device-level test results
+        - A_String_Result: String-based test results
+        
+    Example:
+        >>> tokens = [["TEST1", "TEST2"], ["TEST3", "TEST4"]]
+        >>> success = execute_pyuber_query(tokens, "lot='LOT123'", "wafer_id=1", 
+        ...                               "program LIKE 'DAB%'", 1000, 
+        ...                               ["D1D_PROD_XEUS"], "output.csv", "MODULE1")
+    """
     cursor = ''
     data_found = False
     finish_loops = False
@@ -108,7 +163,42 @@ def execute_pyuber_query(token_chunks, lot_condition, wafer_condition, program_c
     
     return data_found
 
+
 def pivot_data(intermediary_file):
+    """
+    Transform raw query data into pivoted format suitable for analysis.
+    
+    This function takes the raw CSV output from PyUber queries and transforms it into
+    a pivoted format where test names become columns and test results become values.
+    This structure is essential for JMP analysis and statistical processing.
+    
+    Args:
+        intermediary_file (str): Path to the CSV file containing raw query results
+        
+    Returns:
+        pandas.DataFrame: Pivoted dataframe with tests as columns
+        
+    Data Transformation:
+        - Reads raw CSV data with test results in rows
+        - Creates unique identifier from LOT, WAFER_ID, SORT_X, SORT_Y
+        - Pivots test_name column to create individual test columns
+        - Handles duplicate test entries with automatic aggregation
+        - Saves pivoted result back to the same CSV file
+        
+    Pivot Structure:
+        Input:  [LOT, WAFER_ID, SORT_X, SORT_Y, TEST_NAME, RESULT]
+        Output: [LOT, WAFER_ID, SORT_X, SORT_Y, TEST1, TEST2, TEST3, ...]
+        
+    Error Handling:
+        - Graceful handling of pivot failures (returns original data)
+        - Automatic fallback to non-pivoted data if pivot fails
+        - Preserves data integrity with robust exception handling
+        
+    Example:
+        >>> df = pivot_data("raw_test_data.csv")
+        >>> print(f"Pivoted data shape: {df.shape}")
+        # Output: "Pivoted data shape: (1000, 15)"  # 1000 devices, 15 test columns
+    """
     # Load CSV
     df1 = pd.read_csv(intermediary_file)
 
@@ -134,6 +224,70 @@ def pivot_data(intermediary_file):
 
 #def uber_request(indexed_input, test_name_file,test_type, output_folder,extra_identifier=''):
 def uber_request(indexed_input, test_name_file, test_type='', output_folder='', program='DAC%', extra_identifier='', lot = ['Not Null'], wafer_id = ['Not Null'], prefetch = '1', databases = ['D1D_PROD_XEUS','F24_PROD_XEUS'],config_number = '',mode=''):
+    """
+    Main CTV data extraction and processing function for PyUber database queries.
+    
+    This is the primary function for extracting and processing CTV (Circuit Test Vehicle)
+    data from Intel's PyUber databases. It handles the complete workflow from reading
+    test configurations to generating final processed data files ready for analysis.
+    
+    Args:
+        indexed_input (str): Path to the indexed CTV decoder CSV file
+        test_name_file (str): Test name identifier for query filtering
+        test_type (str, optional): Type of test processing ('ClkUtils' or standard)
+        output_folder (str, optional): Directory for output files (auto-detected if empty)
+        program (str, optional): Database program filter pattern (default: 'DAC%')
+        extra_identifier (str, optional): Additional identifier for output filenames
+        lot (list, optional): List of lot IDs to filter (default: ['Not Null'])
+        wafer_id (list, optional): List of wafer IDs to filter (default: ['Not Null'])
+        prefetch (str, optional): Days of historical data to fetch (default: '1')
+        databases (list, optional): Database names to query (default: ['D1D_PROD_XEUS','F24_PROD_XEUS'])
+        config_number (str, optional): Configuration number for file naming
+        mode (str, optional): Processing mode ('CtvTag' for special handling)
+    
+    Returns:
+        tuple: (intermediary_file_path, final_output_file_path)
+    
+    Features:
+        - Comprehensive CTV data extraction from PyUber databases
+        - Support for multiple test types (ClkUtils, standard MTPL)
+        - Advanced token generation and modification for database queries
+        - Data cleaning and column combination operations
+        - Statistical processing with PASS/FAIL result consolidation
+        - Intelligent file naming with ItuffToken extraction
+        
+    Processing Workflow:
+        1. Load and parse CTV decoder configuration
+        2. Generate test tokens with appropriate suffixes
+        3. Execute database queries with chunking support
+        4. Pivot and transform raw data into analysis format
+        5. Combine and clean data columns
+        6. Apply statistical processing and sorting
+        7. Generate final output files
+        
+    Test Type Support:
+        - ClkUtils: Numeric suffix tokens (1-20) for clock utility tests
+        - Standard: PASS/FAIL tokens with extensive variation handling
+        - Automatic token modification based on test patterns
+        
+    Data Processing Features:
+        - Column merging for suffixed data
+        - PASS/FAIL result combination with pipe separators
+        - TDO (Test Data Out) column filtering
+        - Custom column sorting with numeric awareness
+        - Statistical aggregation and reporting
+        
+    Example:
+        >>> intermediary, output = uber_request(
+        ...     indexed_input='decoder.csv',
+        ...     test_name_file='CLK_PLL_BASE::TEST_MODULE',
+        ...     test_type='ClkUtils',
+        ...     program='DAC%',
+        ...     lot=['LOT123'],
+        ...     prefetch='7'
+        ... )
+        >>> print(f"Data saved to: {output}")
+    """
     decoder_df = pd.read_csv(indexed_input)
     test_name = test_name_file
     #print(output_folder)
@@ -615,6 +769,40 @@ def uber_request(indexed_input, test_name_file, test_type='', output_folder='', 
 
 
 def modify_tokens(tokens, status):
+    """
+    Modify token names by inserting status suffixes in appropriate positions.
+    
+    This function takes a list of token names and appends or inserts a status suffix
+    (like 'PASS', 'FAIL', or numeric identifiers) in the correct position based on
+    the token structure. For tokens ending with numbers, the status is inserted
+    before the final numeric part.
+    
+    Args:
+        tokens (list): List of token names to modify
+        status (str): Status suffix to add (e.g., 'PASS', 'FAIL', '1', '2', etc.)
+    
+    Returns:
+        list: Modified tokens with status suffixes properly positioned
+    
+    Features:
+        - Smart positioning for numbered tokens (inserts before final number)
+        - Appends status for non-numbered tokens
+        - Preserves original token structure
+        - Handles various status types (PASS/FAIL, numeric identifiers)
+        
+    Token Modification Logic:
+        - If token ends with underscore + number: Insert status before number
+        - Otherwise: Append status at the end
+        - Maintains token naming conventions for database queries
+        
+    Example:
+        >>> tokens = ['TEST_TOKEN_1', 'SIMPLE_TOKEN']
+        >>> modify_tokens(tokens, 'PASS')
+        ['TEST_TOKEN_PASS_1', 'SIMPLE_TOKEN_PASS']
+        
+        >>> modify_tokens(['MODULE_TEST_5'], 'FAIL')
+        ['MODULE_TEST_FAIL_5']
+    """
     modified_tokens = []
     
     for token in tokens:
@@ -639,6 +827,44 @@ def modify_tokens(tokens, status):
     return modified_tokens
 
 def split_by_byte_size(lst, max_bytes):
+    """
+    Split a list of tokens into chunks based on byte size limits.
+    
+    This function divides a list of tokens into manageable chunks that don't exceed
+    a specified byte size when formatted as SQL query parameters. This is essential
+    for preventing database query size limitations and memory issues during processing.
+    
+    Args:
+        lst (list): List of token strings to be chunked
+        max_bytes (int): Maximum byte size for each chunk when formatted
+    
+    Yields:
+        str: Comma and newline separated token strings within byte limit
+    
+    Features:
+        - Intelligent chunking based on formatted string size
+        - Accounts for SQL formatting (quotes, commas, newlines)
+        - Memory-efficient generator implementation
+        - Prevents database query size overflow
+        
+    Formatting Logic:
+        - Calculates size including SQL formatting: "'token',\n"
+        - Yields chunks as comma-separated strings ready for SQL IN clauses
+        - Maintains proper SQL syntax in output strings
+        
+    Use Cases:
+        - Database query parameter chunking
+        - Memory-efficient data processing
+        - SQL IN clause optimization
+        - Large dataset partitioning
+        
+    Example:
+        >>> tokens = ['TOKEN1', 'TOKEN2', 'TOKEN3']
+        >>> chunks = list(split_by_byte_size(tokens, 50))
+        >>> print(chunks[0])
+        'TOKEN1',
+        'TOKEN2'
+    """
     current_chunk = []
     current_size = 0
 
@@ -663,6 +889,40 @@ def split_by_byte_size(lst, max_bytes):
         yield current_chunk_joined
 
 def combine_pipe_fields(pass_str, fail_str):
+    """
+    Combine PASS and FAIL data fields using pipe separator logic.
+    
+    This function merges corresponding fields from PASS and FAIL test result strings,
+    prioritizing PASS values when available and falling back to FAIL values when
+    PASS fields are empty. This is essential for consolidating test data from
+    multiple result categories.
+    
+    Args:
+        pass_str (str): Pipe-separated string of PASS test results
+        fail_str (str): Pipe-separated string of FAIL test results
+    
+    Returns:
+        str: Combined pipe-separated string with prioritized values
+    
+    Features:
+        - Field-by-field merging with PASS priority
+        - Automatic length normalization for mismatched field counts
+        - Preserves data structure with pipe separators
+        - Handles empty and missing fields gracefully
+        
+    Combination Logic:
+        - Split both strings by pipe separators
+        - Extend shorter list with empty strings to match lengths
+        - For each position: use PASS value if available, else use FAIL value
+        - Rejoin with pipe separators
+        
+    Example:
+        >>> combine_pipe_fields("value1||value3", "|value2|")
+        'value1|value2|value3'
+        
+        >>> combine_pipe_fields("", "fail1|fail2")
+        'fail1|fail2'
+    """
     pass_fields = pass_str.split('|')
     fail_fields = fail_str.split('|')
 
@@ -683,6 +943,44 @@ def combine_pipe_fields(pass_str, fail_str):
     return '|'.join(combined_fields)
 
 def sorting_key(name):
+    """
+    Generate sorting key for test column names based on numeric suffixes.
+    
+    This function creates a sorting key that enables proper numerical ordering
+    of test column names that end with numeric identifiers. It ensures that
+    columns are sorted logically (e.g., TEST_1, TEST_2, TEST_10) rather than
+    alphabetically (which would give TEST_1, TEST_10, TEST_2).
+    
+    Args:
+        name (str): Column name to generate sorting key for
+    
+    Returns:
+        tuple: (base_name, numeric_suffix) for proper sorting
+    
+    Features:
+        - Extracts numeric suffixes from column names
+        - Handles non-numeric suffixes gracefully
+        - Maintains alphabetical order for non-numeric parts
+        - Supports custom column ordering in data analysis
+        
+    Sorting Logic:
+        - Split name by underscores from the right
+        - Extract last part as potential numeric value
+        - Return base name and numeric value for tuple sorting
+        - Use infinity for non-numeric suffixes (sorts to end)
+        
+    Example:
+        >>> sorting_key("TEST_MODULE_5")
+        ('TEST_MODULE', 5)
+        
+        >>> sorting_key("SIMPLE_TEST")
+        ('SIMPLE_TEST', inf)
+        
+        >>> # Usage in sorting:
+        >>> columns = ["TEST_10", "TEST_2", "TEST_1"]
+        >>> sorted(columns, key=sorting_key)
+        ['TEST_1', 'TEST_2', 'TEST_10']
+    """
     # Split the name by underscores
     parts = name.rsplit('_', 1)
     # Extract the last integer part for sorting
@@ -694,7 +992,59 @@ def sorting_key(name):
     return (parts[0], last_int)
 
 def get_testtimes(module_name, lot, wafer_id, programs, prefetch, databases, place_in=''):
-#def get_testtimes(tests, module_name, lot, wafer_id, programs, prefetch, databases, place_in='',max_bytes=63000):
+    """
+    Retrieve test time data for a specific module from PyUber databases.
+    
+    This function queries PyUber databases to extract test time measurements for a specified
+    module, processes the data into structured format with totals and averages, and exports
+    results to CSV files. It automatically handles data cleaning, test grouping, and 
+    statistical calculations.
+    
+    Args:
+        module_name (str): Name of the test module to query (e.g., 'CLK_PLL_BASE')
+        lot (list): List of lot IDs to filter by, or ['Not Null'] for all lots
+        wafer_id (list): List of wafer IDs to filter by, or ['Not Null'] for all wafers
+        programs (list): List of program names to query (supports wildcards with %)
+        prefetch (str): Number of days to look back for test data (default: '3')
+        databases (list): List of database names to query (e.g., ['D1D_PROD_XEUS'])
+        place_in (str, optional): Output directory path for generated CSV files
+    
+    Returns:
+        None: Generates CSV files with processed test time data
+    
+    Features:
+        - Automated test time data extraction from PyUber databases
+        - Support for multiple programs with wildcard matching
+        - Data cleaning and value extraction from string results
+        - Test grouping with automatic total calculations
+        - Wafer-level and overall statistical summaries
+        - CSV export with structured column organization
+        
+    Data Processing:
+        - Extracts numeric values from MAIN_xxxMS format strings
+        - Groups tests by name patterns for logical organization
+        - Creates module totals and test group totals
+        - Calculates wafer-level totals for each lot/wafer combination
+        - Generates overall averages for interface bins 1,2,3,01,02,03
+        
+    Output Format:
+        - CSV files named: testtime_{program}_{module_name}.csv
+        - Columns: ID fields + module totals + group totals + individual tests
+        - Includes wafer totals and overall averages
+        - Sorted by LOT and WAFER_ID for easy analysis
+        
+    Example:
+        >>> get_testtimes(
+        ...     module_name='CLK_PLL_BASE',
+        ...     lot=['LOT123', 'LOT124'],
+        ...     wafer_id=['Not Null'],
+        ...     programs=['DAC%'],
+        ...     prefetch='7',
+        ...     databases=['D1D_PROD_XEUS'],
+        ...     place_in='C:/output/'
+        ... )
+    """
+    #def get_testtimes(tests, module_name, lot, wafer_id, programs, prefetch, databases, place_in='',max_bytes=63000):
     #tests = [test.split('::')[1] if '::' in test else test for test in tests]
     #token_Names = ["TESTTIME_"+str(module_name)+"::"+str(test) for test in tests]
     #token_names = ["testtime_"+str(module_name)+"::"+str(test) for test in tests]
