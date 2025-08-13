@@ -153,6 +153,7 @@ class CTVListGUI:
         self.clkutils_tests = []  # Store CLKUtils test names
         self.all_clkutils_items = []  # Store all CLKUtils items for filtering
         self.clkutils_file_path = tk.StringVar()
+        self.clkutils_config_path = tk.StringVar(value='configFile_DMR.json')  # Default config file path
         self.run_clkutils_var = tk.BooleanVar(value=False)  # Initialize here for early access
         
         # Initialize theme components as None for fallback handling
@@ -572,6 +573,32 @@ class CTVListGUI:
             for category in missing_categories:
                 print(f"  {category}: {' or '.join(expected_files[category])}")
             print("The application will use text-based fallbacks for missing images.")
+    
+    def validate_clkutils_config(self):
+        """Validate CLKUtils configuration file exists and is accessible"""
+        config_file = self.clkutils_config_path.get().strip()
+        if not config_file:
+            return False, "No configuration file specified"
+        
+        # Check if absolute path exists
+        if os.path.isabs(config_file):
+            if os.path.exists(config_file):
+                return True, config_file
+            else:
+                return False, f"Configuration file not found: {config_file}"
+        
+        # Check relative paths in common locations
+        search_paths = [
+            config_file,  # Current working directory
+            os.path.join(os.path.dirname(__file__), config_file),  # Script directory
+            os.path.join(os.getcwd(), config_file)  # Explicit current directory
+        ]
+        
+        for path in search_paths:
+            if os.path.exists(path):
+                return True, os.path.abspath(path)
+        
+        return False, f"Configuration file '{config_file}' not found in any of these locations: {search_paths}"
         
     def setup_window_management(self):
         """Setup proper window state handling and resize management"""
@@ -621,6 +648,7 @@ class CTVListGUI:
             # Add trace callbacks for file path normalization
             self._mtpl_path_trace_id = self.mtpl_file_path.trace_add('write', self.on_file_path_change)
             self._clkutils_path_trace_id = self.clkutils_file_path.trace_add('write', self.on_file_path_change)
+            self._clkutils_config_path_trace_id = self.clkutils_config_path.trace_add('write', self.on_file_path_change)
             self._output_path_trace_id = self.output_path_var.trace_add('write', self.on_output_path_change)
         except Exception as e:
             print(f"Error setting up file path traces: {e}")
@@ -633,6 +661,8 @@ class CTVListGUI:
                 path_var = self.mtpl_file_path
             elif var_name == str(self.clkutils_file_path):
                 path_var = self.clkutils_file_path
+            elif var_name == str(self.clkutils_config_path):
+                path_var = self.clkutils_config_path
             else:
                 return
             
@@ -649,6 +679,10 @@ class CTVListGUI:
                         self.clkutils_file_path.trace_remove('write', self._clkutils_path_trace_id)
                         self.clkutils_file_path.set(normalized)
                         self._clkutils_path_trace_id = self.clkutils_file_path.trace_add('write', self.on_file_path_change)
+                    elif var_name == str(self.clkutils_config_path):
+                        self.clkutils_config_path.trace_remove('write', self._clkutils_config_path_trace_id)
+                        self.clkutils_config_path.set(normalized)
+                        self._clkutils_config_path_trace_id = self.clkutils_config_path.trace_add('write', self.on_file_path_change)
         except Exception as e:
             print(f"Error in on_file_path_change: {e}")
 
@@ -1834,6 +1868,23 @@ class CTVListGUI:
                           "• Manual text input (comma, whitespace, or newline-separated)")
         ttk.Label(instruction_frame, text=instruction_text, wraplength=600, justify='left').pack(padx=10, pady=10)
         
+        # Configuration file section - stretch with consistent margins
+        config_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="Configuration File")
+        config_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
+        
+        # Configure grid weights for responsive design
+        config_frame.grid_columnconfigure(1, weight=1)
+        
+        ttk.Label(config_frame, text="Config File Path:").grid(row=0, column=0, sticky='w', padx=10, pady=5)
+        config_entry = ttk.Entry(config_frame, textvariable=self.clkutils_config_path)
+        config_entry.grid(row=0, column=1, padx=10, pady=5, sticky='ew')
+        ttk.Button(config_frame, text="Browse", command=self.browse_clkutils_config).grid(row=0, column=2, padx=10, pady=5)
+        
+        # Add info label for config file
+        config_info = ttk.Label(config_frame, text="ℹ️ Specify the path to configFile_DMR.json or equivalent configuration file", 
+                               foreground='blue', font=('Arial', 9))
+        config_info.grid(row=1, column=0, columnspan=3, sticky='w', padx=10, pady=(0, 5))
+        
         # Input method selection - stretch with consistent margins
         method_frame = ttk.LabelFrame(self.clkutils_scrollable_frame, text="Test Input Method")
         method_frame.pack(fill='x', padx=(20, 40), pady=10)  # Right margin accounts for scrollbar
@@ -1985,6 +2036,23 @@ class CTVListGUI:
             # If CSV file, load column options
             if normalized_path.lower().endswith('.csv'):
                 self.load_csv_columns()
+    
+    def browse_clkutils_config(self):
+        """Browse for CLKUtils configuration file"""
+        filetypes = [
+            ("JSON files", "*.json"),
+            ("All files", "*.*")
+        ]
+        file_path = filedialog.askopenfilename(
+            title="Select CLKUtils Configuration File", 
+            filetypes=filetypes,
+            initialfile="configFile_DMR.json"
+        )
+        if file_path:
+            # Normalize the file path to handle UNC paths and strip quotes
+            normalized_path = self.normalize_unc_path(file_path)
+            self.clkutils_config_path.set(normalized_path)
+            self.log_message(f"CLKUtils config file set to: {normalized_path}")
     
     def load_csv_columns(self):
         """Load column names from CSV file for selection"""
@@ -4940,22 +5008,43 @@ class CTVListGUI:
                             # ClkUtils do not require mtpl parsing
                             self.log_message(f"Processing ClkUtils for test: {test}")
                             
-                            # Ensure configFile_DMR.json exists in current working directory
-                            config_file = 'configFile_DMR.json'
+                            # Get config file path from user input
+                            config_file = self.clkutils_config_path.get().strip()
+                            if not config_file:
+                                # Fallback to default if empty
+                                config_file = 'configFile_DMR.json'
+                                self.log_message(f"No config file specified, using default: {config_file}")
+                            
+                            # Check if the specified config file exists
                             if not os.path.exists(config_file):
-                                # Try looking in the script directory as backup
-                                script_dir_config = os.path.join(os.path.dirname(__file__), config_file)
-                                if os.path.exists(script_dir_config):
-                                    config_file = script_dir_config
-                                    self.log_message(f"Using config file from script directory: {script_dir_config}")
+                                # If it's a relative path, try looking in the script directory
+                                if not os.path.isabs(config_file):
+                                    script_dir_config = os.path.join(os.path.dirname(__file__), config_file)
+                                    if os.path.exists(script_dir_config):
+                                        config_file = script_dir_config
+                                        self.log_message(f"Using config file from script directory: {script_dir_config}")
+                                    else:
+                                        # Try current working directory
+                                        cwd_config = os.path.join(os.getcwd(), config_file)
+                                        if os.path.exists(cwd_config):
+                                            config_file = cwd_config
+                                            self.log_message(f"Using config file from current directory: {cwd_config}")
+                                        else:
+                                            error_msg = (f"Error: Config file '{config_file}' not found!\n"
+                                                       f"Checked locations:\n"
+                                                       f"  • Specified path: {self.clkutils_config_path.get()}\n"
+                                                       f"  • Script directory: {script_dir_config}\n"
+                                                       f"  • Current directory: {cwd_config}\n"
+                                                       f"Please specify a valid config file path in the CLKUtils tab.")
+                                            self.log_message(error_msg, "error")
+                                            continue
                                 else:
-                                    error_msg = (f"Error: {config_file} not found!\n"
-                                               f"Current working directory: {os.getcwd()}\n"
-                                               f"Please ensure {config_file} is in the current working directory.")
+                                    error_msg = (f"Error: Config file '{config_file}' not found!\n"
+                                               f"Please specify a valid config file path in the CLKUtils tab.")
                                     self.log_message(error_msg, "error")
                                     continue
                             else:
-                                self.log_message(f"Using config file from current directory: {os.path.abspath(config_file)}")
+                                self.log_message(f"Using config file: {os.path.abspath(config_file)}")
                             
                             bitbased = True
                             indexed_file,tag_header_names = clk.process_json_to_csv(config_file,test,place_in,bitbased)
@@ -5329,6 +5418,8 @@ class CTVListGUI:
         self.clkutils_tests = []
         self.all_clkutils_items = []
         self.clkutils_file_path = tk.StringVar()
+        # Reset CLKUtils config to default
+        self.clkutils_config_path = tk.StringVar(value='configFile_DMR.json')
 
         
         # Clear displays
