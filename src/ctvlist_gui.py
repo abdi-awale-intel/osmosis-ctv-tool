@@ -67,6 +67,7 @@ import mtpl_parser as mt
 import index_ctv as ind
 import smart_json_parser as sm
 import clkutils_config_json_to_csv as clk
+import port_mismatches as pm
 
 # Import pyuber_query with fallback handling
 PYUBER_AVAILABLE = True
@@ -2430,6 +2431,7 @@ class CTVListGUI:
         self.stop_button = ttk.Button(process_frame, text="Stop", command=self.stop_processing, state='disabled')
         self.stop_button.pack(side='left', padx=10)
         ttk.Button(process_frame, text="Get Testtimes", command=self.get_testtimes, style='Accent.TButton').pack(side='left', padx=10)
+        ttk.Button(process_frame, text="MTPL Verification", command=self.run_mtpl_verification, style='Accent.TButton').pack(side='left', padx=10)
         ttk.Button(process_frame, text="Clear All", command=self.clear_all).pack(side='left', padx=10)
         
         # Progress bar (separate from log) - stretch with consistent margins
@@ -3448,7 +3450,7 @@ class CTVListGUI:
             self.log_message(f"Processed path: {processed_path}")
             self.log_message(f"Final path: {final_path}")
             
-            self.mtpl_csv_path = mt.mtpl_to_csv(final_path)
+            self.mtpl_csv_path = mt.mtpl_test_to_csv(final_path)
             self.mtpl_df = pd.read_csv(self.mtpl_csv_path)
             
             # Debug: Print MTPL dataframe info
@@ -3501,7 +3503,7 @@ class CTVListGUI:
             final_path = self.normalize_unc_path(processed_path)
             
             # Process the file
-            self.mtpl_csv_path = mt.mtpl_to_csv(final_path)
+            self.mtpl_csv_path = mt.mtpl_test_to_csv(final_path)
             self.mtpl_df = pd.read_csv(self.mtpl_csv_path)
             
             self.update_mtpl_display()
@@ -4710,6 +4712,67 @@ class CTVListGUI:
             
         except Exception as e:
             error_msg = f"Error initiating test times retrieval: {str(e)}"
+            self.log_message(f"❌ {error_msg}")
+            messagebox.showerror("Error", error_msg)
+    
+    def run_mtpl_verification(self):
+        """Run MTPL verification using the port_mismatches module"""
+        try:
+            # Check if MTPL file is loaded
+            mtpl_path = self.mtpl_file_path.get() if hasattr(self, 'mtpl_file_path') else ""
+            if not mtpl_path or not os.path.exists(mtpl_path):
+                messagebox.showerror("Error", "Please load an MTPL file first from the MTPL tab")
+                return
+            
+            # Get output folder
+            output_folder = self.output_path_var.get() if hasattr(self, 'output_path_var') else ''
+            if not output_folder:
+                messagebox.showerror("Error", "Please select an output folder first")
+                return
+            
+            # Normalize and validate output folder
+            output_folder = self.normalize_unc_path(output_folder)
+            if not os.path.exists(output_folder):
+                try:
+                    os.makedirs(output_folder, exist_ok=True)
+                    self.log_message(f"Created output directory: {output_folder}")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to create output directory: {str(e)}")
+                    return
+            
+            # Add trailing separator if needed
+            place_in = output_folder + os.sep if not output_folder.endswith(os.sep) else output_folder
+            
+            # Log the verification start
+            self.log_message(f"🔍 Starting MTPL verification for: {os.path.basename(mtpl_path)}")
+            self.log_message(f"📁 Output directory: {output_folder}")
+            
+            # Run verification in a separate thread to avoid blocking the UI
+            import threading
+            
+            def run_verification():
+                try:
+                    # Call the mtpl_verification function from port_mismatches module
+                    pm.mtpl_verification(mtpl_path, place_in)
+                    
+                    # Show success message
+                    self.root.after(0, lambda: messagebox.showinfo(
+                        "Success", 
+                        f"MTPL verification completed successfully!\nCheck the output folder for results."
+                    ))
+                    self.root.after(0, lambda: self.log_message("✅ MTPL verification completed successfully"))
+                    
+                except Exception as e:
+                    error_msg = f"Error during MTPL verification: {str(e)}"
+                    self.root.after(0, lambda: self.log_message(f"❌ {error_msg}"))
+                    self.root.after(0, lambda: messagebox.showerror("Error", error_msg))
+            
+            # Start the verification thread
+            thread = threading.Thread(target=run_verification, daemon=True)
+            thread.start()
+            
+        except Exception as e:
+            error_msg = f"Error initiating MTPL verification: {str(e)}"
             self.log_message(f"❌ {error_msg}")
             messagebox.showerror("Error", error_msg)
         

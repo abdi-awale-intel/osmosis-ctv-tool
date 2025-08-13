@@ -1,9 +1,9 @@
 {
   "zoom_level": 0.5,
   "compact_mode": false,
-  "window_geometry": "1400x900+284+166",
+  "window_geometry": "1400x900+260+90",
   "theme_mode": "light",
-  "last_mtpl_path": "H:\\program\\1276\\eng\\hdmtprogs\\dmr_dai_sds\\testprogram\\DAIEBJX30A5313XPOD\\Modules\\EIO_UCIE\\EIO_UCIE.mtpl",
+  "last_mtpl_path": "H:\\program\\1276\\eng\\hdmtprogs\\dmr_dai_sds\\testprogram\\DAIEBJX30A5332B1SF\\Modules\\SIO_BSCAN\\SIO_BSCAN.mtpl",
   "material_inputs": {
     "lot": "",
     "wafer": "311",
@@ -12,7 +12,7 @@
     "database": "D1D_PROD_XEUS"
   },
   "output_settings": {
-    "output_path": "C:\\Users\\burtonr\\Downloads\\TESTTIMES",
+    "output_path": "dataOut",
     "delete_files": false,
     "run_jmp": false
   }

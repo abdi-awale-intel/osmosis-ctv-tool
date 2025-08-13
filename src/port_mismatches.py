@@ -6,6 +6,8 @@ import os
 import pandas as pd
 import json
 import re
+import mtpl_parser as mtpl #Make code to process mtpl
+import file_functions as fi
 
 def fix_json_trailing_commas(json_string):
     """
@@ -35,20 +37,21 @@ def load_json_with_comma_fix(file_path):
 def find_port_mismatches(mtpl_csv, port_csv,base_dir):
     base_dir = base_dir + '\\'
     #base_dir = r"\\alpfile4.al.intel.com\hop\program\1276\eng\hdmtprogs\dmr_dab_hop\savirine\WW32\WW32.4_EIO_TP8/"
-    mtpl_df = pd.read_csv(mtpl_csv, header=1,index_col=False,dtype={'BasicTestConfiguration': 'str'})
+    mtpl_df = pd.read_csv(mtpl_csv,index_col=False,dtype={'BasicTestConfiguration': 'str'})
     port_df = pd.read_csv(port_csv,index_col=False)
     
     mismatches = []
     
     # Iterate through each row of mtpl_df
     for index, row in mtpl_df.iterrows():
-        test_name = str(row['Test Name'])
+        test_name = str(row['TestName'])
         config_file_path = str(row['ConfigurationFile'])
         basic_test_config = row['BasicTestConfiguration']
         mode = str(row.get('Mode', '')).strip('\"\'')  # Get mode, default to empty string if not present
+        bypass = str(row.get('BypassPort', '')).strip('\"\'')  # Get bypass, default to empty string if not present
         # Get list of exit ports from configuration files
         exit_ports = []
-        if 'ctv' not in row[" Template"].lower():
+        if 'ctv' not in row["TestType"].lower():
             continue
         # Handle path construction based on config_file_path format
         #print(f"DEBUG: config_file_path = {config_file_path}")
@@ -229,6 +232,7 @@ def find_port_mismatches(mtpl_csv, port_csv,base_dir):
                         'decoder_miss': decoder_missing,
                         'basic_test_config': basic_test_config,
                         'mode': mode,
+                        'bypass': bypass,
                         'ports_in_data_not_in_config': missing_ports,
                         #'ports_in_config_not_in_data': extra_ports,
                         'expected_ports': exit_ports,
@@ -251,6 +255,7 @@ def find_port_mismatches(mtpl_csv, port_csv,base_dir):
                     'decoder_miss': decoder_missing,
                     'basic_test_config': basic_test_config,
                     'mode': mode,
+                    'bypass': bypass,
                     'ports_in_data_not_in_config': [],
                     #'ports_in_config_not_in_data': extra_ports,
                     'expected_ports': [],
@@ -261,38 +266,40 @@ def find_port_mismatches(mtpl_csv, port_csv,base_dir):
             elif filtered_df.empty:
                 print(f"  No matching rows found in port_df for {test_name}")
             elif not exit_ports:
-                print(f"  \nNo exit ports found in configuration for {test_name}\n")
+                print(f"\n  No exit ports found in configuration for {test_name}")
     
     return mismatches
 
-#PathtoMtpl"
-mtpl_csv = r"C:\Users\burtonr\OneDrive - Intel Corporation\Desktop\MIO_DDR.mtpl.sorted.csv"
-#PathtoPort
-port_csv = r"C:\Users\burtonr\OneDrive - Intel Corporation\Desktop\mioddrportinfo.csv"
 
-#base_dir = os.path.dirname(os.path.dirname(os.path.dirname(mtpl_csv)))
-base_dir = r"\\al4file1.ra.intel.com\sdx\program\1276\eng\hdmtprogs\dmr_dai_sds\aawale\TP1_8_12\\"
-#r"\\alpfile4.al.intel.com\hop\program\1276\eng\hdmtprogs\dmr_dab_hop\kristia1\POWER_DOE_DAB_WW32_4_500mA\\"
-#mtpl_base_dir = os.path.dirname(os.path.dirname(os.path.dirname(mtpl)))
-# Call the function
-mismatches = find_port_mismatches(mtpl_csv, port_csv,base_dir)
+def mtpl_verification(mtpl_file,place_in=''):
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(mtpl_file)))
+    test_csv = mtpl.mtpl_test_to_csv(mtpl_file,place_in)
+    port_csv = mtpl.mtpl_port_to_csv(mtpl_file,place_in)
+    mismatches = find_port_mismatches(test_csv, port_csv,base_dir)
+    output_csv = f"{place_in}{os.path.basename(mtpl_file)}.mismatches.csv"
+    output_csv = fi.check_write_permission(output_csv)
+    if mismatches:
+        results_df = pd.DataFrame([
+            {
+                'Test Instance': mismatch['test_name'],
+                'Missing Ports': ', '.join(mismatch['ports_in_data_not_in_config']),
+                'Missing Config': mismatch['config_miss'],
+                'Missing Decoder': ', '.join(mismatch['decoder_miss']),
+                'Bypass Port': mismatch['bypass']
+            }
+            for mismatch in mismatches
+        ])
 
-# Create DataFrame for results and save to CSV
-if mismatches:
-    results_df = pd.DataFrame([
-        {
-            'Test Instance': mismatch['test_name'],
-            'Missing Ports': ', '.join(mismatch['ports_in_data_not_in_config']),
-            'Missing Config': mismatch['config_miss'],
-            'Missing Decoder': ', '.join(mismatch['decoder_miss'])
-        }
-        for mismatch in mismatches
-    ])
-    
-    # Save to CSV
-    output_csv = r"C:\Users\burtonr\OneDrive - Intel Corporation\Desktop\mismatches\mioddr_mismatches.csv"
-    results_df.to_csv(output_csv, index=False)
-    print(f"Results saved to {output_csv}")
-    print(f"Found {len(mismatches)} test instances with missing ports")
-else:
-    print("No mismatches found")
+        results_df.to_csv(output_csv, index=False)
+
+        print(f"Results saved to {output_csv}")
+        print(f"Found {len(mismatches)} test instances with missing ports")
+        return output_csv
+    else:
+        print("\n  NO MISMATCHES FOUND\n")
+
+
+if __name__ == "__main__":
+    mtpl_file = r"H:\program\1276\eng\hdmtprogs\dmr_dai_sds\savirine\WW33\WW33.2_EIO_TP4\Modules\EIO_UCIE\EIO_UCIE.mtpl"
+    place_in = r"C:\Users\burtonr\OneDrive - Intel Corporation\Desktop\mismatches\\"
+    mtpl_verification(mtpl_file, place_in)
