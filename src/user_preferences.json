@@ -3,7 +3,7 @@
   "compact_mode": false,
   "window_geometry": "1400x900+260+90",
   "theme_mode": "light",
-  "last_mtpl_path": "H:\\program\\1276\\eng\\hdmtprogs\\dmr_dai_sds\\testprogram\\DAIEBJX30A5332B1SF\\Modules\\SIO_BSCAN\\SIO_BSCAN.mtpl",
+  "last_mtpl_path": "H:\\program\\1276\\eng\\hdmtprogs\\dmr_dai_sds\\testprogram\\DAIEBJX30A5332B1SF\\Modules\\SIO_PCIE\\SIO_PCIE.mtpl",
   "material_inputs": {
     "lot": "",
     "wafer": "311",

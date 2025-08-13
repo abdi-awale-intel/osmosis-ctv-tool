@@ -427,7 +427,9 @@ class CTVListGUI:
                 'output_settings': {
                     'output_path': getattr(self, 'output_path_var', tk.StringVar()).get(),
                     'delete_files': getattr(self, 'delete_files_var', tk.BooleanVar()).get(),
-                    'run_jmp': getattr(self, 'run_jmp_var', tk.BooleanVar()).get()
+                    'run_jmp': getattr(self, 'run_jmp_var', tk.BooleanVar()).get(),
+                    'jmp_mode': getattr(self, 'jmp_mode_var', tk.StringVar()).get(),
+                    'max_workers': getattr(self, 'max_workers_var', tk.IntVar()).get()
                 }
             }
             import json
@@ -470,6 +472,10 @@ class CTVListGUI:
                     self.delete_files_var.set(output_settings.get('delete_files', True))
                 if hasattr(self, 'run_jmp_var'):
                     self.run_jmp_var.set(output_settings.get('run_jmp', False))
+                if hasattr(self, 'jmp_mode_var'):
+                    self.jmp_mode_var.set(output_settings.get('jmp_mode', 'unified_threaded'))
+                if hasattr(self, 'max_workers_var'):
+                    self.max_workers_var.set(output_settings.get('max_workers', 3))
                 
                 # Restore last MTPL file path if available
                 last_mtpl_path = preferences.get('last_mtpl_path', "")
@@ -2408,6 +2414,36 @@ class CTVListGUI:
         
         self.run_jmp_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(options_frame, text="Run JMP on stacked files", variable=self.run_jmp_var).pack(anchor='w', padx=10, pady=5)
+        
+        # JMP execution mode selection
+        jmp_mode_frame = ttk.LabelFrame(options_frame, text="JMP Execution Mode")
+        jmp_mode_frame.pack(fill='x', padx=10, pady=5)
+        
+        self.jmp_mode_var = tk.StringVar(value="unified_threaded")
+        
+        # Create mode selection with descriptions
+        ttk.Radiobutton(jmp_mode_frame, text="Unified Session (Threaded) - Recommended", 
+                       variable=self.jmp_mode_var, value="unified_threaded").pack(anchor='w', padx=10, pady=2)
+        ttk.Label(jmp_mode_frame, text="   ↳ Fast JSL creation + Single JMP workspace (optimal)", 
+                 font=('Arial', 8), foreground='gray').pack(anchor='w', padx=25)
+        
+        ttk.Radiobutton(jmp_mode_frame, text="Unified Session", 
+                       variable=self.jmp_mode_var, value="unified").pack(anchor='w', padx=10, pady=2)
+        ttk.Label(jmp_mode_frame, text="   ↳ Sequential processing + Single JMP workspace (efficient)", 
+                 font=('Arial', 8), foreground='gray').pack(anchor='w', padx=25)
+        
+        ttk.Radiobutton(jmp_mode_frame, text="Parallel Instances", 
+                       variable=self.jmp_mode_var, value="parallel").pack(anchor='w', padx=10, pady=2)
+        ttk.Label(jmp_mode_frame, text="   ↳ Multiple JMP windows (fast but resource intensive)", 
+                 font=('Arial', 8), foreground='gray').pack(anchor='w', padx=25)
+        
+        # Max workers setting for parallel mode
+        workers_frame = ttk.Frame(jmp_mode_frame)
+        workers_frame.pack(fill='x', padx=10, pady=5)
+        ttk.Label(workers_frame, text="Max concurrent JMP instances:").pack(side='left')
+        self.max_workers_var = tk.IntVar(value=3)
+        workers_spinbox = ttk.Spinbox(workers_frame, from_=1, to=8, width=5, textvariable=self.max_workers_var)
+        workers_spinbox.pack(side='left', padx=5)
         
         # Processing mode selection (MTPL vs CLKUtils)
         mode_frame = ttk.LabelFrame(options_frame, text="Processing Mode")
@@ -5145,7 +5181,13 @@ class CTVListGUI:
                 
                 # Run JMP on stacked files if requested (from master.py)
                 if self.run_jmp_var.get() and stacked_files:
-                    self.log_message("Creating JSL scripts and launching single JMP workspace...")
+                    jmp_mode = getattr(self, 'jmp_mode_var', tk.StringVar()).get() or "unified_threaded"
+                    max_workers = getattr(self, 'max_workers_var', tk.IntVar()).get() or 3
+                    
+                    self.log_message(f"🚀 Starting JMP analysis in {jmp_mode} mode...")
+                    if jmp_mode == "parallel":
+                        self.log_message(f"🔧 Using {max_workers} concurrent JMP instances")
+                    
                     try:
                         import jmp_python as jmp
                         jmp_executable_path = fi.find_latest_jmp_pro_path()
@@ -5173,36 +5215,60 @@ class CTVListGUI:
                             except Exception as test_e:
                                 self.log_message(f"JMP access test warning: {test_e}", "warning")
                             
-                            # Step 1: Create all JSL scripts first (no JMP launching yet)
-                            self.log_message(f"📝 Creating JSL scripts for {len(stacked_files)} stacked files...")
+                            # Progress callback for threading modes
+                            def jmp_progress_callback(current, total, description):
+                                progress = (current / total) * 100
+                                self.root.after(0, lambda: self.log_message(f"� JMP Progress: {current}/{total} ({progress:.1f}%) - {description}"))
                             
                             try:
                                 # Get output folder for JSL scripts
                                 output_folder = place_in if place_in else os.getcwd()
                                 
-                                # Create JSL scripts for all stacked files
-                                jsl_scripts = jmp.create_multiple_jsl_scripts(stacked_files, output_folder)
+                                # Execute JMP with selected mode
+                                if jmp_mode == "parallel":
+                                    self.log_message(f"📊 Running {len(stacked_files)} JMP instances in parallel...")
+                                    results = jmp.run_jmp_with_options(
+                                        stacked_files, 
+                                        jmp_executable_path, 
+                                        mode="parallel", 
+                                        max_workers=max_workers,
+                                        progress_callback=jmp_progress_callback
+                                    )
+                                    
+                                    # Report results
+                                    success_count = sum(1 for r in results.values() if r["status"] == "success")
+                                    total_count = len(results)
+                                    
+                                    if success_count > 0:
+                                        self.log_message(f"✅ JMP Parallel Execution completed!")
+                                        self.log_message(f"📊 Successfully processed: {success_count}/{total_count} files")
+                                        self.log_message(f"🖥️ {success_count} JMP windows opened")
+                                        
+                                        if success_count < total_count:
+                                            self.log_message(f"⚠️ {total_count - success_count} files failed to process", "warning")
+                                    else:
+                                        self.log_message("❌ No files were processed successfully", "error")
                                 
-                                if jsl_scripts:
-                                    self.log_message(f"✅ Successfully created {len(jsl_scripts)} JSL scripts")
+                                elif jmp_mode in ["unified", "unified_threaded"]:
+                                    self.log_message(f"� Processing {len(stacked_files)} files for unified JMP session...")
                                     
-                                    # Step 2: Launch single JMP workspace with all analyses
-                                    self.log_message("🚀 Launching single JMP workspace with all analyses...")
-                                    
-                                    success = jmp.run_master_jsl_workspace(jsl_scripts, jmp_executable_path, output_folder)
+                                    success = jmp.run_jmp_with_options(
+                                        stacked_files, 
+                                        jmp_executable_path, 
+                                        mode=jmp_mode,
+                                        progress_callback=jmp_progress_callback
+                                    )
                                     
                                     if success:
-                                        self.log_message("🎯 JMP Master Workspace launched successfully!")
+                                        self.log_message("🎯 JMP Unified Session launched successfully!")
                                         self.log_message("💡 All your stacked files are now analyzed in one organized JMP session")
                                         self.log_message(f"📊 {len(stacked_files)} datasets each have their own analysis window")
                                         self.log_message("⚡ Resource efficient: Single JMP process instead of multiple instances")
                                     else:
-                                        self.log_message("❌ Failed to launch JMP Master Workspace", "error")
-                                else:
-                                    self.log_message("❌ No JSL scripts were created successfully", "error")
-                                    
-                            except Exception as jsl_e:
-                                self.log_message(f"Error creating JSL scripts: {jsl_e}", "error")
+                                        self.log_message("❌ Failed to launch JMP Unified Session", "error")
+                                        
+                            except Exception as jmp_e:
+                                self.log_message(f"Error during JMP execution: {jmp_e}", "error")
                             
                         else:
                             self.log_message("JMP executable path not found - cannot run JMP", "warning")

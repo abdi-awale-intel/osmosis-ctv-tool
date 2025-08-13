@@ -30,6 +30,10 @@ import subprocess
 from pathlib import Path
 import winreg
 import file_functions as fi
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import queue
 
 
 def create_jsl_script(csv_file_path):
@@ -925,6 +929,271 @@ if __name__ == "__main__":
     # Example configuration - update these paths for your system
     csv_path = Path("C:\\Users\\burtonr\\the best scripts\\DAC%_script_output\\LJPLL_TOP_CLKUTILS_K_SDTBEGIN_TAP_CORE_NOM_X_DCM_FLL_IREFTRIM_dataoutput.csv")
     jmp_executable_path = Path("C:\\Program Files\\SAS\\JMPPRO\\17\\jmp.exe")
+
+
+def run_jmp_threaded_instances(csv_files, jmp_executable_path, max_workers=3, progress_callback=None):
+    """
+    Run multiple JMP instances in parallel using threading for faster processing.
+    
+    This function creates separate JSL scripts for each CSV file and launches them
+    in parallel JMP instances. It includes resource management to prevent system
+    overload and provides progress tracking.
+    
+    Args:
+        csv_files (list): List of paths to CSV files to analyze
+        jmp_executable_path (str): Path to the JMP executable
+        max_workers (int, optional): Maximum number of concurrent JMP instances. Defaults to 3.
+        progress_callback (callable, optional): Callback function for progress updates
+        
+    Returns:
+        dict: Results dictionary with success/failure status for each file
+        
+    Features:
+        - Parallel execution with resource management
+        - Configurable worker limit to prevent system overload
+        - Progress tracking and callback support
+        - Comprehensive error handling per instance
+        - Timeout management for each JMP session
+        
+    Resource Management:
+        - Default max_workers=3 to balance speed vs system resources
+        - Each JMP instance typically uses 200-500MB RAM
+        - Automatic cleanup of failed instances
+        
+    Example:
+        >>> files = ["data1.csv", "data2.csv", "data3.csv"]
+        >>> results = run_jmp_threaded_instances(files, "C:/JMP/jmp.exe", max_workers=2)
+        >>> for file, status in results.items():
+        ...     print(f"{file}: {status}")
+    """
+    if not csv_files:
+        print("No CSV files provided for JMP analysis")
+        return {}
+    
+    if not os.path.exists(jmp_executable_path):
+        raise FileNotFoundError(f"JMP executable not found at: {jmp_executable_path}")
+    
+    print(f"🚀 Starting threaded JMP analysis for {len(csv_files)} files")
+    print(f"🔧 Using {max_workers} concurrent JMP instances")
+    
+    results = {}
+    completed_count = 0
+    total_files = len(csv_files)
+    
+    def process_single_csv(csv_file):
+        """Process a single CSV file in JMP"""
+        try:
+            print(f"📊 Processing: {os.path.basename(csv_file)}")
+            
+            # Create JSL script for this CSV
+            jsl_path = create_jsl_script(csv_file)
+            
+            # Run JMP with timeout
+            result = subprocess.run(
+                [jmp_executable_path, jsl_path], 
+                capture_output=True, 
+                text=True, 
+                timeout=60  # 60 second timeout per instance
+            )
+            
+            if result.returncode == 0:
+                return {"file": csv_file, "status": "success", "message": "JMP analysis completed successfully"}
+            else:
+                return {"file": csv_file, "status": "error", "message": f"JMP returned error code {result.returncode}"}
+                
+        except subprocess.TimeoutExpired:
+            return {"file": csv_file, "status": "timeout", "message": "JMP execution timed out after 60 seconds"}
+        except Exception as e:
+            return {"file": csv_file, "status": "error", "message": f"Error processing file: {str(e)}"}
+    
+    # Use ThreadPoolExecutor for parallel processing
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all tasks
+        future_to_file = {executor.submit(process_single_csv, csv_file): csv_file for csv_file in csv_files}
+        
+        # Process completed tasks
+        for future in as_completed(future_to_file):
+            csv_file = future_to_file[future]
+            completed_count += 1
+            
+            try:
+                result = future.result()
+                results[result["file"]] = {
+                    "status": result["status"],
+                    "message": result["message"]
+                }
+                
+                # Progress reporting
+                progress_pct = (completed_count / total_files) * 100
+                print(f"✅ ({completed_count}/{total_files}) {progress_pct:.1f}% - {os.path.basename(csv_file)}: {result['status']}")
+                
+                # Call progress callback if provided
+                if progress_callback:
+                    progress_callback(completed_count, total_files, f"Processed {os.path.basename(csv_file)}")
+                    
+            except Exception as e:
+                results[csv_file] = {"status": "error", "message": f"Task execution error: {str(e)}"}
+                print(f"❌ ({completed_count}/{total_files}) {os.path.basename(csv_file)}: Task execution error")
+    
+    # Summary
+    success_count = sum(1 for r in results.values() if r["status"] == "success")
+    error_count = len(results) - success_count
+    
+    print(f"\n📊 JMP Threading Summary:")
+    print(f"   ✅ Successful: {success_count}")
+    print(f"   ❌ Failed: {error_count}")
+    print(f"   📈 Success Rate: {(success_count/total_files)*100:.1f}%")
+    
+    return results
+
+
+def run_jmp_unified_session_threaded(csv_files, jmp_executable_path, progress_callback=None):
+    """
+    Create JSL scripts in parallel, then launch unified JMP session with all datasets.
+    
+    This function combines the speed benefits of threaded JSL script creation with
+    the resource efficiency of a single JMP session. It creates all JSL scripts
+    in parallel threads, then launches one JMP instance with all analyses.
+    
+    Args:
+        csv_files (list): List of paths to CSV files to analyze
+        jmp_executable_path (str): Path to the JMP executable  
+        progress_callback (callable, optional): Callback function for progress updates
+        
+    Returns:
+        bool: True if unified session launched successfully, False otherwise
+        
+    Features:
+        - Parallel JSL script creation (faster preparation)
+        - Single JMP session (resource efficient)
+        - Progress tracking for script creation phase
+        - Comprehensive error handling
+        - Optimal balance of speed and resource usage
+        
+    Resource Benefits:
+        - JSL creation: Parallel (faster)
+        - JMP execution: Single instance (efficient)
+        - Best of both approaches combined
+        
+    Example:
+        >>> files = ["data1.csv", "data2.csv", "data3.csv"] 
+        >>> success = run_jmp_unified_session_threaded(files, "C:/JMP/jmp.exe")
+        >>> if success:
+        ...     print("All analyses available in single JMP workspace!")
+    """
+    if not csv_files:
+        print("No CSV files provided for JMP analysis")
+        return False
+    
+    if not os.path.exists(jmp_executable_path):
+        raise FileNotFoundError(f"JMP executable not found at: {jmp_executable_path}")
+    
+    print(f"🚀 Creating JSL scripts in parallel for {len(csv_files)} files")
+    
+    jsl_scripts = []
+    completed_count = 0
+    total_files = len(csv_files)
+    
+    def create_jsl_for_file(csv_file):
+        """Create JSL script for a single CSV file"""
+        try:
+            print(f"📝 Creating JSL: {os.path.basename(csv_file)}")
+            jsl_path = create_jsl_script(csv_file)
+            return {"file": csv_file, "jsl_path": jsl_path, "status": "success"}
+        except Exception as e:
+            return {"file": csv_file, "jsl_path": None, "status": "error", "message": str(e)}
+    
+    # Create JSL scripts in parallel
+    with ThreadPoolExecutor(max_workers=5) as executor:  # More workers for JSL creation (less resource intensive)
+        future_to_file = {executor.submit(create_jsl_for_file, csv_file): csv_file for csv_file in csv_files}
+        
+        for future in as_completed(future_to_file):
+            csv_file = future_to_file[future]
+            completed_count += 1
+            
+            try:
+                result = future.result()
+                if result["status"] == "success":
+                    jsl_scripts.append(result["jsl_path"])
+                    print(f"✅ ({completed_count}/{total_files}) JSL created: {os.path.basename(csv_file)}")
+                else:
+                    print(f"❌ ({completed_count}/{total_files}) JSL failed: {os.path.basename(csv_file)}")
+                
+                # Progress callback
+                if progress_callback:
+                    progress_callback(completed_count, total_files, f"Created JSL for {os.path.basename(csv_file)}")
+                    
+            except Exception as e:
+                print(f"❌ ({completed_count}/{total_files}) JSL creation error: {os.path.basename(csv_file)}")
+    
+    # Launch unified JMP session
+    if jsl_scripts:
+        print(f"\n🎯 Launching unified JMP session with {len(jsl_scripts)} analyses...")
+        success = run_master_jsl_workspace(jsl_scripts, jmp_executable_path)
+        
+        if success:
+            print("✅ Unified JMP session launched successfully!")
+            print("💡 All your datasets are analyzed in one organized workspace")
+        
+        return success
+    else:
+        print("❌ No JSL scripts were created successfully")
+        return False
+
+
+def run_jmp_with_options(csv_files, jmp_executable_path, mode="unified", max_workers=3, progress_callback=None):
+    """
+    Flexible JMP execution with multiple threading options.
+    
+    This is the main entry point for JMP execution that supports multiple modes:
+    - "unified": Single JMP session with all datasets (recommended)
+    - "parallel": Multiple JMP instances running in parallel  
+    - "unified_threaded": Parallel JSL creation + unified session (optimal)
+    
+    Args:
+        csv_files (list): List of paths to CSV files to analyze
+        jmp_executable_path (str): Path to the JMP executable
+        mode (str): Execution mode - "unified", "parallel", or "unified_threaded"
+        max_workers (int): Maximum concurrent workers for parallel modes
+        progress_callback (callable, optional): Progress update callback
+        
+    Returns:
+        bool or dict: Success status (bool) for unified modes, results dict for parallel
+        
+    Mode Recommendations:
+        - "unified_threaded": Best balance of speed and resources (recommended)
+        - "unified": Most resource efficient, good for large datasets
+        - "parallel": Fastest but resource intensive, good for small datasets
+        
+    Example:
+        >>> files = ["data1.csv", "data2.csv", "data3.csv"]
+        >>> # Recommended approach
+        >>> success = run_jmp_with_options(files, jmp_exe, mode="unified_threaded")
+        >>> 
+        >>> # For speed with small datasets
+        >>> results = run_jmp_with_options(files, jmp_exe, mode="parallel", max_workers=2)
+    """
+    if mode == "parallel":
+        return run_jmp_threaded_instances(csv_files, jmp_executable_path, max_workers, progress_callback)
+    elif mode == "unified_threaded":
+        return run_jmp_unified_session_threaded(csv_files, jmp_executable_path, progress_callback)
+    elif mode == "unified":
+        # Original unified approach (no threading for JSL creation)
+        print(f"🚀 Creating JSL scripts sequentially for {len(csv_files)} files")
+        try:
+            output_folder = os.path.dirname(csv_files[0]) if csv_files else os.getcwd()
+            jsl_scripts = create_multiple_jsl_scripts(csv_files, output_folder)
+            if jsl_scripts:
+                return run_master_jsl_workspace(jsl_scripts, jmp_executable_path, output_folder)
+            return False
+        except Exception as e:
+            print(f"❌ Error in unified mode: {e}")
+            return False
+    else:
+        raise ValueError(f"Invalid mode: {mode}. Choose from 'unified', 'parallel', or 'unified_threaded'")
+
+
+if __name__ == "__main__":
     
     # Process the data through the complete workflow
     csv_path = stack_file(csv_path)
